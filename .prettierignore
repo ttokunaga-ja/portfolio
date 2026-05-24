@@ -1,0 +1,7 @@
+dist
+node_modules
+src/generated
+.accessibility-reports
+test-results
+playwright-report
+reports

@@ -1,0 +1,8 @@
+node_modules
+dist
+reports
+playwright-report
+test-results
+src/generated/content.generated.ts
+.wrangler
+.DS_Store

@@ -1,0 +1,1203 @@
+import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
+import LinkedInIcon from "@mui/icons-material/LinkedIn";
+import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
+import MailOutlineRoundedIcon from "@mui/icons-material/MailOutlineRounded";
+import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
+import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
+import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
+import {
+  AppBar,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  Chip,
+  Container,
+  CssBaseline,
+  Divider,
+  Drawer,
+  GlobalStyles,
+  IconButton,
+  Link,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Stack,
+  ThemeProvider,
+  Toolbar,
+  Tooltip,
+  Typography
+} from "@mui/material";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { getDemoHref, getEntries, getEntry, getLatestEntry } from "./content";
+import { setI18nLanguage } from "./i18n";
+import { getSeo, hrefFor } from "./routes";
+import { theme } from "./theme";
+import type { Collection, ExperienceType, Locale, PortfolioEntry, PrimaryPage, RouteState } from "./types";
+
+type AppProps = {
+  initialRoute: RouteState;
+  initialLocale: Locale;
+};
+
+const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
+  { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
+  { page: "research", labelKey: "nav.research", icon: <ScienceRoundedIcon /> },
+  { page: "projects", labelKey: "nav.projects", icon: <AccountTreeRoundedIcon /> },
+  { page: "experience", labelKey: "nav.experience", icon: <TimelineRoundedIcon /> },
+  { page: "skills", labelKey: "nav.skills", icon: <CodeRoundedIcon /> },
+  { page: "contact", labelKey: "nav.contact", icon: <MailOutlineRoundedIcon /> }
+];
+
+const topNavItems = navItems.filter((item) => item.page !== "home");
+
+const skillGroups: Array<{ title: string; items: string[] }> = [];
+
+const experienceDotColors: Record<ExperienceType, [string, string]> = {
+  education: ["#1D4ED8", "#60A5FA"],
+  work: ["#0E6F6A", "#37B37E"]
+};
+
+function getExperienceType(entry: PortfolioEntry): ExperienceType {
+  if (entry.experienceType === "education" || entry.experienceType === "work") {
+    return entry.experienceType;
+  }
+
+  return entry.tags.some((tag) => /university|college|school|academic|education/i.test(tag)) ? "education" : "work";
+}
+
+function getExperienceDotColor(type: ExperienceType, index: number) {
+  const colors = experienceDotColors[type];
+  return colors[index % colors.length];
+}
+
+function setNamedMeta(name: string, content: string) {
+  let meta = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = name;
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+}
+
+function setPropertyMeta(property: string, content: string) {
+  let meta = document.querySelector<HTMLMetaElement>(`meta[property="${property}"]`);
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute("property", property);
+    document.head.appendChild(meta);
+  }
+  meta.content = content;
+}
+
+export default function App({ initialRoute, initialLocale }: AppProps) {
+  const [locale, setLocale] = React.useState<Locale>(initialLocale);
+
+  React.useEffect(() => {
+    const seo = getSeo(initialRoute, locale);
+
+    setI18nLanguage(locale);
+    document.documentElement.lang = locale;
+    document.title = seo.title;
+    setNamedMeta("description", seo.description);
+    setNamedMeta("twitter:title", seo.title);
+    setNamedMeta("twitter:description", seo.description);
+    setPropertyMeta("og:title", seo.title);
+    setPropertyMeta("og:description", seo.description);
+  }, [initialRoute, locale]);
+
+  return (
+    <ThemeProvider theme={theme} defaultMode="system">
+      <CssBaseline enableColorScheme />
+      <GlobalStyles
+        styles={{
+          "html, body, #root": {
+            minHeight: "100%"
+          },
+          body: {
+            backgroundColor: "var(--mui-palette-background-default)"
+          },
+          "*, *::before, *::after": {
+            boxSizing: "border-box"
+          }
+        }}
+      />
+      <Layout locale={locale} setLocale={setLocale} route={initialRoute}>
+        <RouteSwitch route={initialRoute} locale={locale} />
+      </Layout>
+    </ThemeProvider>
+  );
+}
+
+function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
+  if (route.kind === "detail") {
+    return <DetailPage locale={locale} collection={route.collection} slug={route.slug} />;
+  }
+
+  switch (route.page) {
+    case "research":
+      return <ListingPage locale={locale} collection="research" />;
+    case "projects":
+      return <ListingPage locale={locale} collection="projects" />;
+    case "experience":
+      return <ExperiencePage locale={locale} />;
+    case "skills":
+      return <SkillsPage />;
+    case "contact":
+      return <ContactPage />;
+    case "home":
+    default:
+      return <HomePage locale={locale} />;
+  }
+}
+
+function Layout({
+  children,
+  locale,
+  setLocale,
+  route
+}: {
+  children: React.ReactNode;
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  route: RouteState;
+}) {
+  const { t } = useTranslation();
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const menuButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  const firstMenuItemRef = React.useRef<HTMLAnchorElement | null>(null);
+  const currentPage = route.kind === "page" ? route.page : route.collection;
+
+  React.useEffect(() => {
+    if (!isMenuOpen) return;
+
+    window.requestAnimationFrame(() => {
+      firstMenuItemRef.current?.focus();
+    });
+  }, [isMenuOpen]);
+
+  const closeMenu = React.useCallback((restoreFocus = false) => {
+    setIsMenuOpen(false);
+    if (restoreFocus) {
+      window.setTimeout(() => menuButtonRef.current?.focus(), 0);
+    }
+  }, []);
+
+  return (
+    <Box>
+      <Box
+        component="a"
+        href="#main-content"
+        sx={{
+          position: "fixed",
+          top: 8,
+          left: 8,
+          zIndex: (theme) => theme.zIndex.tooltip,
+          transform: "translateY(-140%)",
+          transition: "transform 0.15s ease",
+          px: 2,
+          py: 1,
+          borderRadius: 1,
+          backgroundColor: "background.paper",
+          color: "primary.main",
+          fontWeight: 800,
+          boxShadow: 3,
+          textDecoration: "none",
+          "&:focus-visible": {
+            transform: "translateY(0)",
+            outline: "3px solid",
+            outlineColor: "secondary.main",
+            outlineOffset: 2
+          }
+        }}
+      >
+        {t("action.skipToContent")}
+      </Box>
+      <AppBar
+        position="sticky"
+        color="transparent"
+        elevation={0}
+        sx={{
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          backdropFilter: "blur(16px)",
+          backgroundColor: "background.default"
+        }}
+      >
+        <Container maxWidth="xl">
+          <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 72 }, gap: 2 }}>
+            <Tooltip title={t("action.openMenu")}>
+              <IconButton
+                ref={menuButtonRef}
+                aria-label={t("action.openMenu")}
+                aria-controls={isMenuOpen ? "site-navigation" : undefined}
+                aria-expanded={isMenuOpen ? "true" : undefined}
+                onClick={() => setIsMenuOpen(true)}
+                color="primary"
+                edge="start"
+              >
+                <MenuRoundedIcon />
+              </IconButton>
+            </Tooltip>
+            <Link
+              href="/"
+              underline="none"
+              color="text.primary"
+              sx={{ display: "inline-flex", alignItems: "center", gap: 1.2, minHeight: 44, mr: "auto" }}
+            >
+              <Box
+                aria-hidden="true"
+                sx={{
+                  width: 34,
+                  height: 34,
+                  display: "grid",
+                  placeItems: "center",
+                  borderRadius: 1.5,
+                  backgroundColor: "primary.main",
+                  color: "primary.contrastText",
+                  fontWeight: 800
+                }}
+              >
+                TT
+              </Box>
+              <Typography component="span" fontWeight={800}>
+                Takumi Tokunaga
+              </Typography>
+            </Link>
+
+            <Stack
+              component="nav"
+              direction="row"
+              spacing={0.5}
+              aria-label="Primary navigation"
+              sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}
+            >
+              {topNavItems.map((item) => {
+                const isActive = currentPage === item.page;
+
+                return (
+                  <Button
+                    key={item.page}
+                    href={hrefFor(item.page)}
+                    variant="text"
+                    color="primary"
+                    sx={{
+                      minWidth: 0,
+                      px: 1.4,
+                      borderRadius: 1,
+                      color: isActive ? "primary.main" : "text.secondary",
+                      fontWeight: isActive ? 800 : 700,
+                      backgroundColor: isActive ? "action.selected" : "transparent",
+                      "&:hover": {
+                        backgroundColor: isActive ? "action.selected" : "action.hover"
+                      }
+                    }}
+                  >
+                    {t(item.labelKey)}
+                  </Button>
+                );
+              })}
+            </Stack>
+
+            <Tooltip title={t("action.switchLanguage")}>
+              <IconButton
+                aria-label={t("action.switchLanguage")}
+                onClick={() => setLocale(locale === "ja" ? "en" : "ja")}
+                color="primary"
+              >
+                <LanguageRoundedIcon />
+              </IconButton>
+            </Tooltip>
+          </Toolbar>
+          <Stack
+            component="nav"
+            direction="row"
+            spacing={0.5}
+            aria-label="Primary navigation"
+            sx={{
+              display: { xs: "flex", md: "none" },
+              alignItems: "center",
+              overflowX: "auto",
+              pb: 1.25,
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none"
+              }
+            }}
+          >
+            {topNavItems.map((item) => {
+              const isActive = currentPage === item.page;
+
+              return (
+                <Button
+                  key={item.page}
+                  href={hrefFor(item.page)}
+                  variant="text"
+                  color="primary"
+                  sx={{
+                    minWidth: "max-content",
+                    px: 1.3,
+                    borderRadius: 1,
+                    color: isActive ? "primary.main" : "text.secondary",
+                    fontWeight: isActive ? 800 : 700,
+                    backgroundColor: isActive ? "action.selected" : "transparent",
+                    "&:hover": {
+                      backgroundColor: isActive ? "action.selected" : "action.hover"
+                    }
+                  }}
+                >
+                  {t(item.labelKey)}
+                </Button>
+              );
+            })}
+          </Stack>
+        </Container>
+      </AppBar>
+      <Drawer
+        id="site-navigation"
+        anchor="left"
+        open={isMenuOpen}
+        onClose={() => closeMenu(true)}
+        PaperProps={{
+          sx: {
+            width: 300,
+            maxWidth: "84vw",
+            borderTopRightRadius: 8,
+            borderBottomRightRadius: 8
+          }
+        }}
+      >
+        <Box sx={{ p: 2.5 }}>
+          <Link href="/" underline="none" color="text.primary" onClick={() => closeMenu(false)}>
+            <Typography variant="h4" component="p">
+              Takumi Tokunaga
+            </Typography>
+          </Link>
+        </Box>
+        <Divider />
+        <List component="nav" aria-label="Site navigation" sx={{ p: 1.5 }}>
+          {navItems.map((item) => (
+            <ListItemButton
+              key={item.page}
+              ref={item.page === "home" ? firstMenuItemRef : undefined}
+              component="a"
+              href={hrefFor(item.page)}
+              selected={currentPage === item.page}
+              onClick={() => closeMenu(false)}
+              sx={{ borderRadius: 1, mb: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: currentPage === item.page ? "primary.main" : "text.secondary" }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={t(item.labelKey)} />
+            </ListItemButton>
+          ))}
+        </List>
+      </Drawer>
+
+      <Box id="main-content" component="main" tabIndex={-1}>
+        {children}
+      </Box>
+
+      <Box
+        component="footer"
+        sx={{ borderTop: "1px solid", borderColor: "divider", py: 5, mt: 8, textAlign: "center" }}
+      >
+        <Container maxWidth="xl">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1.5}
+            alignItems="center"
+            justifyContent="center"
+            textAlign="center"
+          >
+            <Typography color="text.secondary">© {new Date().getFullYear()} Takumi Tokunaga</Typography>
+            <Button
+              href="https://github.com/ttokunaga-ja"
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`GitHub (${t("label.opensInNewTab")})`}
+              variant="text"
+              startIcon={<GitHubIcon />}
+              endIcon={<OpenInNewRoundedIcon />}
+            >
+              GitHub
+            </Button>
+          </Stack>
+        </Container>
+      </Box>
+    </Box>
+  );
+}
+
+function HomePage({ locale }: { locale: Locale }) {
+  const { t } = useTranslation();
+  const sections: Array<{
+    collection: Collection;
+    title: string;
+    lead: string;
+    href: string;
+    icon: React.ReactNode;
+  }> = [
+    {
+      collection: "research",
+      title: t("page.researchTitle"),
+      lead: t("page.researchLead"),
+      href: "/research/",
+      icon: <ScienceRoundedIcon />
+    },
+    {
+      collection: "projects",
+      title: t("page.projectsTitle"),
+      lead: t("page.projectsLead"),
+      href: "/projects/",
+      icon: <AccountTreeRoundedIcon />
+    },
+    {
+      collection: "experience",
+      title: t("page.experienceTitle"),
+      lead: t("page.experienceLead"),
+      href: "/experience/",
+      icon: <TimelineRoundedIcon />
+    }
+  ];
+
+  return (
+    <>
+      <Box
+        sx={{
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          backgroundColor: "background.paper"
+        }}
+      >
+        <Container maxWidth="xl" sx={{ py: { xs: 6, md: 8 } }}>
+          <Stack spacing={2.4} sx={{ maxWidth: 860 }}>
+            <Box>
+              <Typography variant="h1">{t("home.title")}</Typography>
+              <Typography variant="h3" component="p" color="text.secondary" sx={{ mt: 2, fontWeight: 520 }}>
+                {t("home.lead")}
+              </Typography>
+            </Box>
+          </Stack>
+        </Container>
+      </Box>
+
+      <Section title={t("home.contentTitle")}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
+            gap: 2.5
+          }}
+        >
+          {sections.map((section) => (
+            <HomeContentCard
+              key={section.collection}
+              title={section.title}
+              lead={section.lead}
+              href={section.href}
+              icon={section.icon}
+              latest={getLatestEntry(locale, section.collection)}
+            />
+          ))}
+        </Box>
+      </Section>
+    </>
+  );
+}
+
+function HomeContentCard({
+  title,
+  lead,
+  href,
+  icon,
+  latest
+}: {
+  title: string;
+  lead: string;
+  href: string;
+  icon: React.ReactNode;
+  latest?: PortfolioEntry;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Card variant="outlined" sx={{ height: "100%" }}>
+      <Stack spacing={2.2} sx={{ p: 2.5, height: "100%" }}>
+        <Stack direction="row" spacing={1.2} alignItems="center">
+          <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>{icon}</Box>
+          <Typography variant="h3">{title}</Typography>
+        </Stack>
+        <Typography color="text.secondary">{lead}</Typography>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="overline" color="primary" fontWeight={800}>
+            {t("label.latest")}
+          </Typography>
+          {latest ? (
+            <Box sx={{ mt: 0.7 }}>
+              <Typography fontWeight={800}>{latest.title}</Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                {latest.abstract}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography color="text.secondary" sx={{ mt: 0.7 }}>
+              {t("label.noContent")}
+            </Typography>
+          )}
+        </Box>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          <Button
+            href={latest ? hrefFor({ collection: latest.collection, slug: latest.slug }) : href}
+            variant={latest ? "contained" : "outlined"}
+            endIcon={<ArrowForwardRoundedIcon />}
+          >
+            {latest ? t("action.viewLatest") : t("action.viewIndex")}
+          </Button>
+          {latest && (
+            <Button href={href} variant="text">
+              {t("action.viewIndex")}
+            </Button>
+          )}
+        </Stack>
+      </Stack>
+    </Card>
+  );
+}
+
+function Section({
+  title,
+  lead,
+  children,
+  tone = "default",
+  align = "left"
+}: {
+  title: string;
+  lead?: string;
+  children: React.ReactNode;
+  tone?: "default" | "paper";
+  align?: "left" | "center";
+}) {
+  return (
+    <Box
+      component="section"
+      sx={{
+        py: { xs: 6, md: 8 },
+        backgroundColor: tone === "paper" ? "background.paper" : "background.default",
+        textAlign: align
+      }}
+    >
+      <Container maxWidth="xl">
+        <Box sx={{ maxWidth: 820, mb: 4, mx: align === "center" ? "auto" : 0, textAlign: align }}>
+          <Typography variant="h2">{title}</Typography>
+          {lead && (
+            <Typography color="text.secondary" sx={{ mt: 1.3, fontSize: "1.05rem" }}>
+              {lead}
+            </Typography>
+          )}
+        </Box>
+        {children}
+      </Container>
+    </Box>
+  );
+}
+
+function PageHead({
+  icon,
+  title,
+  lead,
+  align = "left"
+}: {
+  icon: React.ReactNode;
+  title: string;
+  lead: string;
+  align?: "left" | "center";
+}) {
+  return (
+    <Box sx={{ borderBottom: "1px solid", borderColor: "divider", backgroundColor: "background.paper" }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 6, md: 8 } }}>
+        <Stack
+          spacing={2.2}
+          sx={{
+            maxWidth: 840,
+            mx: align === "center" ? "auto" : 0,
+            alignItems: align === "center" ? "center" : "flex-start",
+            textAlign: align
+          }}
+        >
+          <Box
+            sx={{
+              width: 52,
+              height: 52,
+              display: "grid",
+              placeItems: "center",
+              borderRadius: 1.5,
+              backgroundColor: "primary.main",
+              color: "primary.contrastText"
+            }}
+          >
+            {icon}
+          </Box>
+          <Typography variant="h1" sx={{ fontSize: "clamp(2.75rem, 7vw, 5rem)" }}>
+            {title}
+          </Typography>
+          <Typography variant="h3" component="p" color="text.secondary" sx={{ fontWeight: 520 }}>
+            {lead}
+          </Typography>
+        </Stack>
+      </Container>
+    </Box>
+  );
+}
+
+function ListingPage({ locale, collection }: { locale: Locale; collection: Collection }) {
+  const { t } = useTranslation();
+  const entries = getEntries(locale, collection);
+  const title = collection === "research" ? t("page.researchTitle") : t("page.projectsTitle");
+  const lead = collection === "research" ? t("page.researchLead") : t("page.projectsLead");
+  const icon = collection === "research" ? <ScienceRoundedIcon /> : <AccountTreeRoundedIcon />;
+
+  return (
+    <>
+      <PageHead icon={icon} title={title} lead={lead} />
+      <Section title={title} lead={t("label.abstract")}>
+        <EntryGrid entries={entries} />
+      </Section>
+    </>
+  );
+}
+
+function EntryGrid({ entries }: { entries: PortfolioEntry[] }) {
+  const { t } = useTranslation();
+
+  if (entries.length === 0) {
+    return <EmptyState message={t("label.noContent")} />;
+  }
+
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" },
+        gap: 2.5
+      }}
+    >
+      {entries.map((entry) => (
+        <EntryCard key={`${entry.collection}-${entry.slug}`} entry={entry} />
+      ))}
+    </Box>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <Card variant="outlined">
+      <Box sx={{ p: 3 }}>
+        <Typography color="text.secondary">{message}</Typography>
+      </Box>
+    </Card>
+  );
+}
+
+function EntryCard({ entry }: { entry: PortfolioEntry }) {
+  const { t } = useTranslation();
+  const demoHref = entry.collection === "projects" ? getDemoHref(entry) : "";
+
+  return (
+    <Card variant="outlined" sx={{ height: "100%" }}>
+      <Stack spacing={2} sx={{ p: 2.5, height: "100%" }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="overline" color="primary" fontWeight={800}>
+            {entry.collection}
+          </Typography>
+        </Stack>
+        <Box>
+          <Typography variant="h3">{entry.title}</Typography>
+          {entry.subtitle && (
+            <Typography color="text.secondary" sx={{ mt: 0.7 }}>
+              {entry.subtitle}
+            </Typography>
+          )}
+        </Box>
+        <Typography color="text.secondary" sx={{ flex: 1 }}>
+          {entry.abstract}
+        </Typography>
+        <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+          {entry.tags.slice(0, 4).map((tag) => (
+            <Chip key={tag} label={tag} size="small" variant="outlined" />
+          ))}
+        </Stack>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+          {demoHref && (
+            <Button
+              href={demoHref}
+              target="_blank"
+              rel="noreferrer"
+              variant="contained"
+              endIcon={<OpenInNewRoundedIcon />}
+              aria-label={`${t("action.openDemo")} (${t("label.opensInNewTab")})`}
+            >
+              {t("action.openDemo")}
+            </Button>
+          )}
+          <Button
+            href={hrefFor({ collection: entry.collection, slug: entry.slug })}
+            endIcon={<ArrowForwardRoundedIcon />}
+          >
+            {t("action.readMore")}
+          </Button>
+        </Stack>
+      </Stack>
+    </Card>
+  );
+}
+
+function ExperiencePage({ locale }: { locale: Locale }) {
+  const { t } = useTranslation();
+  const entries = getEntries(locale, "experience");
+
+  return (
+    <>
+      <PageHead icon={<TimelineRoundedIcon />} title={t("page.experienceTitle")} lead={t("page.experienceLead")} />
+      <Section title={t("page.experienceTitle")} lead={t("label.organization")}>
+        <ExperienceTimeline entries={entries} />
+      </Section>
+    </>
+  );
+}
+
+function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
+  const { t } = useTranslation();
+
+  if (entries.length === 0) {
+    return <EmptyState message={t("label.noContent")} />;
+  }
+
+  const typeCounts: Record<ExperienceType, number> = {
+    education: 0,
+    work: 0
+  };
+
+  return (
+    <Box sx={{ maxWidth: 980 }}>
+      {entries.map((entry, index) => {
+        const experienceType = getExperienceType(entry);
+        const dotColor = getExperienceDotColor(experienceType, typeCounts[experienceType]);
+        typeCounts[experienceType] += 1;
+
+        return (
+          <Box
+            key={entry.slug}
+            sx={{
+              position: "relative",
+              display: "grid",
+              gridTemplateColumns: { xs: "72px 28px minmax(0, 1fr)", md: "112px 36px minmax(0, 1fr)" },
+              columnGap: { xs: 1.5, md: 2.5 }
+            }}
+          >
+            <Stack
+              spacing={0.2}
+              sx={{
+                alignItems: "flex-end",
+                pt: 0.4,
+                color: "text.secondary",
+                textAlign: "right"
+              }}
+            >
+              <Typography fontWeight={800} sx={{ fontSize: { xs: "0.72rem", md: "0.84rem" } }}>
+                {entry.startLabel || entry.startDate || entry.period || "-"}
+              </Typography>
+              <Typography aria-hidden="true" sx={{ lineHeight: 1 }}>
+                -
+              </Typography>
+              <Typography fontWeight={800} sx={{ fontSize: { xs: "0.72rem", md: "0.84rem" } }}>
+                {entry.endLabel || entry.endDate || t("label.present")}
+              </Typography>
+            </Stack>
+            <Box
+              aria-hidden="true"
+              sx={{
+                position: "relative",
+                display: "flex",
+                justifyContent: "center"
+              }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: index === entries.length - 1 ? "calc(100% - 28px)" : 0,
+                  width: 2,
+                  backgroundColor: "divider"
+                }}
+              />
+              <Box
+                sx={{
+                  position: "relative",
+                  zIndex: 1,
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "3px solid",
+                  borderColor: "background.default",
+                  backgroundColor: dotColor,
+                  mt: 0.6
+                }}
+              />
+            </Box>
+            <Card variant="outlined" sx={{ mb: 2.5 }}>
+              <CardActionArea href={hrefFor({ collection: "experience", slug: entry.slug })}>
+                <Box sx={{ p: { xs: 2.2, md: 3 } }}>
+                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between">
+                    <Box>
+                      <Typography variant="h3">{entry.organization || entry.title}</Typography>
+                      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                        {entry.role || entry.subtitle}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Typography color="text.secondary" sx={{ mt: 2 }}>
+                    {entry.abstract}
+                  </Typography>
+                  <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+                    {entry.tags.map((tag) => (
+                      <Chip key={tag} label={tag} size="small" variant="outlined" />
+                    ))}
+                  </Stack>
+                  <Button component="span" endIcon={<ArrowForwardRoundedIcon />} sx={{ mt: 1.5, px: 0 }}>
+                    {t("action.readMore")}
+                  </Button>
+                </Box>
+              </CardActionArea>
+            </Card>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+function SkillsPage() {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <PageHead icon={<CodeRoundedIcon />} title={t("page.skillsTitle")} lead={t("page.skillsLead")} />
+      <Section title={t("page.skillsTitle")} lead={t("page.skillsLead")}>
+        {skillGroups.length === 0 ? (
+          <EmptyState message={t("label.noContent")} />
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" },
+              gap: 2.5
+            }}
+          >
+            {skillGroups.map((group) => (
+              <Card key={group.title} variant="outlined">
+                <Box sx={{ p: 2.5 }}>
+                  <Typography variant="h3">{group.title}</Typography>
+                  <Stack direction="row" spacing={0.9} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+                    {group.items.map((item) => (
+                      <Chip key={item} label={item} variant="outlined" />
+                    ))}
+                  </Stack>
+                </Box>
+              </Card>
+            ))}
+          </Box>
+        )}
+      </Section>
+    </>
+  );
+}
+
+function ContactPage() {
+  const { t } = useTranslation();
+  const contacts = [
+    {
+      label: "GitHub",
+      href: "https://github.com/ttokunaga-ja",
+      value: "github.com/ttokunaga-ja",
+      icon: <GitHubIcon />
+    },
+    {
+      label: "Zenn",
+      href: "https://zenn.dev/t_tokunaga",
+      value: "zenn.dev/t_tokunaga",
+      icon: <LinkRoundedIcon />
+    },
+    {
+      label: "LinkedIn",
+      href: "https://www.linkedin.com/in/%E6%8B%93%E6%9C%AA-%E5%BE%B3%E6%B0%B8-725094354/",
+      value: "linkedin.com/in/拓未-徳永-725094354",
+      icon: <LinkedInIcon />
+    },
+    {
+      label: "Mail",
+      href: "mailto:ttokunaga.ja@gmail.com",
+      value: "ttokunaga.ja@gmail.com",
+      icon: <MailOutlineRoundedIcon />
+    }
+  ];
+
+  return (
+    <>
+      <PageHead
+        icon={<MailOutlineRoundedIcon />}
+        title={t("page.contactTitle")}
+        lead={t("page.contactLead")}
+        align="center"
+      />
+      <Section title={t("page.contactTitle")} lead={t("page.contactLead")} align="center">
+        <Box sx={{ maxWidth: 760, mx: "auto", textAlign: "center" }}>
+          <Stack spacing={1.5}>
+            {contacts.map((contact) => {
+              const isExternal = Boolean(contact.href?.startsWith("http"));
+              const content = (
+                <>
+                  <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>{contact.icon}</Box>
+                  <Box>
+                    <Typography fontWeight={800}>{contact.label}</Typography>
+                    <Typography color="text.secondary">{contact.value}</Typography>
+                  </Box>
+                </>
+              );
+
+              if (!contact.href) {
+                return (
+                  <Box
+                    key={contact.label}
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 1,
+                      px: 2,
+                      py: 2,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      backgroundColor: "background.paper",
+                      color: "text.primary",
+                      textAlign: "center"
+                    }}
+                  >
+                    {content}
+                  </Box>
+                );
+              }
+
+              return (
+                <Box
+                  key={contact.label}
+                  component="a"
+                  href={contact.href}
+                  target={isExternal ? "_blank" : undefined}
+                  rel={isExternal ? "noreferrer" : undefined}
+                  aria-label={isExternal ? `${contact.label} (${t("label.opensInNewTab")})` : undefined}
+                  sx={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1,
+                    px: 2,
+                    py: 2,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    backgroundColor: "background.paper",
+                    color: "text.primary",
+                    textAlign: "center",
+                    textDecoration: "none",
+                    "&:hover": {
+                      borderColor: "primary.main"
+                    }
+                  }}
+                >
+                  {content}
+                  {isExternal && <OpenInNewRoundedIcon sx={{ position: "absolute", top: 14, right: 14 }} />}
+                </Box>
+              );
+            })}
+          </Stack>
+        </Box>
+      </Section>
+    </>
+  );
+}
+
+function DetailPage({ locale, collection, slug }: { locale: Locale; collection: Collection; slug: string }) {
+  const { t } = useTranslation();
+  const entry = getEntry(locale, collection, slug);
+
+  if (!entry) {
+    return (
+      <Section title="Not Found" lead="The requested content does not exist.">
+        <Button href={`/${collection}/`} variant="contained">
+          Back
+        </Button>
+      </Section>
+    );
+  }
+
+  const demoHref = entry.collection === "projects" ? getDemoHref(entry) : "";
+  const visibleLinks = entry.links.filter((link) => {
+    return !["demo", "experience", "trial", "preview", "play"].includes(link.kind);
+  });
+
+  return (
+    <>
+      <Box sx={{ borderBottom: "1px solid", borderColor: "divider", backgroundColor: "background.paper" }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
+          <Stack spacing={2.2}>
+            <Chip label={collection} color="primary" sx={{ alignSelf: "flex-start" }} />
+            <Typography variant="h1" sx={{ fontSize: "clamp(2.6rem, 6.5vw, 5rem)" }}>
+              {entry.title}
+            </Typography>
+            {entry.subtitle && (
+              <Typography variant="h3" component="p" color="text.secondary" sx={{ fontWeight: 520 }}>
+                {entry.subtitle}
+              </Typography>
+            )}
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              {entry.organization && <Chip label={`${t("label.organization")}: ${entry.organization}`} />}
+              {entry.period && <Chip label={`${t("label.period")}: ${entry.period}`} />}
+            </Stack>
+          </Stack>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg" sx={{ py: { xs: 5, md: 7 } }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 280px" },
+            gap: { xs: 4, lg: 6 },
+            alignItems: "start"
+          }}
+        >
+          <MarkdownArticle html={entry.bodyHtml} />
+          <Box
+            component="aside"
+            sx={{
+              position: { lg: "sticky" },
+              top: { lg: 100 },
+              borderLeft: { lg: "1px solid" },
+              borderColor: "divider",
+              pl: { lg: 3 }
+            }}
+          >
+            {demoHref && (
+              <Button
+                href={demoHref}
+                target="_blank"
+                rel="noreferrer"
+                variant="contained"
+                fullWidth
+                endIcon={<OpenInNewRoundedIcon />}
+                aria-label={`${t("action.openDemo")} (${t("label.opensInNewTab")})`}
+                sx={{ mb: 3 }}
+              >
+                {t("action.openDemo")}
+              </Button>
+            )}
+            <Typography variant="h4" component="h2">
+              {t("label.tags")}
+            </Typography>
+            <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap" sx={{ mt: 1.5 }}>
+              {entry.tags.map((tag) => (
+                <Chip key={tag} label={tag} size="small" variant="outlined" />
+              ))}
+            </Stack>
+            {visibleLinks.length > 0 && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="h4" component="h2">
+                  {t("label.links")}
+                </Typography>
+                <Stack spacing={1} sx={{ mt: 1.5 }}>
+                  {visibleLinks.map((link) => (
+                    <Button
+                      key={`${link.label}-${link.url}`}
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      variant="outlined"
+                      endIcon={<OpenInNewRoundedIcon />}
+                      aria-label={`${link.label} (${t("label.opensInNewTab")})`}
+                    >
+                      {link.label}
+                    </Button>
+                  ))}
+                </Stack>
+              </>
+            )}
+          </Box>
+        </Box>
+      </Container>
+    </>
+  );
+}
+
+function MarkdownArticle({ html }: { html: string }) {
+  return (
+    <Box
+      className="markdown-article"
+      dangerouslySetInnerHTML={{ __html: html }}
+      sx={{
+        fontSize: "1.06rem",
+        lineHeight: 1.78,
+        color: "text.primary",
+        "& > *:first-of-type": {
+          mt: 0
+        },
+        "& h2": {
+          mt: 5,
+          mb: 1.5,
+          fontSize: "1.8rem",
+          lineHeight: 1.2
+        },
+        "& h3": {
+          mt: 3.5,
+          mb: 1,
+          fontSize: "1.25rem"
+        },
+        "& p": {
+          color: "text.secondary"
+        },
+        "& ul": {
+          pl: 3
+        },
+        "& li": {
+          mb: 0.7,
+          color: "text.secondary"
+        },
+        "& a": {
+          color: "primary.main",
+          fontWeight: 700
+        },
+        "& code": {
+          px: 0.6,
+          py: 0.2,
+          borderRadius: 1,
+          backgroundColor: "action.hover"
+        }
+      }}
+    />
+  );
+}

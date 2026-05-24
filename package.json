@@ -1,0 +1,51 @@
+{
+  "name": "portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.0.8",
+  "scripts": {
+    "dev": "pnpm build:content && vite --host 127.0.0.1",
+    "build": "pnpm build:content && pnpm build:client && pnpm build:ssr && node scripts/prerender.mjs && node scripts/build-sitemap.mjs",
+    "build:content": "node scripts/build-content.mjs",
+    "build:client": "vite build",
+    "build:ssr": "vite build --config vite.ssr.config.ts",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "pnpm build:content && tsc --noEmit",
+    "lint": "prettier --check . && eslint 'src/**/*.{ts,tsx}'",
+    "lint:a11y": "eslint 'src/**/*.{ts,tsx}'",
+    "test:a11y": "playwright test",
+    "a11y:lighthouse": "node scripts/accessibility/run-lighthouse.mjs",
+    "lighthouse": "pnpm a11y:lighthouse",
+    "quality": "pnpm lint && pnpm typecheck && pnpm build && pnpm test:a11y && pnpm a11y:lighthouse"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "6.5.0",
+    "@mui/material": "6.5.0",
+    "i18next": "^26.2.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-i18next": "^17.0.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@typescript-eslint/parser": "^8.59.4",
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "axe-core": "^4.11.0",
+    "chrome-launcher": "^1.2.1",
+    "eslint": "^9.0.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "gray-matter": "^4.0.3",
+    "lighthouse": "^13.0.1",
+    "marked": "^18.0.4",
+    "prettier": "^3.1.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.14",
+    "wrangler": "^4.50.0"
+  }
+}
