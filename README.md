@@ -25,10 +25,10 @@ pnpm quality
 
 `pnpm quality` runs formatting/a11y lint, typecheck, build, Playwright + axe-core, and Lighthouse accessibility checks.
 
-Set `PORTFOLIO_SITE_ORIGIN` during production builds to write absolute sitemap URLs. If it is not set, the build falls back to `https://portfolio.pages.dev`.
+Set `PORTFOLIO_SITE_ORIGIN` during production builds to write absolute sitemap URLs. If it is not set, the build falls back to `https://takumi-tokunaga.com`.
 
 ```bash
-PORTFOLIO_SITE_ORIGIN=https://example.com pnpm build
+PORTFOLIO_SITE_ORIGIN=https://takumi-tokunaga.com pnpm build
 ```
 
 ## Content
@@ -69,3 +69,24 @@ experienceType: "education"
 
 Experience frontmatter uses `startDate` and optional `endDate` as the source of truth. The build generates month-level labels and period text from those dates. If `endDate` is empty, the UI displays Present. If `endDate` is in the future at build time, the generated end label is marked as planned/expected.
 Set `experienceType` to `education` or `work` to control the timeline dot color.
+
+## Deploy
+
+Cloudflare Pages is used as a Direct Upload project. GitHub Actions builds `dist/` and uploads it with Wrangler; Cloudflare Git integration is not used.
+
+| Setting                  | Value                          |
+| ------------------------ | ------------------------------ |
+| Cloudflare Pages project | `takumi-tokunaga`              |
+| Deployment method        | Direct Upload                  |
+| GitHub workflow          | `.github/workflows/deploy.yml` |
+| Build output directory   | `dist`                         |
+| Production branch        | `main`                         |
+| Custom domain            | `takumi-tokunaga.com`          |
+| Production origin        | `https://takumi-tokunaga.com`  |
+
+GitHub repository secrets:
+
+| Secret                  | Purpose                                         |
+| ----------------------- | ----------------------------------------------- |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID                           |
+| `CLOUDFLARE_API_TOKEN`  | API token with Cloudflare Pages edit permission |

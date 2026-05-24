@@ -18,6 +18,12 @@ const paths = [
   "/404.html"
 ];
 
+const siteOrigin = process.env.PORTFOLIO_SITE_ORIGIN?.replace(/\/+$/, "");
+
+function expectedCanonical(path: string) {
+  return siteOrigin ? `${siteOrigin}${path}` : path;
+}
+
 test.describe("portfolio accessibility", () => {
   for (const path of paths) {
     test(`has no detectable a11y violations: ${path}`, async ({ page }) => {
@@ -51,7 +57,9 @@ test.describe("portfolio accessibility", () => {
     );
     expect(html).toContain('<meta property="og:title" content="立命館大学 | Takumi Tokunaga" />');
     expect(html).toContain('<meta property="og:type" content="article" />');
-    expect(html).toContain('<link rel="canonical" href="/experience/ritsumeikan-university/" />');
+    expect(html).toContain(
+      `<link rel="canonical" href="${expectedCanonical("/experience/ritsumeikan-university/")}" />`
+    );
     expect(html).toMatch(/<h1 class="[^"]*">立命館大学<\/h1>/);
     expect(html).not.toContain("AI systems, XR");
     expect(html).not.toContain("Knowledge Infrastructure");

@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 
 const root = process.cwd();
 const dist = join(root, "dist");
-const siteOrigin = (process.env.PORTFOLIO_SITE_ORIGIN ?? "https://portfolio.pages.dev").replace(/\/+$/, "");
+const siteOrigin = (process.env.PORTFOLIO_SITE_ORIGIN ?? "https://takumi-tokunaga.com").replace(/\/+$/, "");
 
 function escapeXml(value) {
   return value
