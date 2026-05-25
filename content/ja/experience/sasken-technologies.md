@@ -22,6 +22,10 @@ links:
 
 インド・バンガロールのオフィスで、車載向け画像認識モデルの改良業務に1か月間従事しました。
 
+![Sasken Technologiesのオフィス入口](sasken-technologies_entrance.png)
+
+![バンガロール滞在中の写真](sasken-technologies_travel.jpg)
+
 ## 主な内容
 
 - AI/MLエンジニアとして、車載向け画像認識モデルの改良業務に参加

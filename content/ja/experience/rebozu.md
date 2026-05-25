@@ -13,6 +13,8 @@ tags:
   - Sales
   - Delivery Service
   - Internship
+links:
+  - "[rebozu合同会社](https://rebozu.com/)"
 ---
 
 ## Abstract

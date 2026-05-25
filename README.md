@@ -53,6 +53,14 @@ links:
 
 Project pages show `demoUrl`, or a link whose label/kind is `demo` / `experience` / `trial` / `preview` / `play`, as the primary demo link. Link metadata can be written as Markdown links or as `{ label, url }` objects.
 
+Markdown body images are stored under `public/images/{collection}/{slug}/`, where `slug` is the Markdown filename without `.md`. Relative image paths in Markdown are rewritten to that folder at build time.
+
+```markdown
+![Screenshot](screenshot.webp)
+```
+
+YouTube URLs written as a standalone line in the Markdown body are converted at build time into privacy-enhanced `youtube-nocookie.com` embeds. YouTube links in frontmatter `links:` remain normal external links.
+
 Example experience frontmatter:
 
 ```yaml
@@ -68,7 +76,7 @@ experienceType: "education"
 ```
 
 Experience frontmatter uses `startDate` and optional `endDate` as the source of truth. The build generates month-level labels and period text from those dates. If `endDate` is empty, the UI displays Present. If `endDate` is in the future at build time, the generated end label is marked as planned/expected.
-Set `experienceType` to `education` or `work` to control the timeline dot color.
+Set `experienceType` to `education`, `work`, or `community` to control the timeline dot color.
 
 ## Deploy
 

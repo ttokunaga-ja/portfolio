@@ -4,7 +4,7 @@ export type Collection = "research" | "projects" | "experience";
 
 export type PrimaryPage = "home" | "research" | "projects" | "experience" | "skills" | "contact";
 
-export type ExperienceType = "education" | "work";
+export type ExperienceType = "education" | "work" | "community";
 
 export type PortfolioLink = {
   label: string;

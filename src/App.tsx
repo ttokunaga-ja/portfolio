@@ -63,12 +63,19 @@ const skillGroups: Array<{ title: string; items: string[] }> = [];
 
 const experienceDotColors: Record<ExperienceType, [string, string]> = {
   education: ["#1D4ED8", "#60A5FA"],
-  work: ["#0E6F6A", "#37B37E"]
+  work: ["#0E6F6A", "#37B37E"],
+  community: ["#7C3AED", "#A78BFA"]
 };
 
 function getExperienceType(entry: PortfolioEntry): ExperienceType {
-  if (entry.experienceType === "education" || entry.experienceType === "work") {
+  if (entry.experienceType === "education" || entry.experienceType === "work" || entry.experienceType === "community") {
     return entry.experienceType;
+  }
+
+  if (
+    entry.tags.some((tag) => /community|club|circle|student organization|robotics|lab|部活|部|団体|研究室/i.test(tag))
+  ) {
+    return "community";
   }
 
   return entry.tags.some((tag) => /university|college|school|academic|education/i.test(tag)) ? "education" : "work";
@@ -785,7 +792,8 @@ function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
 
   const typeCounts: Record<ExperienceType, number> = {
     education: 0,
-    work: 0
+    work: 0,
+    community: 0
   };
 
   return (
@@ -1190,6 +1198,39 @@ function MarkdownArticle({ html }: { html: string }) {
         "& a": {
           color: "primary.main",
           fontWeight: 700
+        },
+        "& img": {
+          display: "block",
+          width: "100%",
+          maxWidth: "100%",
+          height: "auto",
+          my: 3,
+          borderRadius: 1,
+          border: "1px solid",
+          borderColor: "divider",
+          backgroundColor: "background.paper"
+        },
+        "& .markdown-video": {
+          width: "100%",
+          aspectRatio: "16 / 9",
+          my: 3,
+          overflow: "hidden",
+          borderRadius: 1,
+          border: "1px solid",
+          borderColor: "divider",
+          backgroundColor: "common.black"
+        },
+        "& iframe": {
+          display: "block",
+          width: "100%",
+          maxWidth: "100%",
+          border: 0
+        },
+        "& .markdown-video iframe": {
+          height: "100%"
+        },
+        '& iframe[src*="youtube.com"], & iframe[src*="youtube-nocookie.com"]': {
+          aspectRatio: "16 / 9"
         },
         "& code": {
           px: 0.6,

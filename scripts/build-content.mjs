@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, posix, relative } from "node:path";
 import matter from "gray-matter";
 import { marked } from "marked";
 
@@ -14,6 +14,160 @@ marked.setOptions({
   gfm: true,
   breaks: false
 });
+
+function escapeHtmlAttribute(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function contentImageBase(collection, slug) {
+  return `/images/${collection}/${slug}/`;
+}
+
+function normalizeMarkdownImageHref(value, context) {
+  const href = String(value ?? "").trim();
+  const imageBase = contentImageBase(context.collection, context.slug);
+
+  if (!href) {
+    throw new Error(`${context.normalized} has an empty image path.`);
+  }
+
+  if (/^(?:https?:)?\/\//.test(href) || href.startsWith("data:")) {
+    throw new Error(`${context.normalized} uses ${href}. Store content images under public${imageBase}.`);
+  }
+
+  if (href.startsWith("/")) {
+    const normalizedHref = posix.normalize(href);
+    if (!normalizedHref.startsWith(imageBase)) {
+      throw new Error(`${context.normalized} image path must start with ${imageBase}.`);
+    }
+    return normalizedHref;
+  }
+
+  const relativeHref = posix.normalize(href.replace(/^\.\/+/, ""));
+  if (!relativeHref || relativeHref === "." || relativeHref === ".." || relativeHref.startsWith("../")) {
+    throw new Error(`${context.normalized} image path must stay inside public${imageBase}.`);
+  }
+
+  return `${imageBase}${relativeHref}`;
+}
+
+function createMarkdownRenderer(context) {
+  const renderer = new marked.Renderer();
+
+  renderer.image = (token) => {
+    const src = normalizeMarkdownImageHref(token.href, context);
+    const title = token.title ? ` title="${escapeHtmlAttribute(token.title)}"` : "";
+
+    return `<img src="${escapeHtmlAttribute(src)}" alt="${escapeHtmlAttribute(token.text)}"${title} loading="lazy" decoding="async">`;
+  };
+
+  return renderer;
+}
+
+function parseTimestampToSeconds(value) {
+  if (!value) return 0;
+
+  if (/^\d+$/.test(value)) {
+    return Number(value);
+  }
+
+  const matched = value.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s?)?$/);
+  if (!matched) return 0;
+
+  const [, hours = "0", minutes = "0", seconds = "0"] = matched;
+  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+}
+
+function toYouTubeEmbedUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return "";
+  }
+
+  const host = url.hostname.replace(/^www\./, "").toLowerCase();
+  const parts = url.pathname.split("/").filter(Boolean);
+  let videoId = "";
+
+  if (host === "youtu.be") {
+    videoId = parts[0] ?? "";
+  } else if (host === "youtube.com" || host === "youtube-nocookie.com" || host === "m.youtube.com") {
+    if (url.pathname === "/watch") {
+      videoId = url.searchParams.get("v") ?? "";
+    } else if (["embed", "shorts", "live"].includes(parts[0] ?? "")) {
+      videoId = parts[1] ?? "";
+    }
+  }
+
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+    return "";
+  }
+
+  const embedUrl = new URL(`https://www.youtube-nocookie.com/embed/${videoId}`);
+  const start = parseTimestampToSeconds(url.searchParams.get("start") ?? url.searchParams.get("t") ?? "");
+  if (start > 0) {
+    embedUrl.searchParams.set("start", String(start));
+  }
+
+  return embedUrl.toString();
+}
+
+function unwrapStandaloneUrl(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("<") && trimmed.endsWith(">")) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function createYouTubeEmbedHtml(embedUrl) {
+  return `<div class="markdown-video"><iframe src="${escapeHtmlAttribute(embedUrl)}" title="YouTube video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`;
+}
+
+function embedStandaloneYouTubeUrls(markdown) {
+  let inFence = false;
+
+  return markdown
+    .split(/\r?\n/)
+    .map((line) => {
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+        inFence = !inFence;
+        return line;
+      }
+
+      if (inFence || !trimmed) {
+        return line;
+      }
+
+      const embedUrl = toYouTubeEmbedUrl(unwrapStandaloneUrl(trimmed));
+      return embedUrl ? createYouTubeEmbedHtml(embedUrl) : line;
+    })
+    .join("\n");
+}
+
+async function validateMarkdownImages(html, context) {
+  const imageBase = contentImageBase(context.collection, context.slug);
+  const imageSources = [...html.matchAll(/<img\b[^>]*\bsrc=(["'])(.*?)\1/gi)].map((match) => match[2]);
+
+  await Promise.all(
+    imageSources.map(async (src) => {
+      if (!src.startsWith(imageBase)) {
+        throw new Error(`${context.normalized} image path must start with ${imageBase}.`);
+      }
+
+      await access(join(root, "public", src.slice(1))).catch(() => {
+        throw new Error(`${context.normalized} references missing image: public${src}`);
+      });
+    })
+  );
+}
 
 async function listMarkdownFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -111,8 +265,17 @@ function normalizeExperienceType(value, tags = []) {
   const normalized = normalizeLinkKind(value);
   if (["education", "academic", "school"].includes(normalized)) return "education";
   if (["work", "career", "employment"].includes(normalized)) return "work";
+  if (
+    ["community", "club", "circle", "student-organization", "student-org", "lab", "research-lab"].includes(normalized)
+  ) {
+    return "community";
+  }
 
   const tagText = tags.join(" ").toLowerCase();
+  if (/(community|club|circle|student organization|robotics|lab|部活|部|団体|研究室)/.test(tagText)) {
+    return "community";
+  }
+
   if (/(university|college|school|academic|education|高校|大学|学校|学歴)/.test(tagText)) {
     return "education";
   }
@@ -190,7 +353,11 @@ for (const file of files) {
   const parsed = matter(raw);
   const data = parsed.data;
   const slug = toSlug(file, collection);
-  const bodyHtml = await marked.parse(parsed.content);
+  const context = { collection, slug, normalized };
+  const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(parsed.content), {
+    renderer: createMarkdownRenderer(context)
+  });
+  await validateMarkdownImages(bodyHtml, context);
   const tags = normalizeArray(data.tags);
   const startDate = firstString(data.startDate);
   const endDate = firstString(data.endDate);

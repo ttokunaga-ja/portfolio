@@ -22,6 +22,10 @@ links:
 
 Worked for one month at the Bangalore, India office on improvements to automotive image recognition models.
 
+![Sasken Technologies office entrance](sasken-technologies_entrance.png)
+
+![Photo from the Bangalore internship stay](sasken-technologies_travel.jpg)
+
 ## Highlights
 
 - Joined as an AI/ML engineering intern for automotive image recognition work
