@@ -2,7 +2,6 @@
 title: "Sasken Technologies Limited"
 subtitle: "AI/ML Engineer Internship"
 abstract: "Worked for one month at the Bangalore, India office on improvements to automotive image recognition models."
-organization: "Sasken Technologies Limited"
 role: "AI/ML Engineer Intern"
 startDate: "2025-08-01"
 endDate: "2025-08-31"

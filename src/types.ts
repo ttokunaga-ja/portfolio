@@ -19,7 +19,6 @@ export type PortfolioEntry = {
   title: string;
   subtitle: string;
   abstract: string;
-  organization: string;
   role: string;
   period: string;
   startDate: string;

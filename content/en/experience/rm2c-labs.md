@@ -2,7 +2,6 @@
 title: "RM2C Labs"
 subtitle: "Research Lab Placement"
 abstract: "Joined RM2C Labs in July 2025 and work on research areas related to Reality Media and Mobile Computing."
-organization: "RM2C Labs"
 role: "Research Lab Placement"
 startDate: "2025-07-01"
 experienceType: "community"

@@ -2,7 +2,6 @@
 title: "RM2C Labs"
 subtitle: "研究室配属"
 abstract: "2025年7月からRM2C Labsに所属し、Reality MediaとMobile Computingに関わる研究領域に取り組んでいます。"
-organization: "RM2C Labs"
 role: "研究室配属"
 startDate: "2025-07-01"
 experienceType: "community"

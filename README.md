@@ -66,7 +66,6 @@ Example experience frontmatter:
 ```yaml
 ---
 title: "Institution"
-organization: "Institution"
 role: "Role"
 abstract: "Short abstract shown on the timeline."
 startDate: "2026-04-01"

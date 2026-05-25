@@ -2,7 +2,6 @@
 title: "Ritsumeikan University"
 subtitle: "College of Information Science and Engineering"
 abstract: "Study in the College of Information Science and Engineering at Ritsumeikan University, with expected graduation in March 2027."
-organization: "Ritsumeikan University"
 role: "College of Information Science and Engineering"
 startDate: "2023-04-01"
 endDate: "2027-03-31"

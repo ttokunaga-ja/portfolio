@@ -2,7 +2,6 @@
 title: "Proseeds Co., Ltd."
 subtitle: "Engineering Department Long-Term Internship"
 abstract: "Worked in the engineering department as a long-term intern on maintenance and new development for web services."
-organization: "Proseeds Co., Ltd."
 role: "Engineering Department Long-Term Intern"
 startDate: "2025-02-01"
 endDate: "2025-10-31"

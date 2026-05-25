@@ -2,7 +2,6 @@
 title: "香川県立丸亀高等学校"
 subtitle: "普通科"
 abstract: "香川県立丸亀高等学校 普通科に在籍し、2022年3月に卒業しました。"
-organization: "香川県立丸亀高等学校"
 role: "普通科"
 startDate: "2019-04-01"
 endDate: "2022-03-31"

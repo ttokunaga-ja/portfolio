@@ -2,7 +2,6 @@
 title: "Ri-one"
 subtitle: "ロボット開発団体"
 abstract: "立命館大学情報理工学部の公認プロジェクト団体であるRi-oneで、RoboCupに向けたロボット開発に取り組んでいます。"
-organization: "Ri-one"
 role: "ロボット開発団体"
 startDate: "2023-04-01"
 experienceType: "community"

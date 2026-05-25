@@ -2,7 +2,6 @@
 title: "Ri-one"
 subtitle: "Robotics Development Organization"
 abstract: "Participate in Ri-one, an official project organization of Ritsumeikan University's College of Information Science and Engineering, working on robotics development for RoboCup."
-organization: "Ri-one"
 role: "Robotics Development Organization"
 startDate: "2023-04-01"
 experienceType: "community"

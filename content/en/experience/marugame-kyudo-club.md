@@ -2,10 +2,9 @@
 title: "Marugame High School Kyudo Club"
 subtitle: "Club Activity"
 abstract: "Practiced kyudo at Kagawa Prefectural Marugame High School, learning shooting form, conduct, and etiquette through regular training."
-organization: "Kagawa Prefectural Marugame High School"
 role: "Kyudo Club"
-startDate: "2019-04-01"
-endDate: "2022-03-31"
+startDate: "2019-05-01"
+endDate: "2021-07-31"
 experienceType: "community"
 sortOrder: 61
 featured: false

@@ -48,7 +48,6 @@ export const resources = {
       label: {
         abstract: "Abstract",
         tags: "Tags",
-        organization: "Organization",
         period: "Period",
         present: "現在",
         role: "Role",
@@ -102,7 +101,6 @@ export const resources = {
       label: {
         abstract: "Abstract",
         tags: "Tags",
-        organization: "Organization",
         period: "Period",
         present: "Present",
         role: "Role",

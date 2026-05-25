@@ -2,7 +2,6 @@
 title: "rebozu合同会社"
 subtitle: "経営コンサルティング事業部 長期インターン"
 abstract: "経営コンサルティング事業部に所属し、飲食店向けのデリバリーサービス営業とコンサルティングを行っています。"
-organization: "rebozu合同会社"
 role: "経営コンサルティング事業部 長期インターン"
 startDate: "2025-10-01"
 experienceType: "work"

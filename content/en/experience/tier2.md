@@ -2,7 +2,6 @@
 title: "Tier2 LLC"
 subtitle: "Founder / Representative Member"
 abstract: "Founded Tier2 LLC and operate online secondhand-goods trading and software development as representative member."
-organization: "Tier2 LLC"
 role: "Representative Member"
 startDate: "2023-09-01"
 experienceType: "work"

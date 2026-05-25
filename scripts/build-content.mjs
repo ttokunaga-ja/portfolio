@@ -384,7 +384,6 @@ for (const file of files) {
     title: firstString(data.title),
     subtitle: firstString(data.subtitle),
     abstract: firstString(data.abstract),
-    organization: firstString(data.organization),
     role: firstString(data.role),
     period,
     startDate,

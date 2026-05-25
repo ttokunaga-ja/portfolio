@@ -776,7 +776,7 @@ function ExperiencePage({ locale }: { locale: Locale }) {
   return (
     <>
       <PageHead icon={<TimelineRoundedIcon />} title={t("page.experienceTitle")} lead={t("page.experienceLead")} />
-      <Section title={t("page.experienceTitle")} lead={t("label.organization")}>
+      <Section title={t("page.experienceTitle")}>
         <ExperienceTimeline entries={entries} />
       </Section>
     </>
@@ -868,7 +868,7 @@ function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
                 <Box sx={{ p: { xs: 2.2, md: 3 } }}>
                   <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between">
                     <Box>
-                      <Typography variant="h3">{entry.organization || entry.title}</Typography>
+                      <Typography variant="h3">{entry.title}</Typography>
                       <Typography color="text.secondary" sx={{ mt: 0.5 }}>
                         {entry.role || entry.subtitle}
                       </Typography>
@@ -1083,7 +1083,6 @@ function DetailPage({ locale, collection, slug }: { locale: Locale; collection: 
               </Typography>
             )}
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-              {entry.organization && <Chip label={`${t("label.organization")}: ${entry.organization}`} />}
               {entry.period && <Chip label={`${t("label.period")}: ${entry.period}`} />}
             </Stack>
           </Stack>
