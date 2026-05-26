@@ -427,7 +427,9 @@ function Layout({
             justifyContent="center"
             textAlign="center"
           >
-            <Typography color="text.secondary">© {new Date().getFullYear()} Takumi Tokunaga</Typography>
+            <Typography color="text.secondary" aria-label="Copyright Takumi Tokunaga">
+              ©
+            </Typography>
             <Button
               href="https://github.com/ttokunaga-ja"
               target="_blank"

@@ -1,3 +1,5 @@
+import { existsSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
 import { expect, test } from "@playwright/test";
 import axe from "axe-core";
 
@@ -7,44 +9,137 @@ declare global {
   }
 }
 
-const paths = [
-  "/",
-  "/research/",
-  "/projects/",
-  "/experience/",
-  "/experience/ritsumeikan-university/",
-  "/skills/",
-  "/contact/",
-  "/404.html"
-];
-
 const siteOrigin = process.env.PORTFOLIO_SITE_ORIGIN?.replace(/\/+$/, "");
 
 function expectedCanonical(path: string) {
   return siteOrigin ? `${siteOrigin}${path}` : path;
 }
 
-test.describe("portfolio accessibility", () => {
-  for (const path of paths) {
-    test(`has no detectable a11y violations: ${path}`, async ({ page }) => {
-      await page.goto(path);
-      await expect(page.locator("main")).toBeVisible();
-      await page.addScriptTag({ content: axe.source });
-      const results = await page.evaluate(async () => {
-        return await window.axe.run(document, {
-          runOnly: {
-            type: "tag",
-            values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"]
-          },
-          rules: {
-            "color-contrast": { enabled: true }
-          }
-        });
-      });
+function collectPrerenderedPaths() {
+  const distDir = join(process.cwd(), "dist");
+  const paths = new Set<string>();
 
-      expect(results.violations).toEqual([]);
-    });
+  if (!existsSync(distDir)) {
+    return ["/"];
   }
+
+  const visit = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = join(directory, entry.name);
+
+      if (entry.isDirectory()) {
+        visit(absolutePath);
+      }
+
+      if (entry.isFile() && entry.name === "index.html") {
+        const routePath = relative(distDir, directory).split(sep).join("/");
+        paths.add(routePath ? `/${routePath}/` : "/");
+      }
+    }
+  };
+
+  visit(distDir);
+  paths.add("/404.html");
+
+  return Array.from(paths).sort((left, right) => {
+    if (left === right) return 0;
+    if (left === "/") return -1;
+    if (right === "/") return 1;
+    return left.localeCompare(right);
+  });
+}
+
+const markdownDetailPathPattern = /^\/(research|projects|experience)\/[^/]+\/$/;
+
+test.describe("portfolio accessibility", () => {
+  test("all prerendered routes have no detectable a11y violations", async ({ page }) => {
+    test.setTimeout(90_000);
+
+    for (const path of collectPrerenderedPaths()) {
+      await test.step(path, async () => {
+        await page.goto(path);
+        await expect(page.locator("main")).toBeVisible();
+        await page.addScriptTag({ content: axe.source });
+        const results = await page.evaluate(async () => {
+          return await window.axe.run(document, {
+            runOnly: {
+              type: "tag",
+              values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa"]
+            },
+            rules: {
+              "color-contrast": { enabled: true }
+            }
+          });
+        });
+
+        expect(results.violations).toEqual([]);
+      });
+    }
+  });
+
+  test("markdown images expose alt text and load successfully", async ({ page }) => {
+    for (const path of collectPrerenderedPaths().filter((routePath) => markdownDetailPathPattern.test(routePath))) {
+      await test.step(path, async () => {
+        await page.goto(path);
+
+        const images = page.locator(".markdown-article img");
+        const imageCount = await images.count();
+        for (let index = 0; index < imageCount; index += 1) {
+          await images.nth(index).scrollIntoViewIfNeeded();
+        }
+        await page.waitForFunction(() =>
+          Array.from(document.querySelectorAll<HTMLImageElement>(".markdown-article img")).every(
+            (image) => !image.currentSrc || (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0)
+          )
+        );
+
+        const imageIssues = await page.locator(".markdown-article img").evaluateAll((images) =>
+          images
+            .map((image) => {
+              const htmlImage = image as HTMLImageElement;
+
+              return {
+                src: htmlImage.getAttribute("src") ?? "",
+                alt: htmlImage.getAttribute("alt") ?? "",
+                complete: htmlImage.complete,
+                naturalWidth: htmlImage.naturalWidth,
+                naturalHeight: htmlImage.naturalHeight
+              };
+            })
+            .filter(
+              (image) =>
+                image.src &&
+                (!image.alt.trim() || !image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0)
+            )
+        );
+
+        expect(imageIssues).toEqual([]);
+      });
+    }
+  });
+
+  test("core routes hydrate without mismatch warnings", async ({ page }) => {
+    const hydrationMessages: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (
+        (message.type() === "error" || message.type() === "warning") &&
+        /hydration|hydrated|did not match|server rendered/i.test(text)
+      ) {
+        hydrationMessages.push(text);
+      }
+    });
+    page.on("pageerror", (error) => hydrationMessages.push(error.message));
+
+    for (const path of ["/", "/experience/rione/", "/contact/"]) {
+      await test.step(path, async () => {
+        await page.goto(path);
+        await page.waitForLoadState("networkidle");
+      });
+    }
+
+    expect(hydrationMessages).toEqual([]);
+  });
 
   test("pre-rendered detail page exposes route-specific metadata before hydration", async ({ request }) => {
     const response = await request.get("/experience/ritsumeikan-university/");
