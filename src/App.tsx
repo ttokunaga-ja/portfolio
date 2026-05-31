@@ -182,7 +182,20 @@ function Layout({
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const menuButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const firstMenuItemRef = React.useRef<HTMLAnchorElement | null>(null);
+  const appBarRef = React.useRef<HTMLElement | null>(null);
+  const [appBarHeight, setAppBarHeight] = React.useState(0);
   const currentPage = route.kind === "page" ? route.page : route.collection;
+
+  React.useEffect(() => {
+    const el = appBarRef.current;
+    if (!el) return;
+
+    const update = () => setAppBarHeight(el.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     if (!isMenuOpen) return;
@@ -230,10 +243,12 @@ function Layout({
         {t("action.skipToContent")}
       </Box>
       <AppBar
+        ref={appBarRef}
         position="sticky"
         color="transparent"
         elevation={0}
         sx={{
+          zIndex: (theme) => theme.zIndex.drawer + 1,
           borderBottom: "1px solid",
           borderColor: "divider",
           backdropFilter: "blur(16px)",
@@ -262,20 +277,17 @@ function Layout({
               sx={{ display: "inline-flex", alignItems: "center", gap: 1.2, minHeight: 44, mr: "auto" }}
             >
               <Box
+                component="img"
+                src="/images/logo.png"
+                alt=""
                 aria-hidden="true"
                 sx={{
                   width: 34,
                   height: 34,
-                  display: "grid",
-                  placeItems: "center",
                   borderRadius: 1.5,
-                  backgroundColor: "primary.main",
-                  color: "primary.contrastText",
-                  fontWeight: 800
+                  objectFit: "contain"
                 }}
-              >
-                TT
-              </Box>
+              />
               <Typography component="span" fontWeight={800}>
                 Takumi Tokunaga
               </Typography>
@@ -378,10 +390,13 @@ function Layout({
           sx: {
             width: 300,
             maxWidth: "84vw",
+            top: appBarHeight,
+            height: appBarHeight ? `calc(100% - ${appBarHeight}px)` : "100%",
             borderTopRightRadius: 8,
             borderBottomRightRadius: 8
           }
         }}
+        sx={{ "& .MuiBackdrop-root": { top: appBarHeight } }}
       >
         <Box sx={{ p: 2.5 }}>
           <Link href="/" underline="none" color="text.primary" onClick={() => closeMenu(false)}>
