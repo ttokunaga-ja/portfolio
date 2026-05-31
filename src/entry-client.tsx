@@ -1,15 +1,14 @@
 import React from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import App from "./App";
-import { defaultLocale } from "./i18n";
-import { parseRoute } from "./routes";
+import { parsePath } from "./routes";
 
-const htmlLocale = document.documentElement.lang === "en" ? "en" : defaultLocale;
+const { locale, route } = parsePath(window.location.pathname);
 
 const root = document.getElementById("root")!;
 const app = (
   <React.StrictMode>
-    <App initialRoute={parseRoute(window.location.pathname)} initialLocale={htmlLocale} />
+    <App initialRoute={route} initialLocale={locale} />
   </React.StrictMode>
 );
 

@@ -30,23 +30,51 @@ async function collectIndexFiles(dir) {
 
 function routeForIndexFile(file) {
   const routeDir = relative(dist, file.replace(/index\.html$/, "")).replaceAll("\\", "/");
-  return routeDir ? `/${routeDir}` : "/";
+  // Keep the trailing slash so sitemap URLs match the canonical links exactly.
+  return routeDir ? `/${routeDir}/` : "/";
 }
 
-const routes = (await collectIndexFiles(dist)).map(routeForIndexFile).sort((a, b) => {
-  if (a === "/") return -1;
-  if (b === "/") return 1;
-  return a.localeCompare(b);
-});
+function enCounterpart(jaRoute) {
+  return jaRoute === "/" ? "/en/" : `/en${jaRoute}`;
+}
+
+const allRoutes = (await collectIndexFiles(dist)).map(routeForIndexFile);
+// Each prerendered page exists in both locales; build the sitemap from the
+// Japanese (default) routes and attach the English alternate to each pair.
+const baseRoutes = allRoutes
+  .filter((route) => route !== "/en" && !route.startsWith("/en/"))
+  .sort((a, b) => {
+    if (a === "/") return -1;
+    if (b === "/") return 1;
+    return a.localeCompare(b);
+  });
+
+function urlEntry(loc, jaRoute) {
+  const jaUrl = `${siteOrigin}${jaRoute}`;
+  const enUrl = `${siteOrigin}${enCounterpart(jaRoute)}`;
+  return [
+    "  <url>",
+    `    <loc>${escapeXml(loc)}</loc>`,
+    `    <xhtml:link rel="alternate" hreflang="ja" href="${escapeXml(jaUrl)}" />`,
+    `    <xhtml:link rel="alternate" hreflang="en" href="${escapeXml(enUrl)}" />`,
+    `    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(jaUrl)}" />`,
+    "  </url>"
+  ].join("\n");
+}
+
+const urls = baseRoutes.flatMap((jaRoute) => [
+  urlEntry(`${siteOrigin}${jaRoute}`, jaRoute),
+  urlEntry(`${siteOrigin}${enCounterpart(jaRoute)}`, jaRoute)
+]);
 
 const xml = [
   '<?xml version="1.0" encoding="UTF-8"?>',
-  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-  ...routes.map((route) => `  <url><loc>${escapeXml(`${siteOrigin}${route}`)}</loc></url>`),
+  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+  ...urls,
   "</urlset>",
   ""
 ].join("\n");
 
 await writeFile(join(dist, "sitemap.xml"), xml, "utf8");
 
-console.log(`[sitemap] dist/sitemap.xml (${routes.length} urls)`);
+console.log(`[sitemap] dist/sitemap.xml (${urls.length} urls)`);

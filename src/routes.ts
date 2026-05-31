@@ -1,12 +1,13 @@
 import { getEntry, getUniqueEntryPaths } from "./content";
-import { resources } from "./i18n";
+import { defaultLocale, resources } from "./i18n";
 import type { Collection, Locale, PrimaryPage, RouteState } from "./types";
 
 const primaryPages = new Set<PrimaryPage>(["home", "research", "projects", "experience", "skills", "contact"]);
 const collections = new Set<Collection>(["research", "projects", "experience"]);
 
-export function parseRoute(pathname: string): RouteState {
-  const segments = pathname.split("/").filter(Boolean);
+export const locales: Locale[] = ["ja", "en"];
+
+function routeFromSegments(segments: string[]): RouteState {
   if (segments.length === 0) return { kind: "page", page: "home" };
 
   const [first, second] = segments;
@@ -21,15 +22,40 @@ export function parseRoute(pathname: string): RouteState {
   return { kind: "page", page: "home" };
 }
 
-export function hrefFor(route: PrimaryPage | { collection: Collection; slug: string }) {
-  if (typeof route === "string") {
-    return route === "home" ? "/" : `/${route}/`;
+export function parsePath(pathname: string): { locale: Locale; route: RouteState } {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments[0] === "en") {
+    return { locale: "en", route: routeFromSegments(segments.slice(1)) };
   }
-  return `/${route.collection}/${route.slug}/`;
+  return { locale: defaultLocale, route: routeFromSegments(segments) };
 }
 
-export function getStaticPathsForPrerender(): string[] {
-  return [
+function localePrefix(locale: Locale): string {
+  return locale === defaultLocale ? "" : `/${locale}`;
+}
+
+export function hrefFor(
+  route: PrimaryPage | { collection: Collection; slug: string },
+  locale: Locale = defaultLocale
+): string {
+  const prefix = localePrefix(locale);
+  if (typeof route === "string") {
+    return route === "home" ? `${prefix}/` : `${prefix}/${route}/`;
+  }
+  return `${prefix}/${route.collection}/${route.slug}/`;
+}
+
+export function hrefForRoute(route: RouteState, locale: Locale = defaultLocale): string {
+  if (route.kind === "detail") {
+    return hrefFor({ collection: route.collection, slug: route.slug }, locale);
+  }
+  return hrefFor(route.page, locale);
+}
+
+export type PrerenderTarget = { path: string; basePath: string; locale: Locale };
+
+export function getStaticPathsForPrerender(): PrerenderTarget[] {
+  const basePaths = [
     "/",
     "/research/",
     "/projects/",
@@ -38,6 +64,14 @@ export function getStaticPathsForPrerender(): string[] {
     "/contact/",
     ...getUniqueEntryPaths().map((entry) => `/${entry.collection}/${entry.slug}/`)
   ];
+
+  return locales.flatMap((locale) =>
+    basePaths.map((basePath) => ({
+      basePath,
+      locale,
+      path: locale === defaultLocale ? basePath : `/${locale}${basePath}`
+    }))
+  );
 }
 
 export function getSeo(route: RouteState, locale: Locale) {

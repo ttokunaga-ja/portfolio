@@ -5,4 +5,5 @@ playwright-report
 test-results
 src/generated/content.generated.ts
 .wrangler
+.playwright-mcp
 .DS_Store

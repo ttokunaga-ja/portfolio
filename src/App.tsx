@@ -38,8 +38,8 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { getDemoHref, getEntries, getEntry, getLatestEntry } from "./content";
-import { setI18nLanguage } from "./i18n";
-import { getSeo, hrefFor } from "./routes";
+import { defaultLocale, setI18nLanguage } from "./i18n";
+import { getSeo, hrefFor, hrefForRoute } from "./routes";
 import { theme } from "./theme";
 import type { Collection, ExperienceType, Locale, PortfolioEntry, PrimaryPage, RouteState } from "./types";
 
@@ -47,6 +47,12 @@ type AppProps = {
   initialRoute: RouteState;
   initialLocale: Locale;
 };
+
+const LocaleContext = React.createContext<Locale>(defaultLocale);
+
+function useLocale(): Locale {
+  return React.useContext(LocaleContext);
+}
 
 const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
   { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
@@ -107,7 +113,7 @@ function setPropertyMeta(property: string, content: string) {
 }
 
 export default function App({ initialRoute, initialLocale }: AppProps) {
-  const [locale, setLocale] = React.useState<Locale>(initialLocale);
+  const locale = initialLocale;
 
   React.useEffect(() => {
     const seo = getSeo(initialRoute, locale);
@@ -138,9 +144,11 @@ export default function App({ initialRoute, initialLocale }: AppProps) {
           }
         }}
       />
-      <Layout locale={locale} setLocale={setLocale} route={initialRoute}>
-        <RouteSwitch route={initialRoute} locale={locale} />
-      </Layout>
+      <LocaleContext.Provider value={locale}>
+        <Layout locale={locale} route={initialRoute}>
+          <RouteSwitch route={initialRoute} locale={locale} />
+        </Layout>
+      </LocaleContext.Provider>
     </ThemeProvider>
   );
 }
@@ -167,17 +175,7 @@ function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
   }
 }
 
-function Layout({
-  children,
-  locale,
-  setLocale,
-  route
-}: {
-  children: React.ReactNode;
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  route: RouteState;
-}) {
+function Layout({ children, locale, route }: { children: React.ReactNode; locale: Locale; route: RouteState }) {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const menuButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -211,6 +209,16 @@ function Layout({
       window.setTimeout(() => menuButtonRef.current?.focus(), 0);
     }
   }, []);
+
+  const switchLocale = React.useCallback(
+    (next: Locale) => {
+      // Persist the explicit choice so the edge can honor it on future root visits.
+      document.cookie = `locale=${next}; path=/; max-age=31536000; samesite=lax; secure`;
+      // Locale lives in the URL; navigate to the prerendered page in the target language.
+      window.location.assign(hrefForRoute(route, next));
+    },
+    [route]
+  );
 
   return (
     <Box>
@@ -271,7 +279,7 @@ function Layout({
               </IconButton>
             </Tooltip>
             <Link
-              href="/"
+              href={hrefFor("home", locale)}
               underline="none"
               color="text.primary"
               sx={{ display: "inline-flex", alignItems: "center", gap: 1.2, minHeight: 44, mr: "auto" }}
@@ -306,7 +314,7 @@ function Layout({
                 return (
                   <Button
                     key={item.page}
-                    href={hrefFor(item.page)}
+                    href={hrefFor(item.page, locale)}
                     variant="text"
                     color="primary"
                     sx={{
@@ -330,7 +338,7 @@ function Layout({
             <Tooltip title={t("action.switchLanguage")}>
               <IconButton
                 aria-label={t("action.switchLanguage")}
-                onClick={() => setLocale(locale === "ja" ? "en" : "ja")}
+                onClick={() => switchLocale(locale === "ja" ? "en" : "ja")}
                 color="primary"
               >
                 <LanguageRoundedIcon />
@@ -359,7 +367,7 @@ function Layout({
               return (
                 <Button
                   key={item.page}
-                  href={hrefFor(item.page)}
+                  href={hrefFor(item.page, locale)}
                   variant="text"
                   color="primary"
                   sx={{
@@ -399,7 +407,7 @@ function Layout({
         sx={{ "& .MuiBackdrop-root": { top: appBarHeight } }}
       >
         <Box sx={{ p: 2.5 }}>
-          <Link href="/" underline="none" color="text.primary" onClick={() => closeMenu(false)}>
+          <Link href={hrefFor("home", locale)} underline="none" color="text.primary" onClick={() => closeMenu(false)}>
             <Typography variant="h4" component="p">
               Takumi Tokunaga
             </Typography>
@@ -412,7 +420,7 @@ function Layout({
               key={item.page}
               ref={item.page === "home" ? firstMenuItemRef : undefined}
               component="a"
-              href={hrefFor(item.page)}
+              href={hrefFor(item.page, locale)}
               selected={currentPage === item.page}
               onClick={() => closeMenu(false)}
               sx={{ borderRadius: 1, mb: 0.5 }}
@@ -476,21 +484,21 @@ function HomePage({ locale }: { locale: Locale }) {
       collection: "research",
       title: t("page.researchTitle"),
       lead: t("page.researchLead"),
-      href: "/research/",
+      href: hrefFor("research", locale),
       icon: <ScienceRoundedIcon />
     },
     {
       collection: "projects",
       title: t("page.projectsTitle"),
       lead: t("page.projectsLead"),
-      href: "/projects/",
+      href: hrefFor("projects", locale),
       icon: <AccountTreeRoundedIcon />
     },
     {
       collection: "experience",
       title: t("page.experienceTitle"),
       lead: t("page.experienceLead"),
-      href: "/experience/",
+      href: hrefFor("experience", locale),
       icon: <TimelineRoundedIcon />
     }
   ];
@@ -554,6 +562,7 @@ function HomeContentCard({
   latest?: PortfolioEntry;
 }) {
   const { t } = useTranslation();
+  const locale = useLocale();
 
   return (
     <Card variant="outlined" sx={{ height: "100%" }}>
@@ -582,7 +591,7 @@ function HomeContentCard({
         </Box>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
           <Button
-            href={latest ? hrefFor({ collection: latest.collection, slug: latest.slug }) : href}
+            href={latest ? hrefFor({ collection: latest.collection, slug: latest.slug }, locale) : href}
             variant={latest ? "contained" : "outlined"}
             endIcon={<ArrowForwardRoundedIcon />}
           >
@@ -735,6 +744,7 @@ function EmptyState({ message }: { message: string }) {
 
 function EntryCard({ entry }: { entry: PortfolioEntry }) {
   const { t } = useTranslation();
+  const locale = useLocale();
   const demoHref = entry.collection === "projects" ? getDemoHref(entry) : "";
 
   return (
@@ -775,7 +785,7 @@ function EntryCard({ entry }: { entry: PortfolioEntry }) {
             </Button>
           )}
           <Button
-            href={hrefFor({ collection: entry.collection, slug: entry.slug })}
+            href={hrefFor({ collection: entry.collection, slug: entry.slug }, locale)}
             endIcon={<ArrowForwardRoundedIcon />}
           >
             {t("action.readMore")}
@@ -801,6 +811,7 @@ function ExperiencePage({ locale }: { locale: Locale }) {
 }
 
 function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
+  const locale = useLocale();
   const { t } = useTranslation();
 
   if (entries.length === 0) {
@@ -881,7 +892,7 @@ function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
               />
             </Box>
             <Card variant="outlined" sx={{ mb: 2.5 }}>
-              <CardActionArea href={hrefFor({ collection: "experience", slug: entry.slug })}>
+              <CardActionArea href={hrefFor({ collection: "experience", slug: entry.slug }, locale)}>
                 <Box sx={{ p: { xs: 2.2, md: 3 } }}>
                   <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} justifyContent="space-between">
                     <Box>

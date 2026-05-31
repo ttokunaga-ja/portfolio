@@ -9,10 +9,10 @@ declare global {
   }
 }
 
-const siteOrigin = process.env.PORTFOLIO_SITE_ORIGIN?.replace(/\/+$/, "");
+const siteOrigin = (process.env.PORTFOLIO_SITE_ORIGIN ?? "https://takumi-tokunaga.com").replace(/\/+$/, "");
 
 function expectedCanonical(path: string) {
-  return siteOrigin ? `${siteOrigin}${path}` : path;
+  return `${siteOrigin}${path}`;
 }
 
 function collectPrerenderedPaths() {
