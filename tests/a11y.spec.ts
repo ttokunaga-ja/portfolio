@@ -165,8 +165,12 @@ test.describe("portfolio accessibility", () => {
 
     await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute("content", "light dark");
     await expect(page.locator('meta[name="theme-color"]')).toHaveCount(2);
-    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.svg");
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/images/logo.png");
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "立命館大学 | Takumi Tokunaga");
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+      "content",
+      "https://takumi-tokunaga.com/images/logo.png"
+    );
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary");
   });
 
