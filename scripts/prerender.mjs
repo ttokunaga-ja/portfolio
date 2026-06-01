@@ -79,6 +79,12 @@ function upsertAlternates(html, basePath) {
   return next.replace(/\n\s*<\/head>/i, `\n    ${tags}\n  </head>`);
 }
 
+function jsonLdScript(data) {
+  // Escape `<` so entry titles can never break out of the script element.
+  const json = JSON.stringify(data).replaceAll("<", "\\u003c");
+  return `<script type="application/ld+json">${json}</script>`;
+}
+
 function inject(shell, rendered) {
   if (!shell.includes('<div id="root"></div>')) {
     throw new Error("Prerender shell must contain an empty root placeholder");
@@ -94,13 +100,16 @@ function inject(shell, rendered) {
   html = upsertMetaByProperty(html, "og:title", rendered.seo.title);
   html = upsertMetaByProperty(html, "og:description", rendered.seo.description);
   html = upsertMetaByProperty(html, "og:locale", ogLocales[rendered.locale]);
+  html = upsertMetaByProperty(html, "og:url", canonicalFor(rendered.routePath));
+  html = upsertMetaByProperty(html, "og:site_name", "Takumi Tokunaga");
   html = upsertCanonical(html, rendered.routePath);
   html = upsertAlternates(html, rendered.basePath);
+  html = html.replace(/\n\s*<\/head>/i, `\n    ${jsonLdScript(rendered.jsonLd)}\n  </head>`);
   html = html.replace('<div id="root"></div>', `<div id="root">${rendered.html}</div>`);
   return html;
 }
 
-const { render, getStaticPathsForPrerender } = await import(pathToFileURL(serverEntry).href);
+const { render, getJsonLd, getStaticPathsForPrerender } = await import(pathToFileURL(serverEntry).href);
 const targets = getStaticPathsForPrerender();
 const templates = new Map();
 
@@ -116,6 +125,7 @@ for (const { path, basePath } of targets) {
   const rendered = render(path);
   rendered.routePath = path;
   rendered.basePath = basePath;
+  rendered.jsonLd = getJsonLd(rendered.route, rendered.locale, siteOrigin);
   const out = outputPathFor(path);
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, inject(shell, rendered), "utf8");

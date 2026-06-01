@@ -2,9 +2,9 @@ import React from "react";
 import { renderToString } from "react-dom/server";
 import App from "./App";
 import { setI18nLanguage } from "./i18n";
-import { getSeo, getStaticPathsForPrerender, parsePath } from "./routes";
+import { getJsonLd, getSeo, getStaticPathsForPrerender, parsePath } from "./routes";
 
-export { getStaticPathsForPrerender };
+export { getJsonLd, getStaticPathsForPrerender };
 
 export function render(pathname: string) {
   const { locale, route } = parsePath(pathname);

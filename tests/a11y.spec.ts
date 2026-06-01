@@ -169,9 +169,18 @@ test.describe("portfolio accessibility", () => {
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "立命館大学 | Takumi Tokunaga");
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
       "content",
-      "https://takumi-tokunaga.com/images/logo.png"
+      "https://takumi-tokunaga.com/images/og-image.png"
     );
-    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary");
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      expectedCanonical("/experience/ritsumeikan-university/")
+    );
+
+    const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+    const graph = JSON.parse(jsonLd ?? "{}")["@graph"] as Array<{ "@type": string }>;
+    expect(graph.some((node) => node["@type"] === "Person")).toBe(true);
+    expect(graph.some((node) => node["@type"] === "BreadcrumbList")).toBe(true);
   });
 
   test("skip link and drawer are keyboard accessible", async ({ page }) => {

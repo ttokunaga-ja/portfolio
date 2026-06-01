@@ -112,3 +112,71 @@ export function getSeo(route: RouteState, locale: Locale) {
     ogType: "website" as const
   };
 }
+
+const SAME_AS = [
+  "https://github.com/ttokunaga-ja",
+  "https://www.linkedin.com/in/%E6%8B%93%E6%9C%AA-%E5%BE%B3%E6%B0%B8-725094354/"
+];
+
+// Build the JSON-LD graph for a page: a shared Person node plus a WebSite node
+// on the home page and a BreadcrumbList everywhere else.
+export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
+  const t = resources[locale].translation;
+  const inLanguage = locale === "ja" ? "ja-JP" : "en-US";
+
+  const person = {
+    "@type": "Person",
+    "@id": `${origin}/#person`,
+    name: "Takumi Tokunaga",
+    url: `${origin}/`,
+    image: `${origin}/images/logo.png`,
+    sameAs: SAME_AS
+  };
+
+  if (route.kind === "page" && route.page === "home") {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        person,
+        {
+          "@type": "WebSite",
+          "@id": `${origin}/#website`,
+          url: `${origin}${hrefFor("home", locale)}`,
+          name: "Takumi Tokunaga Portfolio",
+          inLanguage,
+          publisher: { "@id": `${origin}/#person` }
+        }
+      ]
+    };
+  }
+
+  const crumbs: Array<{ name: string; url: string }> = [
+    { name: t.nav.home, url: `${origin}${hrefFor("home", locale)}` }
+  ];
+  if (route.kind === "detail") {
+    crumbs.push({ name: t.nav[route.collection], url: `${origin}${hrefFor(route.collection, locale)}` });
+    const entry = getEntry(locale, route.collection, route.slug);
+    crumbs.push({
+      name: entry ? entry.title : route.slug,
+      url: `${origin}${hrefFor({ collection: route.collection, slug: route.slug }, locale)}`
+    });
+  } else {
+    crumbs.push({ name: t.nav[route.page], url: `${origin}${hrefFor(route.page, locale)}` });
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      person,
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: crumbs.map((crumb, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: crumb.name,
+          item: crumb.url
+        }))
+      }
+    ]
+  };
+}
