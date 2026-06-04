@@ -3,7 +3,6 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import GitHubIcon from "@mui/icons-material/GitHub";
-import GoogleIcon from "@mui/icons-material/Google";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
@@ -1102,7 +1101,7 @@ function ContactPage() {
 function ApiAccessPanel() {
   const { t } = useTranslation();
   const [authUser, setAuthUser] = React.useState<FirebaseUser | null>(null);
-  const [busyAction, setBusyAction] = React.useState<"google" | "key" | null>(null);
+  const [isBusy, setIsBusy] = React.useState(false);
   const [toast, setToast] = React.useState<{
     message: string;
     severity: "info" | "success" | "warning" | "error";
@@ -1139,28 +1138,17 @@ function ApiAccessPanel() {
     return t("apiAccess.operationFailed");
   };
 
-  const handleGoogleSignIn = async () => {
-    setBusyAction("google");
-    try {
-      const user = await signInToTrialAuthWithGoogle();
-      setAuthUser(user);
-      showToast(t("apiAccess.signInSuccess"), "success");
-    } catch (error) {
-      showToast(getFriendlyError(error), "error");
-    } finally {
-      setBusyAction(null);
-    }
-  };
-
   const handleIssueAPIKey = async () => {
-    if (!authUser) {
-      showToast(t("apiAccess.signInRequired"), "warning");
-      return;
-    }
-
-    setBusyAction("key");
+    setIsBusy(true);
     try {
-      const issued = await issueTrialAPIKey(authUser);
+      let user = authUser;
+
+      if (!user) {
+        user = await signInToTrialAuthWithGoogle();
+        setAuthUser(user);
+      }
+
+      const issued = await issueTrialAPIKey(user);
       showToast(
         `${t("apiAccess.apiKeyIssued")} ${creditSummary(issued.dailyCredits)}`.trim(),
         "success",
@@ -1169,7 +1157,7 @@ function ApiAccessPanel() {
     } catch (error) {
       showToast(getFriendlyError(error), "error");
     } finally {
-      setBusyAction(null);
+      setIsBusy(false);
     }
   };
 
@@ -1187,8 +1175,8 @@ function ApiAccessPanel() {
         id="api-access"
         component="button"
         type="button"
-        disabled={busyAction !== null}
-        aria-busy={busyAction === "key"}
+        disabled={isBusy}
+        aria-busy={isBusy}
         onClick={handleIssueAPIKey}
         sx={{
           display: "flex",
@@ -1219,44 +1207,7 @@ function ApiAccessPanel() {
         <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>
           <VpnKeyRoundedIcon />
         </Box>
-        <Typography fontWeight={800}>{t("action.getApiKey")}</Typography>
-      </Box>
-      <Box
-        component="button"
-        type="button"
-        disabled={busyAction !== null}
-        aria-busy={busyAction === "google"}
-        onClick={handleGoogleSignIn}
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          width: "100%",
-          px: 2,
-          py: 2,
-          border: "1px solid",
-          borderColor: "divider",
-          borderRadius: 1,
-          backgroundColor: "background.paper",
-          color: "text.primary",
-          cursor: "pointer",
-          font: "inherit",
-          textAlign: "center",
-          "&:hover": {
-            borderColor: "primary.main"
-          },
-          "&:disabled": {
-            cursor: "not-allowed",
-            opacity: 0.72
-          }
-        }}
-      >
-        <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>
-          <GoogleIcon />
-        </Box>
-        <Typography fontWeight={800}>{t("action.continueWithGoogle")}</Typography>
+        <Typography fontWeight={800}>{t("action.getApiKeyWithGoogle")}</Typography>
       </Box>
       <Snackbar
         open={Boolean(toast)}

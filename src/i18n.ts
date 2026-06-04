@@ -29,7 +29,8 @@ export const resources = {
         github: "GitHubを開く",
         copy: "コピー",
         continueWithGoogle: "Googleで続行",
-        getApiKey: "Get API Key"
+        getApiKey: "Get API Key",
+        getApiKeyWithGoogle: "Get API Key(Googleで続行)"
       },
       apiAccess: {
         title: "API Access",
@@ -99,7 +100,8 @@ export const resources = {
         github: "Open GitHub",
         copy: "Copy",
         continueWithGoogle: "Continue with Google",
-        getApiKey: "Get API Key"
+        getApiKey: "Get API Key",
+        getApiKeyWithGoogle: "Get API Key(Continue with Google)"
       },
       apiAccess: {
         title: "API Access",
