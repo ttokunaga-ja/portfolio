@@ -45,7 +45,8 @@ export const resources = {
         apiKeyCopied: "APIキーをコピーしました。",
         creditSummary: "本日の残りクレジット: {{remaining}} / {{daily}}",
         operationFailed: "処理に失敗しました。時間をおいて再度お試しください。",
-        operationFailedWithCode: "処理に失敗しました。エラーコード: {{code}}"
+        operationFailedWithCode: "処理に失敗しました。エラーコード: {{code}}",
+        operationFailedWithDetails: "処理に失敗しました。{{code}}: {{message}}"
       },
       home: {
         title: "Takumi Tokunaga",
@@ -119,7 +120,8 @@ export const resources = {
         apiKeyCopied: "API key copied.",
         creditSummary: "Remaining credits today: {{remaining}} / {{daily}}",
         operationFailed: "The request failed. Try again later.",
-        operationFailedWithCode: "The request failed. Error code: {{code}}"
+        operationFailedWithCode: "The request failed. Error code: {{code}}",
+        operationFailedWithDetails: "The request failed. {{code}}: {{message}}"
       },
       home: {
         title: "Takumi Tokunaga",
