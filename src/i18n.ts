@@ -26,7 +26,22 @@ export const resources = {
         openMenu: "メニューを開く",
         skipToContent: "本文へ移動",
         switchLanguage: "Switch to English",
-        github: "GitHubを開く"
+        github: "GitHubを開く",
+        copy: "コピー",
+        continueWithGoogle: "Googleで続行",
+        getApiKey: "Get API Key"
+      },
+      apiAccess: {
+        title: "API Access",
+        lead: "個人開発サービス用のAPIキーを管理します。",
+        signInRequired: "APIキーの取得には、先に Google で続行してください。",
+        signInSuccess: "Googleログインが完了しました。",
+        signInCanceled: "Googleログインをキャンセルしました。",
+        authUnavailable: "この環境ではGoogleログインを開始できません。",
+        apiKeyIssued: "APIキーを発行しました。表示されるのは今回だけです。",
+        apiKeyCopied: "APIキーをコピーしました。",
+        creditSummary: "本日の残りクレジット: {{remaining}} / {{daily}}",
+        operationFailed: "処理に失敗しました。時間をおいて再度お試しください。"
       },
       home: {
         title: "Takumi Tokunaga",
@@ -81,7 +96,22 @@ export const resources = {
         openMenu: "Open Menu",
         skipToContent: "Skip to content",
         switchLanguage: "日本語に切り替え",
-        github: "Open GitHub"
+        github: "Open GitHub",
+        copy: "Copy",
+        continueWithGoogle: "Continue with Google",
+        getApiKey: "Get API Key"
+      },
+      apiAccess: {
+        title: "API Access",
+        lead: "Manage an API key for personal backend services.",
+        signInRequired: "Continue with Google before requesting an API key.",
+        signInSuccess: "Google sign-in is complete.",
+        signInCanceled: "Google sign-in was canceled.",
+        authUnavailable: "Google sign-in is not available in this environment.",
+        apiKeyIssued: "API key issued. It is shown only this time.",
+        apiKeyCopied: "API key copied.",
+        creditSummary: "Remaining credits today: {{remaining}} / {{daily}}",
+        operationFailed: "The request failed. Try again later."
       },
       home: {
         title: "Takumi Tokunaga",

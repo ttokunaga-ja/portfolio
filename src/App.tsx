@@ -1,17 +1,20 @@
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import GitHubIcon from "@mui/icons-material/GitHub";
+import GoogleIcon from "@mui/icons-material/Google";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
-import LinkRoundedIcon from "@mui/icons-material/LinkRounded";
 import MailOutlineRoundedIcon from "@mui/icons-material/MailOutlineRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
+import VpnKeyRoundedIcon from "@mui/icons-material/VpnKeyRounded";
 import {
+  Alert,
   AppBar,
   Box,
   Button,
@@ -29,7 +32,9 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Snackbar,
   Stack,
+  SvgIcon,
   ThemeProvider,
   Toolbar,
   Tooltip,
@@ -41,7 +46,15 @@ import { getDemoHref, getEntries, getEntry, getLatestEntry } from "./content";
 import { defaultLocale, setI18nLanguage } from "./i18n";
 import { getSeo, hrefFor, hrefForRoute } from "./routes";
 import { theme } from "./theme";
+import {
+  issueTrialAPIKey,
+  signInToTrialAuthWithGoogle,
+  subscribeTrialAuthState,
+  TrialAuthClientError,
+  type DailyCredits
+} from "./trialAuthClient";
 import type { Collection, ExperienceType, Locale, PortfolioEntry, PrimaryPage, RouteState } from "./types";
+import type { User as FirebaseUser } from "firebase/auth";
 
 type AppProps = {
   initialRoute: RouteState;
@@ -66,6 +79,15 @@ const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNo
 const topNavItems = navItems.filter((item) => item.page !== "home");
 
 const skillGroups: Array<{ title: string; items: string[] }> = [];
+
+function ZennIcon() {
+  return (
+    <SvgIcon viewBox="0 0 88.3 88.3">
+      <path d="M3.9,83.3h17c0.9,0,1.7-0.5,2.2-1.2L69.9,5.2c0.6-1-0.1-2.2-1.3-2.2H52.5c-0.8,0-1.5,0.4-1.9,1.1L3.1,81.9 C2.8,82.5,3.2,83.3,3.9,83.3z" />
+      <path d="M62.5,82.1l22.1-35.5c0.7-1.1-0.1-2.5-1.4-2.5h-16c-0.6,0-1.2,0.3-1.5,0.8L43,81.2c-0.6,0.9,0.1,2.1,1.2,2.1 h16.3C61.3,83.3,62.1,82.9,62.5,82.1z" />
+    </SvgIcon>
+  );
+}
 
 const experienceDotColors: Record<ExperienceType, [string, string]> = {
   education: ["#1D4ED8", "#60A5FA"],
@@ -202,6 +224,11 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
       firstMenuItemRef.current?.focus();
     });
   }, [isMenuOpen]);
+
+  React.useEffect(() => {
+    const activeMobileNavItem = document.querySelector<HTMLElement>("[data-mobile-nav-active='true']");
+    activeMobileNavItem?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [currentPage]);
 
   const closeMenu = React.useCallback((restoreFocus = false) => {
     setIsMenuOpen(false);
@@ -370,6 +397,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
                   href={hrefFor(item.page, locale)}
                   variant="text"
                   color="primary"
+                  data-mobile-nav-active={isActive ? "true" : undefined}
                   sx={{
                     minWidth: "max-content",
                     px: 1.3,
@@ -965,25 +993,21 @@ function ContactPage() {
     {
       label: "GitHub",
       href: "https://github.com/ttokunaga-ja",
-      value: "github.com/ttokunaga-ja",
       icon: <GitHubIcon />
     },
     {
       label: "Zenn",
       href: "https://zenn.dev/t_tokunaga",
-      value: "zenn.dev/t_tokunaga",
-      icon: <LinkRoundedIcon />
+      icon: <ZennIcon />
     },
     {
       label: "LinkedIn",
       href: "https://www.linkedin.com/in/%E6%8B%93%E6%9C%AA-%E5%BE%B3%E6%B0%B8-725094354/",
-      value: "linkedin.com/in/拓未-徳永-725094354",
       icon: <LinkedInIcon />
     },
     {
       label: "Mail",
       href: "mailto:ttokunaga.ja@gmail.com",
-      value: "ttokunaga.ja@gmail.com",
       icon: <MailOutlineRoundedIcon />
     }
   ];
@@ -999,15 +1023,13 @@ function ContactPage() {
       <Section title={t("page.contactTitle")} lead={t("page.contactLead")} align="center">
         <Box sx={{ maxWidth: 760, mx: "auto", textAlign: "center" }}>
           <Stack spacing={1.5}>
+            <ApiAccessPanel />
             {contacts.map((contact) => {
               const isExternal = Boolean(contact.href?.startsWith("http"));
               const content = (
                 <>
                   <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>{contact.icon}</Box>
-                  <Box>
-                    <Typography fontWeight={800}>{contact.label}</Typography>
-                    <Typography color="text.secondary">{contact.value}</Typography>
-                  </Box>
+                  <Typography fontWeight={800}>{contact.label}</Typography>
                 </>
               );
 
@@ -1073,6 +1095,209 @@ function ContactPage() {
           </Stack>
         </Box>
       </Section>
+    </>
+  );
+}
+
+function ApiAccessPanel() {
+  const { t } = useTranslation();
+  const [authUser, setAuthUser] = React.useState<FirebaseUser | null>(null);
+  const [busyAction, setBusyAction] = React.useState<"google" | "key" | null>(null);
+  const [toast, setToast] = React.useState<{
+    message: string;
+    severity: "info" | "success" | "warning" | "error";
+    apiKey?: string;
+  } | null>(null);
+
+  React.useEffect(() => subscribeTrialAuthState(setAuthUser), []);
+
+  const showToast = (message: string, severity: "info" | "success" | "warning" | "error", apiKey?: string) => {
+    setToast({ message, severity, apiKey });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
+
+  const creditSummary = (credits?: DailyCredits) => {
+    if (!credits) {
+      return "";
+    }
+    return t("apiAccess.creditSummary", {
+      remaining: credits.remainingCredits,
+      daily: credits.dailyLimit
+    });
+  };
+
+  const getFriendlyError = (error: unknown) => {
+    if (error instanceof TrialAuthClientError && (error.code === "BROWSER_ONLY" || error.code === "CONFIG_MISSING")) {
+      return t("apiAccess.authUnavailable");
+    }
+    if (error instanceof Error && "code" in error && error.code === "auth/popup-closed-by-user") {
+      return t("apiAccess.signInCanceled");
+    }
+    return t("apiAccess.operationFailed");
+  };
+
+  const handleGoogleSignIn = async () => {
+    setBusyAction("google");
+    try {
+      const user = await signInToTrialAuthWithGoogle();
+      setAuthUser(user);
+      showToast(t("apiAccess.signInSuccess"), "success");
+    } catch (error) {
+      showToast(getFriendlyError(error), "error");
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleIssueAPIKey = async () => {
+    if (!authUser) {
+      showToast(t("apiAccess.signInRequired"), "warning");
+      return;
+    }
+
+    setBusyAction("key");
+    try {
+      const issued = await issueTrialAPIKey(authUser);
+      showToast(
+        `${t("apiAccess.apiKeyIssued")} ${creditSummary(issued.dailyCredits)}`.trim(),
+        "success",
+        issued.apiKey ?? undefined
+      );
+    } catch (error) {
+      showToast(getFriendlyError(error), "error");
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const copyAPIKey = async () => {
+    if (!toast?.apiKey) {
+      return;
+    }
+    await navigator.clipboard.writeText(toast.apiKey);
+    showToast(t("apiAccess.apiKeyCopied"), "success");
+  };
+
+  return (
+    <>
+      <Box
+        id="api-access"
+        component="button"
+        type="button"
+        disabled={busyAction !== null}
+        aria-busy={busyAction === "key"}
+        onClick={handleIssueAPIKey}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1,
+          width: "100%",
+          px: 2,
+          py: 2,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          backgroundColor: "background.paper",
+          color: "text.primary",
+          cursor: "pointer",
+          font: "inherit",
+          textAlign: "center",
+          "&:hover": {
+            borderColor: "primary.main"
+          },
+          "&:disabled": {
+            cursor: "not-allowed",
+            opacity: 0.72
+          }
+        }}
+      >
+        <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>
+          <VpnKeyRoundedIcon />
+        </Box>
+        <Typography fontWeight={800}>{t("action.getApiKey")}</Typography>
+      </Box>
+      <Box
+        component="button"
+        type="button"
+        disabled={busyAction !== null}
+        aria-busy={busyAction === "google"}
+        onClick={handleGoogleSignIn}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 1,
+          width: "100%",
+          px: 2,
+          py: 2,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          backgroundColor: "background.paper",
+          color: "text.primary",
+          cursor: "pointer",
+          font: "inherit",
+          textAlign: "center",
+          "&:hover": {
+            borderColor: "primary.main"
+          },
+          "&:disabled": {
+            cursor: "not-allowed",
+            opacity: 0.72
+          }
+        }}
+      >
+        <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>
+          <GoogleIcon />
+        </Box>
+        <Typography fontWeight={800}>{t("action.continueWithGoogle")}</Typography>
+      </Box>
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={toast?.apiKey ? null : 5200}
+        onClose={closeToast}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert onClose={closeToast} severity={toast?.severity ?? "info"} variant="filled" sx={{ width: "100%" }}>
+          <Stack spacing={1}>
+            <Typography variant="body2">{toast?.message}</Typography>
+            {toast?.apiKey && (
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
+                <Typography
+                  component="code"
+                  variant="body2"
+                  sx={{
+                    px: 1,
+                    py: 0.75,
+                    border: "1px solid",
+                    borderColor: "currentColor",
+                    borderRadius: 1,
+                    color: "inherit",
+                    wordBreak: "break-all"
+                  }}
+                >
+                  {toast.apiKey}
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<ContentCopyRoundedIcon />}
+                  onClick={copyAPIKey}
+                  sx={{ borderColor: "currentColor", color: "inherit" }}
+                >
+                  {t("action.copy")}
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+        </Alert>
+      </Snackbar>
     </>
   );
 }
