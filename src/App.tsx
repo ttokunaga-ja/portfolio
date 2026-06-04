@@ -1146,7 +1146,11 @@ function ApiAccessPanel() {
     if (error instanceof Error && "code" in error && error.code === "auth/popup-blocked") {
       return t("apiAccess.popupBlocked");
     }
-    return t("apiAccess.operationFailed");
+    const errorCode =
+      typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+        ? error.code
+        : "";
+    return errorCode ? t("apiAccess.operationFailedWithCode", { code: errorCode }) : t("apiAccess.operationFailed");
   };
 
   const handleIssueAPIKey = async () => {
