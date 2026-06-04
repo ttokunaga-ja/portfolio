@@ -29,8 +29,7 @@ export const resources = {
         github: "GitHubを開く",
         copy: "コピー",
         continueWithGoogle: "Googleで続行",
-        getApiKey: "Get API Key",
-        getApiKeyWithGoogle: "Get API Key(Googleで続行)"
+        getApiKey: "APIキーを取得"
       },
       apiAccess: {
         title: "API Access",
@@ -40,7 +39,7 @@ export const resources = {
         signInCanceled: "Googleログインをキャンセルしました。",
         popupBlocked: "Googleログインのポップアップがブロックされました。もう一度お試しください。",
         authUnavailable: "この環境ではGoogleログインを開始できません。",
-        apiKeyIssued: "APIキーを発行しました。表示されるのは今回だけです。",
+        apiKeyIssued: "APIキーを発行しました。",
         apiKeyCopied: "APIキーをコピーしました。",
         creditSummary: "本日の残りクレジット: {{remaining}} / {{daily}}",
         operationFailed: "処理に失敗しました。時間をおいて再度お試しください。",
@@ -103,8 +102,7 @@ export const resources = {
         github: "Open GitHub",
         copy: "Copy",
         continueWithGoogle: "Continue with Google",
-        getApiKey: "Get API Key",
-        getApiKeyWithGoogle: "Get API Key(Continue with Google)"
+        getApiKey: "Get API Key"
       },
       apiAccess: {
         title: "API Access",
@@ -114,7 +112,7 @@ export const resources = {
         signInCanceled: "Google sign-in was canceled.",
         popupBlocked: "The Google sign-in popup was blocked. Try again.",
         authUnavailable: "Google sign-in is not available in this environment.",
-        apiKeyIssued: "API key issued. It is shown only this time.",
+        apiKeyIssued: "API key issued.",
         apiKeyCopied: "API key copied.",
         creditSummary: "Remaining credits today: {{remaining}} / {{daily}}",
         operationFailed: "The request failed. Try again later.",

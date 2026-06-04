@@ -3,6 +3,7 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import GitHubIcon from "@mui/icons-material/GitHub";
+import GoogleIcon from "@mui/icons-material/Google";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
@@ -11,7 +12,6 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
-import VpnKeyRoundedIcon from "@mui/icons-material/VpnKeyRounded";
 import {
   Alert,
   AppBar,
@@ -1105,6 +1105,7 @@ function ApiAccessPanel() {
   const [isBusy, setIsBusy] = React.useState(false);
   const [toast, setToast] = React.useState<{
     message: string;
+    detail?: string;
     severity: "info" | "success" | "warning" | "error";
     apiKey?: string;
   } | null>(null);
@@ -1115,8 +1116,13 @@ function ApiAccessPanel() {
     return unsubscribe;
   }, []);
 
-  const showToast = (message: string, severity: "info" | "success" | "warning" | "error", apiKey?: string) => {
-    setToast({ message, severity, apiKey });
+  const showToast = (
+    message: string,
+    severity: "info" | "success" | "warning" | "error",
+    apiKey?: string,
+    detail?: string
+  ) => {
+    setToast({ message, severity, apiKey, detail });
   };
 
   const closeToast = () => {
@@ -1171,11 +1177,7 @@ function ApiAccessPanel() {
       }
 
       const issued = await issueTrialAPIKey(user);
-      showToast(
-        `${t("apiAccess.apiKeyIssued")} ${creditSummary(issued.dailyCredits)}`.trim(),
-        "success",
-        issued.apiKey ?? undefined
-      );
+      showToast(t("apiAccess.apiKeyIssued"), "success", issued.apiKey ?? undefined, creditSummary(issued.dailyCredits));
     } catch (error) {
       showToast(getFriendlyError(error), "error");
     } finally {
@@ -1230,9 +1232,14 @@ function ApiAccessPanel() {
         }}
       >
         <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>
-          <VpnKeyRoundedIcon />
+          <GoogleIcon />
         </Box>
-        <Typography fontWeight={800}>{t("action.getApiKeyWithGoogle")}</Typography>
+        <Stack spacing={0.25} alignItems="center">
+          <Typography fontWeight={800}>{t("action.getApiKey")}</Typography>
+          <Typography variant="body2" color="text.secondary" fontWeight={700}>
+            {t("action.continueWithGoogle")}
+          </Typography>
+        </Stack>
       </Box>
       <Snackbar
         open={Boolean(toast)}
@@ -1243,6 +1250,7 @@ function ApiAccessPanel() {
         <Alert onClose={closeToast} severity={toast?.severity ?? "info"} variant="filled" sx={{ width: "100%" }}>
           <Stack spacing={1}>
             <Typography variant="body2">{toast?.message}</Typography>
+            {toast?.detail && <Typography variant="body2">{toast.detail}</Typography>}
             {toast?.apiKey && (
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
                 <Typography
