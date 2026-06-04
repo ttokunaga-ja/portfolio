@@ -107,13 +107,22 @@ export function preloadTrialAuth(): Promise<void> {
     return Promise.resolve();
   }
 
-  authPreparationPromise ??= (async () => {
+  if (authPreparationPromise) {
+    return authPreparationPromise;
+  }
+
+  authPreparationPromise = (async () => {
     const auth = await getReadyAuth();
     const authModule = await import("firebase/auth");
     GoogleAuthProviderCtor = authModule.GoogleAuthProvider;
     signInWithPopupFn = authModule.signInWithPopup;
     authInstance = auth;
   })();
+
+  authPreparationPromise = authPreparationPromise.catch((error: unknown) => {
+    authPreparationPromise = null;
+    throw error;
+  });
 
   return authPreparationPromise;
 }
@@ -141,6 +150,8 @@ export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
 }
 
 export async function signInToTrialAuthWithGoogle(): Promise<User> {
+  await preloadTrialAuth();
+
   if (!authInstance || !GoogleAuthProviderCtor || !signInWithPopupFn) {
     throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
   }

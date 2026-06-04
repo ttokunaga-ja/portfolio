@@ -1123,6 +1123,10 @@ function ApiAccessPanel() {
     setToast(null);
   };
 
+  const warmUpTrialAuth = () => {
+    void preloadTrialAuth().catch(() => undefined);
+  };
+
   const creditSummary = (credits?: DailyCredits) => {
     if (!credits) {
       return "";
@@ -1136,9 +1140,6 @@ function ApiAccessPanel() {
   const getFriendlyError = (error: unknown) => {
     if (error instanceof TrialAuthClientError && (error.code === "BROWSER_ONLY" || error.code === "CONFIG_MISSING")) {
       return t("apiAccess.authUnavailable");
-    }
-    if (error instanceof TrialAuthClientError && error.code === "AUTH_NOT_READY") {
-      return t("apiAccess.authPreparing");
     }
     if (error instanceof Error && "code" in error && error.code === "auth/popup-closed-by-user") {
       return t("apiAccess.signInCanceled");
@@ -1199,6 +1200,9 @@ function ApiAccessPanel() {
         disabled={isBusy}
         aria-busy={isBusy}
         onClick={handleIssueAPIKey}
+        onFocus={warmUpTrialAuth}
+        onMouseEnter={warmUpTrialAuth}
+        onPointerDown={warmUpTrialAuth}
         sx={{
           display: "flex",
           flexDirection: "column",
