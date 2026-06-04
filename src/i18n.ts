@@ -31,6 +31,8 @@ export const resources = {
       home: {
         title: "Takumi Tokunaga",
         lead: "Research / Projects / Experience",
+        seoDescription:
+          "徳永拓未の個人ホームページです。研究、個人開発プロジェクト、技術スタック、経歴、AI・機械学習、Cloud Run、Firebase、教育支援システムに関する活動を掲載しています。",
         contentTitle: "Explore"
       },
       page: {
@@ -84,6 +86,8 @@ export const resources = {
       home: {
         title: "Takumi Tokunaga",
         lead: "Research / Projects / Experience",
+        seoDescription:
+          "Takumi Tokunaga's personal portfolio covering research, personal projects, technical skills, experience, AI and machine learning, Cloud Run, Firebase, and education support systems.",
         contentTitle: "Explore"
       },
       page: {

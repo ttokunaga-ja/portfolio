@@ -1,4 +1,4 @@
-import { getEntry, getUniqueEntryPaths } from "./content";
+import { getEntries, getEntry, getUniqueEntryPaths } from "./content";
 import { defaultLocale, resources } from "./i18n";
 import type { Collection, Locale, PrimaryPage, RouteState } from "./types";
 
@@ -97,7 +97,7 @@ export function getSeo(route: RouteState, locale: Locale) {
   };
 
   const pageDescriptions: Record<PrimaryPage, string> = {
-    home: t.home.lead,
+    home: t.home.seoDescription,
     research: t.page.researchLead,
     projects: t.page.projectsLead,
     experience: t.page.experienceLead,
@@ -118,11 +118,46 @@ const SAME_AS = [
   "https://www.linkedin.com/in/%E6%8B%93%E6%9C%AA-%E5%BE%B3%E6%B0%B8-725094354/"
 ];
 
-// Build the JSON-LD graph for a page: a shared Person node plus a WebSite node
-// on the home page and a BreadcrumbList everywhere else.
+const PROFILE_KEYWORDS = [
+  "Takumi Tokunaga",
+  "徳永拓未",
+  "portfolio",
+  "research",
+  "personal projects",
+  "Go",
+  "Python",
+  "React",
+  "Cloud Run",
+  "Firebase",
+  "AI",
+  "machine learning",
+  "computer vision",
+  "education support systems"
+];
+
+function absoluteUrl(origin: string, route: PrimaryPage | { collection: Collection; slug: string }, locale: Locale) {
+  return `${origin}${hrefFor(route, locale)}`;
+}
+
+function pageName(route: RouteState, locale: Locale) {
+  const t = resources[locale].translation;
+  if (route.kind === "detail") {
+    const entry = getEntry(locale, route.collection, route.slug);
+    return entry ? entry.title : route.slug;
+  }
+  return route.page === "home" ? "Takumi Tokunaga Portfolio" : t.nav[route.page];
+}
+
+function collectionPageType(page: PrimaryPage) {
+  return page === "research" || page === "projects" || page === "experience" ? "CollectionPage" : "WebPage";
+}
+
+// Build the JSON-LD graph for a page. Keep the Person and WebSite nodes stable
+// and add page-specific nodes so crawlers can connect the profile, lists, and entries.
 export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
   const t = resources[locale].translation;
   const inLanguage = locale === "ja" ? "ja-JP" : "en-US";
+  const seo = getSeo(route, locale);
 
   const person = {
     "@type": "Person",
@@ -130,25 +165,18 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
     name: "Takumi Tokunaga",
     url: `${origin}/`,
     image: `${origin}/images/logo.png`,
-    sameAs: SAME_AS
+    sameAs: SAME_AS,
+    knowsAbout: PROFILE_KEYWORDS
   };
 
-  if (route.kind === "page" && route.page === "home") {
-    return {
-      "@context": "https://schema.org",
-      "@graph": [
-        person,
-        {
-          "@type": "WebSite",
-          "@id": `${origin}/#website`,
-          url: `${origin}${hrefFor("home", locale)}`,
-          name: "Takumi Tokunaga Portfolio",
-          inLanguage,
-          publisher: { "@id": `${origin}/#person` }
-        }
-      ]
-    };
-  }
+  const website = {
+    "@type": "WebSite",
+    "@id": `${origin}/#website`,
+    url: `${origin}/`,
+    name: "Takumi Tokunaga Portfolio",
+    inLanguage,
+    publisher: { "@id": `${origin}/#person` }
+  };
 
   const crumbs: Array<{ name: string; url: string }> = [
     { name: t.nav.home, url: `${origin}${hrefFor("home", locale)}` }
@@ -160,23 +188,96 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
       name: entry ? entry.title : route.slug,
       url: `${origin}${hrefFor({ collection: route.collection, slug: route.slug }, locale)}`
     });
-  } else {
+  } else if (route.page !== "home") {
     crumbs.push({ name: t.nav[route.page], url: `${origin}${hrefFor(route.page, locale)}` });
+  }
+
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.url
+    }))
+  };
+
+  if (route.kind === "detail") {
+    const entry = getEntry(locale, route.collection, route.slug);
+    const routeUrl = absoluteUrl(origin, { collection: route.collection, slug: route.slug }, locale);
+
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        person,
+        website,
+        breadcrumb,
+        {
+          "@type": "CreativeWork",
+          "@id": `${routeUrl}#creative-work`,
+          url: routeUrl,
+          name: entry ? entry.title : route.slug,
+          headline: entry ? entry.title : route.slug,
+          description: entry ? entry.abstract : seo.description,
+          inLanguage,
+          keywords: entry?.tags ?? [],
+          creator: { "@id": `${origin}/#person` },
+          author: { "@id": `${origin}/#person` },
+          isPartOf: { "@id": `${origin}/#website` },
+          about: route.collection
+        }
+      ]
+    };
+  }
+
+  if (route.kind === "page" && route.page === "home") {
+    return {
+      "@context": "https://schema.org",
+      "@graph": [
+        person,
+        website,
+        {
+          "@type": "ProfilePage",
+          "@id": `${origin}${hrefFor("home", locale)}#profile-page`,
+          url: `${origin}${hrefFor("home", locale)}`,
+          name: "Takumi Tokunaga Portfolio",
+          description: seo.description,
+          inLanguage,
+          mainEntity: { "@id": `${origin}/#person` },
+          isPartOf: { "@id": `${origin}/#website` }
+        }
+      ]
+    };
+  }
+
+  const page = route.kind === "page" ? route.page : "home";
+  const pageUrl = `${origin}${hrefFor(page, locale)}`;
+  const pageNode: Record<string, unknown> = {
+    "@type": collectionPageType(page),
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: pageName(route, locale),
+    description: seo.description,
+    inLanguage,
+    isPartOf: { "@id": `${origin}/#website` },
+    about: { "@id": `${origin}/#person` }
+  };
+
+  if (page === "research" || page === "projects" || page === "experience") {
+    const items = getEntries(locale, page).map((entry, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: entry.title,
+      url: absoluteUrl(origin, { collection: entry.collection, slug: entry.slug }, locale)
+    }));
+    pageNode.mainEntity = {
+      "@type": "ItemList",
+      itemListElement: items
+    };
   }
 
   return {
     "@context": "https://schema.org",
-    "@graph": [
-      person,
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: crumbs.map((crumb, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          name: crumb.name,
-          item: crumb.url
-        }))
-      }
-    ]
+    "@graph": [person, website, breadcrumb, pageNode]
   };
 }

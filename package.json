@@ -6,7 +6,7 @@
   "packageManager": "pnpm@11.0.8",
   "scripts": {
     "dev": "pnpm build:content && vite --host 127.0.0.1",
-    "build": "pnpm build:content && pnpm build:client && pnpm build:ssr && node scripts/prerender.mjs && node scripts/build-sitemap.mjs",
+    "build": "pnpm build:content && pnpm build:client && pnpm build:ssr && node scripts/prerender.mjs && node scripts/build-ai-search.mjs && node scripts/build-sitemap.mjs",
     "build:content": "node scripts/build-content.mjs",
     "build:client": "vite build",
     "build:ssr": "vite build --config vite.ssr.config.ts",

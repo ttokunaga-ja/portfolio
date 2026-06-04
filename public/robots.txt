@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://takumi-tokunaga.com/sitemap.xml
+# AI-readable index: https://takumi-tokunaga.com/llms.txt
