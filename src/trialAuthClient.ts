@@ -1,5 +1,5 @@
 import type { FirebaseApp } from "firebase/app";
-import type { Auth, User } from "firebase/auth";
+import type { Auth, GoogleAuthProvider, User, UserCredential } from "firebase/auth";
 
 const firebaseAppName = "trial-auth";
 const trialAuthApiOrigin =
@@ -7,6 +7,9 @@ const trialAuthApiOrigin =
 
 let authInstance: Auth | null = null;
 let persistencePromise: Promise<void> | null = null;
+let authPreparationPromise: Promise<void> | null = null;
+let GoogleAuthProviderCtor: (new () => GoogleAuthProvider) | null = null;
+let signInWithPopupFn: ((auth: Auth, provider: GoogleAuthProvider) => Promise<UserCredential>) | null = null;
 
 export type DailyCredits = {
   date: string;
@@ -99,6 +102,22 @@ async function getReadyAuth(): Promise<Auth> {
   return auth;
 }
 
+export function preloadTrialAuth(): Promise<void> {
+  if (!isBrowser()) {
+    return Promise.resolve();
+  }
+
+  authPreparationPromise ??= (async () => {
+    const auth = await getReadyAuth();
+    const authModule = await import("firebase/auth");
+    GoogleAuthProviderCtor = authModule.GoogleAuthProvider;
+    signInWithPopupFn = authModule.signInWithPopup;
+    authInstance = auth;
+  })();
+
+  return authPreparationPromise;
+}
+
 export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
   if (!isBrowser()) {
     return () => undefined;
@@ -122,12 +141,14 @@ export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
 }
 
 export async function signInToTrialAuthWithGoogle(): Promise<User> {
-  const auth = await getReadyAuth();
-  const { GoogleAuthProvider, signInWithPopup } = await import("firebase/auth");
-  const provider = new GoogleAuthProvider();
+  if (!authInstance || !GoogleAuthProviderCtor || !signInWithPopupFn) {
+    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
+  }
+
+  const provider = new GoogleAuthProviderCtor();
   provider.setCustomParameters({ prompt: "select_account" });
 
-  const credential = await signInWithPopup(auth, provider);
+  const credential = await signInWithPopupFn(authInstance, provider);
   return credential.user;
 }
 

@@ -47,6 +47,7 @@ import { getSeo, hrefFor, hrefForRoute } from "./routes";
 import { theme } from "./theme";
 import {
   issueTrialAPIKey,
+  preloadTrialAuth,
   signInToTrialAuthWithGoogle,
   subscribeTrialAuthState,
   TrialAuthClientError,
@@ -1108,7 +1109,11 @@ function ApiAccessPanel() {
     apiKey?: string;
   } | null>(null);
 
-  React.useEffect(() => subscribeTrialAuthState(setAuthUser), []);
+  React.useEffect(() => {
+    const unsubscribe = subscribeTrialAuthState(setAuthUser);
+    void preloadTrialAuth().catch(() => undefined);
+    return unsubscribe;
+  }, []);
 
   const showToast = (message: string, severity: "info" | "success" | "warning" | "error", apiKey?: string) => {
     setToast({ message, severity, apiKey });
@@ -1132,8 +1137,14 @@ function ApiAccessPanel() {
     if (error instanceof TrialAuthClientError && (error.code === "BROWSER_ONLY" || error.code === "CONFIG_MISSING")) {
       return t("apiAccess.authUnavailable");
     }
+    if (error instanceof TrialAuthClientError && error.code === "AUTH_NOT_READY") {
+      return t("apiAccess.authPreparing");
+    }
     if (error instanceof Error && "code" in error && error.code === "auth/popup-closed-by-user") {
       return t("apiAccess.signInCanceled");
+    }
+    if (error instanceof Error && "code" in error && error.code === "auth/popup-blocked") {
+      return t("apiAccess.popupBlocked");
     }
     return t("apiAccess.operationFailed");
   };
