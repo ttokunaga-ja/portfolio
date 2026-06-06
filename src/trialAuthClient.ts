@@ -3,7 +3,7 @@ import type { Auth, GoogleAuthProvider, User, UserCredential } from "firebase/au
 
 const firebaseAppName = "trial-auth";
 const trialAuthApiOrigin =
-  import.meta.env.VITE_TRIAL_AUTH_API_ORIGIN || "https://trial-auth-api-k2i4vgakga-an.a.run.app";
+  import.meta.env.VITE_TRIAL_AUTH_API_ORIGIN || "https://auth.api.takumi-tokunaga.com";
 
 let authInstance: Auth | null = null;
 let persistencePromise: Promise<void> | null = null;
