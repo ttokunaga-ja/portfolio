@@ -49,7 +49,6 @@ import {
   getTrialAPIKeyState,
   issueTrialAPIKey,
   preloadTrialAuth,
-  reauthenticateTrialAuthWithGoogle,
   signInToTrialAuthWithGoogle,
   signOutTrialAuth,
   subscribeTrialAuthState,
@@ -65,7 +64,8 @@ type AppProps = {
 };
 
 const LocaleContext = React.createContext<Locale>(defaultLocale);
-const trialAPIKeyCacheStorageKey = "portfolio.trialAuth.apiKey.v1";
+const trialAPIKeyCacheCookieName = "portfolio_trial_auth_api_key_v1";
+const legacyTrialAPIKeyCacheStorageKey = "portfolio.trialAuth.apiKey.v1";
 const trialAPIKeyCacheMaxAgeMs = 10 * 60 * 1000;
 const toastAutoHideDurationMs = 5200;
 
@@ -77,23 +77,49 @@ type CachedTrialAPIKey = {
   dailyCredits?: DailyCredits;
 };
 
-type TrialAPIKeyIssueAttempt = {
-  previousKeyState: Awaited<ReturnType<typeof getTrialAPIKeyState>>;
-  issued: Awaited<ReturnType<typeof issueTrialAPIKey>>;
-};
+function trialAPIKeyCookieAttributes(maxAgeSeconds: number) {
+  const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+  return `Path=/; Max-Age=${Math.max(0, maxAgeSeconds)}; SameSite=Strict${secure}`;
+}
+
+function clearLegacyTrialAPIKeySessionCache() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.removeItem(legacyTrialAPIKeyCacheStorageKey);
+  } catch {
+    // Ignore storage failures. The short-lived cookie remains the source of truth.
+  }
+}
+
+function getTrialAPIKeyCookieValue() {
+  if (typeof document === "undefined" || !document.cookie) {
+    return null;
+  }
+
+  const cookiePrefix = `${encodeURIComponent(trialAPIKeyCacheCookieName)}=`;
+  const matchedCookie = document.cookie
+    .split("; ")
+    .find((cookie) => cookie.length >= cookiePrefix.length && cookie.startsWith(cookiePrefix));
+  return matchedCookie ? matchedCookie.slice(cookiePrefix.length) : null;
+}
 
 function readCachedTrialAPIKey(now = Date.now()): CachedTrialAPIKey | null {
   if (typeof window === "undefined") {
     return null;
   }
 
+  clearLegacyTrialAPIKeySessionCache();
+
   try {
-    const raw = window.sessionStorage.getItem(trialAPIKeyCacheStorageKey);
+    const raw = getTrialAPIKeyCookieValue();
     if (!raw) {
       return null;
     }
 
-    const parsed = JSON.parse(raw) as Partial<CachedTrialAPIKey>;
+    const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<CachedTrialAPIKey>;
     if (
       typeof parsed.apiKey !== "string" ||
       parsed.apiKey.length === 0 ||
@@ -102,7 +128,7 @@ function readCachedTrialAPIKey(now = Date.now()): CachedTrialAPIKey | null {
       typeof parsed.expiresAt !== "number" ||
       parsed.expiresAt <= now
     ) {
-      window.sessionStorage.removeItem(trialAPIKeyCacheStorageKey);
+      clearCachedTrialAPIKey();
       return null;
     }
 
@@ -114,7 +140,7 @@ function readCachedTrialAPIKey(now = Date.now()): CachedTrialAPIKey | null {
       dailyCredits: parsed.dailyCredits
     };
   } catch {
-    window.sessionStorage.removeItem(trialAPIKeyCacheStorageKey);
+    clearCachedTrialAPIKey();
     return null;
   }
 }
@@ -125,7 +151,7 @@ function writeCachedTrialAPIKey(
   dailyCredits?: DailyCredits,
   now = Date.now()
 ): CachedTrialAPIKey | null {
-  if (typeof window === "undefined" || !apiKey) {
+  if (typeof window === "undefined" || typeof document === "undefined" || !apiKey) {
     return null;
   }
 
@@ -138,7 +164,11 @@ function writeCachedTrialAPIKey(
   };
 
   try {
-    window.sessionStorage.setItem(trialAPIKeyCacheStorageKey, JSON.stringify(cached));
+    clearLegacyTrialAPIKeySessionCache();
+    const maxAgeSeconds = Math.ceil((cached.expiresAt - now) / 1000);
+    document.cookie = `${encodeURIComponent(trialAPIKeyCacheCookieName)}=${encodeURIComponent(
+      JSON.stringify(cached)
+    )}; ${trialAPIKeyCookieAttributes(maxAgeSeconds)}`;
   } catch {
     return null;
   }
@@ -147,11 +177,12 @@ function writeCachedTrialAPIKey(
 }
 
 function clearCachedTrialAPIKey() {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || typeof document === "undefined") {
     return;
   }
 
-  window.sessionStorage.removeItem(trialAPIKeyCacheStorageKey);
+  clearLegacyTrialAPIKeySessionCache();
+  document.cookie = `${encodeURIComponent(trialAPIKeyCacheCookieName)}=; ${trialAPIKeyCookieAttributes(0)}`;
 }
 
 function useLocale(): Locale {
@@ -1192,7 +1223,7 @@ function ContactPage() {
 
 function ApiAccessPanel() {
   const { t } = useTranslation();
-  const [authUser, setAuthUser] = React.useState<FirebaseUser | null>(null);
+  const [, setAuthUser] = React.useState<FirebaseUser | null>(null);
   const [isBusy, setIsBusy] = React.useState(false);
   const toastIdRef = React.useRef(0);
   const [toast, setToast] = React.useState<{
@@ -1289,29 +1320,15 @@ function ApiAccessPanel() {
         return;
       }
 
-      let user = authUser;
+      clearCachedTrialAPIKey();
+      setAuthUser(null);
+      await signOutTrialAuth().catch(() => undefined);
 
-      user = user ?? (await signInToTrialAuthWithGoogle({ forceLogin: true }));
+      const user = await signInToTrialAuthWithGoogle({ forceLogin: true });
       setAuthUser(user);
 
-      const issueForUser = async (nextUser: FirebaseUser): Promise<TrialAPIKeyIssueAttempt> => ({
-        previousKeyState: await getTrialAPIKeyState(nextUser),
-        issued: await issueTrialAPIKey(nextUser)
-      });
-
-      let attempt: TrialAPIKeyIssueAttempt;
-      try {
-        attempt = await issueForUser(user);
-      } catch (error) {
-        if (!(error instanceof TrialAuthClientError) || error.code !== "RECENT_SIGN_IN_REQUIRED") {
-          throw error;
-        }
-        user = await reauthenticateTrialAuthWithGoogle(user);
-        setAuthUser(user);
-        attempt = await issueForUser(user);
-      }
-
-      const { previousKeyState, issued } = attempt;
+      const previousKeyState = await getTrialAPIKeyState(user);
+      const issued = await issueTrialAPIKey(user);
       if (!issued.apiKey) {
         clearCachedTrialAPIKey();
         showToast(t("apiAccess.apiKeyUnavailable"), "warning", undefined, creditSummary(issued.dailyCredits));
