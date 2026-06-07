@@ -188,6 +188,12 @@ export async function reauthenticateTrialAuthWithGoogle(user: User): Promise<Use
   return credential.user;
 }
 
+export async function signOutTrialAuth(): Promise<void> {
+  const auth = await getTrialAuth();
+  const { signOut } = await import("firebase/auth");
+  await signOut(auth);
+}
+
 async function requestTrialAuth<T>(
   user: User,
   path: string,

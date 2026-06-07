@@ -38,6 +38,8 @@ export const resources = {
         signInSuccess: "Googleログインが完了しました。",
         signInCanceled: "Googleログインをキャンセルしました。",
         popupBlocked: "Googleログインのポップアップがブロックされました。もう一度お試しください。",
+        accountMismatch:
+          "現在のGoogleログインと異なるアカウントが選択されました。もう一度押して、使用するGoogleアカウントを選び直してください。",
         authUnavailable: "この環境ではGoogleログインを開始できません。",
         apiKeyIssued: "APIキーを発行しました。",
         apiKeyRotated: "古いAPIキーの無効化と再発行を行いました。",
@@ -115,6 +117,8 @@ export const resources = {
         signInSuccess: "Google sign-in is complete.",
         signInCanceled: "Google sign-in was canceled.",
         popupBlocked: "The Google sign-in popup was blocked. Try again.",
+        accountMismatch:
+          "A different Google account was selected. Click again and choose the Google account you want to use.",
         authUnavailable: "Google sign-in is not available in this environment.",
         apiKeyIssued: "API key issued.",
         apiKeyRotated: "The old API key was revoked and a new one was issued.",

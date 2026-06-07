@@ -51,6 +51,7 @@ import {
   preloadTrialAuth,
   reauthenticateTrialAuthWithGoogle,
   signInToTrialAuthWithGoogle,
+  signOutTrialAuth,
   subscribeTrialAuthState,
   TrialAuthClientError,
   type DailyCredits
@@ -74,6 +75,11 @@ type CachedTrialAPIKey = {
   cachedAt: number;
   expiresAt: number;
   dailyCredits?: DailyCredits;
+};
+
+type TrialAPIKeyIssueAttempt = {
+  previousKeyState: Awaited<ReturnType<typeof getTrialAPIKeyState>>;
+  issued: Awaited<ReturnType<typeof issueTrialAPIKey>>;
 };
 
 function readCachedTrialAPIKey(now = Date.now()): CachedTrialAPIKey | null {
@@ -1252,6 +1258,9 @@ function ApiAccessPanel() {
     if (error instanceof TrialAuthClientError && error.code === "RECENT_SIGN_IN_REQUIRED") {
       return t("apiAccess.recentSignInRequired");
     }
+    if (error instanceof Error && "code" in error && error.code === "auth/user-mismatch") {
+      return t("apiAccess.accountMismatch");
+    }
     if (error instanceof Error && "code" in error && error.code === "auth/popup-closed-by-user") {
       return t("apiAccess.signInCanceled");
     }
@@ -1282,13 +1291,27 @@ function ApiAccessPanel() {
 
       let user = authUser;
 
-      user = user
-        ? await reauthenticateTrialAuthWithGoogle(user)
-        : await signInToTrialAuthWithGoogle({ forceLogin: true });
+      user = user ?? (await signInToTrialAuthWithGoogle({ forceLogin: true }));
       setAuthUser(user);
 
-      const previousKeyState = await getTrialAPIKeyState(user);
-      const issued = await issueTrialAPIKey(user);
+      const issueForUser = async (nextUser: FirebaseUser): Promise<TrialAPIKeyIssueAttempt> => ({
+        previousKeyState: await getTrialAPIKeyState(nextUser),
+        issued: await issueTrialAPIKey(nextUser)
+      });
+
+      let attempt: TrialAPIKeyIssueAttempt;
+      try {
+        attempt = await issueForUser(user);
+      } catch (error) {
+        if (!(error instanceof TrialAuthClientError) || error.code !== "RECENT_SIGN_IN_REQUIRED") {
+          throw error;
+        }
+        user = await reauthenticateTrialAuthWithGoogle(user);
+        setAuthUser(user);
+        attempt = await issueForUser(user);
+      }
+
+      const { previousKeyState, issued } = attempt;
       if (!issued.apiKey) {
         clearCachedTrialAPIKey();
         showToast(t("apiAccess.apiKeyUnavailable"), "warning", undefined, creditSummary(issued.dailyCredits));
@@ -1304,6 +1327,11 @@ function ApiAccessPanel() {
     } catch (error) {
       if (error instanceof TrialAuthClientError && error.code === "RECENT_SIGN_IN_REQUIRED") {
         clearCachedTrialAPIKey();
+      }
+      if (error instanceof Error && "code" in error && error.code === "auth/user-mismatch") {
+        clearCachedTrialAPIKey();
+        setAuthUser(null);
+        await signOutTrialAuth().catch(() => undefined);
       }
       showToast(getFriendlyError(error), "error");
     } finally {
