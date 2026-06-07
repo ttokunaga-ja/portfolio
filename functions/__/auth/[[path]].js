@@ -1,4 +1,4 @@
-const firebaseAuthOrigin = "https://trialauth-498405.firebaseapp.com";
+const firebaseAuthOrigin = "https://authapi-tt-20260607.firebaseapp.com";
 
 function proxiedAuthUrl(requestUrl) {
   const url = new URL(requestUrl);
