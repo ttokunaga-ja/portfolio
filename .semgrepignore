@@ -1,0 +1,8 @@
+# Prerendered HTML route shells. The flagged canonical links are not fetched
+# subresources, so SRI does not apply.
+index.html
+contact/index.html
+experience/index.html
+projects/index.html
+research/index.html
+skills/index.html

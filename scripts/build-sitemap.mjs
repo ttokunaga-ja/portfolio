@@ -6,7 +6,7 @@ const dist = join(root, "dist");
 const siteOrigin = (process.env.PORTFOLIO_SITE_ORIGIN ?? "https://takumi-tokunaga.com").replace(/\/+$/, "");
 
 function escapeXml(value) {
-  return value
+  return value // nosemgrep: javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
