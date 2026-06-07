@@ -196,6 +196,10 @@ function normalizeLinkKind(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function isAllowedExternalLinkURL(value) {
+  return /^https?:\/\//.test(value);
+}
+
 function normalizeLink(value, fallbackKind = "") {
   if (!value) return null;
 
@@ -203,6 +207,7 @@ function normalizeLink(value, fallbackKind = "") {
     const markdownLink = value.match(/^\s*\[([^\]]+)\]\(([^)]+)\)\s*$/);
     if (markdownLink) {
       const [, label, url] = markdownLink;
+      if (!isAllowedExternalLinkURL(url)) return null;
       return {
         label,
         url,
@@ -210,7 +215,7 @@ function normalizeLink(value, fallbackKind = "") {
       };
     }
 
-    if (/^https?:\/\//.test(value)) {
+    if (isAllowedExternalLinkURL(value)) {
       return {
         label: fallbackKind || value,
         url: value,
@@ -226,6 +231,7 @@ function normalizeLink(value, fallbackKind = "") {
   const label = firstString(value.label, firstString(value.name, firstString(value.title, fallbackKind)));
   const url = firstString(value.url, firstString(value.href));
   if (!label || !url) return null;
+  if (!isAllowedExternalLinkURL(url)) return null;
 
   return {
     label,

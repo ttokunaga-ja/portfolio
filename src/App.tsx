@@ -64,20 +64,17 @@ type AppProps = {
 };
 
 const LocaleContext = React.createContext<Locale>(defaultLocale);
-const trialAPIKeyCacheCookieName = "portfolio_trial_auth_api_key_v1";
+const legacyTrialAPIKeyCacheCookieName = "portfolio_trial_auth_api_key_v1";
 const legacyTrialAPIKeyCacheStorageKey = "portfolio.trialAuth.apiKey.v1";
-const trialAPIKeyCacheMaxAgeMs = 10 * 60 * 1000;
 const toastAutoHideDurationMs = 5200;
 
-type CachedTrialAPIKey = {
+type SessionTrialAPIKey = {
   apiKey: string;
   keyPrefix: string;
-  cachedAt: number;
-  expiresAt: number;
   dailyCredits?: DailyCredits;
 };
 
-function trialAPIKeyCookieAttributes(maxAgeSeconds: number) {
+function legacyTrialAPIKeyCookieAttributes(maxAgeSeconds: number) {
   const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
   return `Path=/; Max-Age=${Math.max(0, maxAgeSeconds)}; SameSite=Strict${secure}`;
 }
@@ -90,99 +87,20 @@ function clearLegacyTrialAPIKeySessionCache() {
   try {
     window.sessionStorage.removeItem(legacyTrialAPIKeyCacheStorageKey);
   } catch {
-    // Ignore storage failures. The short-lived cookie remains the source of truth.
-  }
-}
-
-function getTrialAPIKeyCookieValue() {
-  if (typeof document === "undefined" || !document.cookie) {
-    return null;
+    // Ignore storage failures. The API key is no longer persisted client-side.
   }
 
-  const cookiePrefix = `${encodeURIComponent(trialAPIKeyCacheCookieName)}=`;
-  const matchedCookie = document.cookie
-    .split("; ")
-    .find((cookie) => cookie.length >= cookiePrefix.length && cookie.startsWith(cookiePrefix));
-  return matchedCookie ? matchedCookie.slice(cookiePrefix.length) : null;
-}
-
-function readCachedTrialAPIKey(now = Date.now()): CachedTrialAPIKey | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  clearLegacyTrialAPIKeySessionCache();
-
-  try {
-    const raw = getTrialAPIKeyCookieValue();
-    if (!raw) {
-      return null;
-    }
-
-    const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<CachedTrialAPIKey>;
-    if (
-      typeof parsed.apiKey !== "string" ||
-      parsed.apiKey.length === 0 ||
-      typeof parsed.keyPrefix !== "string" ||
-      typeof parsed.cachedAt !== "number" ||
-      typeof parsed.expiresAt !== "number" ||
-      parsed.expiresAt <= now
-    ) {
-      clearCachedTrialAPIKey();
-      return null;
-    }
-
-    return {
-      apiKey: parsed.apiKey,
-      keyPrefix: parsed.keyPrefix,
-      cachedAt: parsed.cachedAt,
-      expiresAt: parsed.expiresAt,
-      dailyCredits: parsed.dailyCredits
-    };
-  } catch {
-    clearCachedTrialAPIKey();
-    return null;
-  }
-}
-
-function writeCachedTrialAPIKey(
-  apiKey: string | null | undefined,
-  keyPrefix: string,
-  dailyCredits?: DailyCredits,
-  now = Date.now()
-): CachedTrialAPIKey | null {
-  if (typeof window === "undefined" || typeof document === "undefined" || !apiKey) {
-    return null;
-  }
-
-  const cached: CachedTrialAPIKey = {
-    apiKey,
-    keyPrefix,
-    dailyCredits,
-    cachedAt: now,
-    expiresAt: now + trialAPIKeyCacheMaxAgeMs
-  };
-
-  try {
-    clearLegacyTrialAPIKeySessionCache();
-    const maxAgeSeconds = Math.ceil((cached.expiresAt - now) / 1000);
-    document.cookie = `${encodeURIComponent(trialAPIKeyCacheCookieName)}=${encodeURIComponent(
-      JSON.stringify(cached)
-    )}; ${trialAPIKeyCookieAttributes(maxAgeSeconds)}`;
-  } catch {
-    return null;
-  }
-
-  return cached;
-}
-
-function clearCachedTrialAPIKey() {
-  if (typeof window === "undefined" || typeof document === "undefined") {
+  if (typeof document === "undefined") {
     return;
   }
 
-  clearLegacyTrialAPIKeySessionCache();
-  document.cookie = `${encodeURIComponent(trialAPIKeyCacheCookieName)}=; ${trialAPIKeyCookieAttributes(0)}`;
+  try {
+    document.cookie = `${encodeURIComponent(legacyTrialAPIKeyCacheCookieName)}=; ${legacyTrialAPIKeyCookieAttributes(
+      0
+    )}`;
+  } catch {
+    // Ignore cookie cleanup failures.
+  }
 }
 
 function useLocale(): Locale {
@@ -1224,6 +1142,7 @@ function ContactPage() {
 function ApiAccessPanel() {
   const { t } = useTranslation();
   const [, setAuthUser] = React.useState<FirebaseUser | null>(null);
+  const [sessionAPIKey, setSessionAPIKey] = React.useState<SessionTrialAPIKey | null>(null);
   const [isBusy, setIsBusy] = React.useState(false);
   const toastIdRef = React.useRef(0);
   const [toast, setToast] = React.useState<{
@@ -1235,6 +1154,7 @@ function ApiAccessPanel() {
   } | null>(null);
 
   React.useEffect(() => {
+    clearLegacyTrialAPIKeySessionCache();
     const unsubscribe = subscribeTrialAuthState(setAuthUser);
     void preloadTrialAuth().catch(() => undefined);
     return unsubscribe;
@@ -1314,13 +1234,18 @@ function ApiAccessPanel() {
   const handleIssueAPIKey = async () => {
     setIsBusy(true);
     try {
-      const cached = readCachedTrialAPIKey();
-      if (cached) {
-        showToast(t("apiAccess.apiKeyCached"), "success", cached.apiKey, creditSummary(cached.dailyCredits));
+      if (sessionAPIKey) {
+        showToast(
+          t("apiAccess.apiKeyCached"),
+          "success",
+          sessionAPIKey.apiKey,
+          creditSummary(sessionAPIKey.dailyCredits)
+        );
         return;
       }
 
-      clearCachedTrialAPIKey();
+      clearLegacyTrialAPIKeySessionCache();
+      setSessionAPIKey(null);
       setAuthUser(null);
       await signOutTrialAuth().catch(() => undefined);
 
@@ -1330,11 +1255,15 @@ function ApiAccessPanel() {
       const previousKeyState = await getTrialAPIKeyState(user);
       const issued = await issueTrialAPIKey(user);
       if (!issued.apiKey) {
-        clearCachedTrialAPIKey();
+        setSessionAPIKey(null);
         showToast(t("apiAccess.apiKeyUnavailable"), "warning", undefined, creditSummary(issued.dailyCredits));
         return;
       }
-      writeCachedTrialAPIKey(issued.apiKey, issued.keyPrefix, issued.dailyCredits);
+      setSessionAPIKey({
+        apiKey: issued.apiKey,
+        keyPrefix: issued.keyPrefix,
+        dailyCredits: issued.dailyCredits
+      });
       showToast(
         t(previousKeyState.hasKey && !previousKeyState.revoked ? "apiAccess.apiKeyRotated" : "apiAccess.apiKeyIssued"),
         "success",
@@ -1343,10 +1272,10 @@ function ApiAccessPanel() {
       );
     } catch (error) {
       if (error instanceof TrialAuthClientError && error.code === "RECENT_SIGN_IN_REQUIRED") {
-        clearCachedTrialAPIKey();
+        setSessionAPIKey(null);
       }
       if (error instanceof Error && "code" in error && error.code === "auth/user-mismatch") {
-        clearCachedTrialAPIKey();
+        setSessionAPIKey(null);
         setAuthUser(null);
         await signOutTrialAuth().catch(() => undefined);
       }
