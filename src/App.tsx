@@ -46,6 +46,7 @@ import { defaultLocale, setI18nLanguage } from "./i18n";
 import { getSeo, hrefFor, hrefForRoute } from "./routes";
 import { theme } from "./theme";
 import {
+  getTrialAPIKeyState,
   issueTrialAPIKey,
   preloadTrialAuth,
   reauthenticateTrialAuthWithGoogle,
@@ -1286,6 +1287,7 @@ function ApiAccessPanel() {
         : await signInToTrialAuthWithGoogle({ forceLogin: true });
       setAuthUser(user);
 
+      const previousKeyState = await getTrialAPIKeyState(user);
       const issued = await issueTrialAPIKey(user);
       if (!issued.apiKey) {
         clearCachedTrialAPIKey();
@@ -1293,7 +1295,12 @@ function ApiAccessPanel() {
         return;
       }
       writeCachedTrialAPIKey(issued.apiKey, issued.keyPrefix, issued.dailyCredits);
-      showToast(t("apiAccess.apiKeyIssued"), "success", issued.apiKey, creditSummary(issued.dailyCredits));
+      showToast(
+        t(previousKeyState.hasKey && !previousKeyState.revoked ? "apiAccess.apiKeyRotated" : "apiAccess.apiKeyIssued"),
+        "success",
+        issued.apiKey,
+        creditSummary(issued.dailyCredits)
+      );
     } catch (error) {
       if (error instanceof TrialAuthClientError && error.code === "RECENT_SIGN_IN_REQUIRED") {
         clearCachedTrialAPIKey();
