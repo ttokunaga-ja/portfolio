@@ -9,6 +9,7 @@ let persistencePromise: Promise<void> | null = null;
 let authPreparationPromise: Promise<void> | null = null;
 let GoogleAuthProviderCtor: (new () => GoogleAuthProvider) | null = null;
 let signInWithPopupFn: ((auth: Auth, provider: GoogleAuthProvider) => Promise<UserCredential>) | null = null;
+let reauthenticateWithPopupFn: ((user: User, provider: GoogleAuthProvider) => Promise<UserCredential>) | null = null;
 
 export type DailyCredits = {
   date: string;
@@ -95,8 +96,8 @@ async function getTrialAuth(): Promise<Auth> {
 
 async function getReadyAuth(): Promise<Auth> {
   const auth = await getTrialAuth();
-  const { browserLocalPersistence, setPersistence } = await import("firebase/auth");
-  persistencePromise ??= setPersistence(auth, browserLocalPersistence);
+  const { browserSessionPersistence, setPersistence } = await import("firebase/auth");
+  persistencePromise ??= setPersistence(auth, browserSessionPersistence);
   await persistencePromise;
   return auth;
 }
@@ -115,6 +116,7 @@ export function preloadTrialAuth(): Promise<void> {
     const authModule = await import("firebase/auth");
     GoogleAuthProviderCtor = authModule.GoogleAuthProvider;
     signInWithPopupFn = authModule.signInWithPopup;
+    reauthenticateWithPopupFn = authModule.reauthenticateWithPopup;
     authInstance = auth;
   })();
 
@@ -135,7 +137,7 @@ export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
   let unsubscribe: () => void = () => undefined;
 
   void (async () => {
-    const auth = await getTrialAuth();
+    const auth = await getReadyAuth();
     const { onAuthStateChanged } = await import("firebase/auth");
     if (active) {
       unsubscribe = onAuthStateChanged(auth, onChange);
@@ -148,22 +150,51 @@ export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
   };
 }
 
-export async function signInToTrialAuthWithGoogle(): Promise<User> {
+type GoogleSignInOptions = {
+  forceLogin?: boolean;
+};
+
+function createGoogleProvider(options: GoogleSignInOptions = {}) {
+  if (!GoogleAuthProviderCtor) {
+    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
+  }
+
+  const provider = new GoogleAuthProviderCtor();
+  provider.setCustomParameters({ prompt: options.forceLogin ? "login" : "select_account" });
+  return provider;
+}
+
+export async function signInToTrialAuthWithGoogle(options: GoogleSignInOptions = {}): Promise<User> {
   await preloadTrialAuth();
 
   if (!authInstance || !GoogleAuthProviderCtor || !signInWithPopupFn) {
     throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
   }
 
-  const provider = new GoogleAuthProviderCtor();
-  provider.setCustomParameters({ prompt: "select_account" });
-
+  const provider = createGoogleProvider(options);
   const credential = await signInWithPopupFn(authInstance, provider);
   return credential.user;
 }
 
-async function requestTrialAuth<T>(user: User, path: string, init: RequestInit = {}): Promise<T> {
-  const token = await user.getIdToken();
+export async function reauthenticateTrialAuthWithGoogle(user: User): Promise<User> {
+  await preloadTrialAuth();
+
+  if (!reauthenticateWithPopupFn) {
+    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
+  }
+
+  const provider = createGoogleProvider({ forceLogin: true });
+  const credential = await reauthenticateWithPopupFn(user, provider);
+  return credential.user;
+}
+
+async function requestTrialAuth<T>(
+  user: User,
+  path: string,
+  init: RequestInit = {},
+  options: { forceRefreshToken?: boolean } = {}
+): Promise<T> {
+  const token = await user.getIdToken(options.forceRefreshToken);
   const response = await fetch(`${trialAuthApiOrigin}${path}`, {
     ...init,
     headers: {
@@ -189,7 +220,7 @@ export async function getTrialAPIKeyState(user: User): Promise<APIKeyState> {
 }
 
 export async function issueTrialAPIKey(user: User): Promise<IssueAPIKeyResponse> {
-  return requestTrialAuth<IssueAPIKeyResponse>(user, "/api/keys", { method: "POST" });
+  return requestTrialAuth<IssueAPIKeyResponse>(user, "/api/keys", { method: "POST" }, { forceRefreshToken: true });
 }
 
 export async function getTrialDailyCredits(user: User): Promise<DailyCredits> {

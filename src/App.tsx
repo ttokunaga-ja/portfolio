@@ -48,6 +48,7 @@ import { theme } from "./theme";
 import {
   issueTrialAPIKey,
   preloadTrialAuth,
+  reauthenticateTrialAuthWithGoogle,
   signInToTrialAuthWithGoogle,
   subscribeTrialAuthState,
   TrialAuthClientError,
@@ -62,6 +63,89 @@ type AppProps = {
 };
 
 const LocaleContext = React.createContext<Locale>(defaultLocale);
+const trialAPIKeyCacheStorageKey = "portfolio.trialAuth.apiKey.v1";
+const trialAPIKeyCacheMaxAgeMs = 10 * 60 * 1000;
+const toastAutoHideDurationMs = 5200;
+
+type CachedTrialAPIKey = {
+  apiKey: string;
+  keyPrefix: string;
+  cachedAt: number;
+  expiresAt: number;
+  dailyCredits?: DailyCredits;
+};
+
+function readCachedTrialAPIKey(now = Date.now()): CachedTrialAPIKey | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(trialAPIKeyCacheStorageKey);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<CachedTrialAPIKey>;
+    if (
+      typeof parsed.apiKey !== "string" ||
+      parsed.apiKey.length === 0 ||
+      typeof parsed.keyPrefix !== "string" ||
+      typeof parsed.cachedAt !== "number" ||
+      typeof parsed.expiresAt !== "number" ||
+      parsed.expiresAt <= now
+    ) {
+      window.sessionStorage.removeItem(trialAPIKeyCacheStorageKey);
+      return null;
+    }
+
+    return {
+      apiKey: parsed.apiKey,
+      keyPrefix: parsed.keyPrefix,
+      cachedAt: parsed.cachedAt,
+      expiresAt: parsed.expiresAt,
+      dailyCredits: parsed.dailyCredits
+    };
+  } catch {
+    window.sessionStorage.removeItem(trialAPIKeyCacheStorageKey);
+    return null;
+  }
+}
+
+function writeCachedTrialAPIKey(
+  apiKey: string | null | undefined,
+  keyPrefix: string,
+  dailyCredits?: DailyCredits,
+  now = Date.now()
+): CachedTrialAPIKey | null {
+  if (typeof window === "undefined" || !apiKey) {
+    return null;
+  }
+
+  const cached: CachedTrialAPIKey = {
+    apiKey,
+    keyPrefix,
+    dailyCredits,
+    cachedAt: now,
+    expiresAt: now + trialAPIKeyCacheMaxAgeMs
+  };
+
+  try {
+    window.sessionStorage.setItem(trialAPIKeyCacheStorageKey, JSON.stringify(cached));
+  } catch {
+    return null;
+  }
+
+  return cached;
+}
+
+function clearCachedTrialAPIKey() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(trialAPIKeyCacheStorageKey);
+}
 
 function useLocale(): Locale {
   return React.useContext(LocaleContext);
@@ -1103,7 +1187,9 @@ function ApiAccessPanel() {
   const { t } = useTranslation();
   const [authUser, setAuthUser] = React.useState<FirebaseUser | null>(null);
   const [isBusy, setIsBusy] = React.useState(false);
+  const toastIdRef = React.useRef(0);
   const [toast, setToast] = React.useState<{
+    id: number;
     message: string;
     detail?: string;
     severity: "info" | "success" | "warning" | "error";
@@ -1116,13 +1202,28 @@ function ApiAccessPanel() {
     return unsubscribe;
   }, []);
 
+  React.useEffect(() => {
+    if (!toast || toast.apiKey) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToast((current) => (current?.id === toast.id ? null : current));
+    }, toastAutoHideDurationMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [toast]);
+
   const showToast = (
     message: string,
     severity: "info" | "success" | "warning" | "error",
     apiKey?: string,
     detail?: string
   ) => {
-    setToast({ message, severity, apiKey, detail });
+    toastIdRef.current += 1;
+    setToast({ id: toastIdRef.current, message, severity, apiKey, detail });
   };
 
   const closeToast = () => {
@@ -1147,6 +1248,9 @@ function ApiAccessPanel() {
     if (error instanceof TrialAuthClientError && (error.code === "BROWSER_ONLY" || error.code === "CONFIG_MISSING")) {
       return t("apiAccess.authUnavailable");
     }
+    if (error instanceof TrialAuthClientError && error.code === "RECENT_SIGN_IN_REQUIRED") {
+      return t("apiAccess.recentSignInRequired");
+    }
     if (error instanceof Error && "code" in error && error.code === "auth/popup-closed-by-user") {
       return t("apiAccess.signInCanceled");
     }
@@ -1169,16 +1273,31 @@ function ApiAccessPanel() {
   const handleIssueAPIKey = async () => {
     setIsBusy(true);
     try {
-      let user = authUser;
-
-      if (!user) {
-        user = await signInToTrialAuthWithGoogle();
-        setAuthUser(user);
+      const cached = readCachedTrialAPIKey();
+      if (cached) {
+        showToast(t("apiAccess.apiKeyCached"), "success", cached.apiKey, creditSummary(cached.dailyCredits));
+        return;
       }
 
+      let user = authUser;
+
+      user = user
+        ? await reauthenticateTrialAuthWithGoogle(user)
+        : await signInToTrialAuthWithGoogle({ forceLogin: true });
+      setAuthUser(user);
+
       const issued = await issueTrialAPIKey(user);
-      showToast(t("apiAccess.apiKeyIssued"), "success", issued.apiKey ?? undefined, creditSummary(issued.dailyCredits));
+      if (!issued.apiKey) {
+        clearCachedTrialAPIKey();
+        showToast(t("apiAccess.apiKeyUnavailable"), "warning", undefined, creditSummary(issued.dailyCredits));
+        return;
+      }
+      writeCachedTrialAPIKey(issued.apiKey, issued.keyPrefix, issued.dailyCredits);
+      showToast(t("apiAccess.apiKeyIssued"), "success", issued.apiKey, creditSummary(issued.dailyCredits));
     } catch (error) {
+      if (error instanceof TrialAuthClientError && error.code === "RECENT_SIGN_IN_REQUIRED") {
+        clearCachedTrialAPIKey();
+      }
       showToast(getFriendlyError(error), "error");
     } finally {
       setIsBusy(false);
@@ -1242,8 +1361,10 @@ function ApiAccessPanel() {
         </Stack>
       </Box>
       <Snackbar
+        key={toast?.id ?? "api-access-toast"}
         open={Boolean(toast)}
-        autoHideDuration={toast?.apiKey ? null : 5200}
+        autoHideDuration={toast?.apiKey ? null : toastAutoHideDurationMs}
+        disableWindowBlurListener
         onClose={closeToast}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
