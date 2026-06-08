@@ -63,9 +63,13 @@ jobs:
 
       - name: Accessibility tests
         run: pnpm test:a11y
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
 
       - name: Lighthouse
         run: pnpm a11y:lighthouse
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
 
   deploy:
     name: Deploy
