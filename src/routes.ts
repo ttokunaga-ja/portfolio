@@ -88,7 +88,7 @@ export function getSeo(route: RouteState, locale: Locale) {
   }
 
   const pageTitles: Record<PrimaryPage, string> = {
-    home: "Takumi Tokunaga Portfolio",
+    home: locale === "ja" ? "徳永拓未 | Takumi Tokunaga Portfolio" : "Takumi Tokunaga Portfolio",
     research: `${t.page.researchTitle} | Takumi Tokunaga`,
     projects: `${t.page.projectsTitle} | Takumi Tokunaga`,
     experience: `${t.page.experienceTitle} | Takumi Tokunaga`,
@@ -118,9 +118,22 @@ const SAME_AS = [
   "https://www.linkedin.com/in/%E6%8B%93%E6%9C%AA-%E5%BE%B3%E6%B0%B8-725094354/"
 ];
 
+const PERSON_NAME = "Takumi Tokunaga";
+const PERSON_ALTERNATE_NAMES = ["Tokunaga Takumi", "徳永拓未", "德永拓未", "とくながたくみ", "トクナガタクミ"];
+const PERSON_SEARCH_TERMS = [
+  ...PERSON_ALTERNATE_NAMES,
+  "徳永",
+  "德永",
+  "拓未",
+  "とくなが",
+  "たくみ",
+  "トクナガ",
+  "タクミ"
+];
+
 const PROFILE_KEYWORDS = [
-  "Takumi Tokunaga",
-  "徳永拓未",
+  PERSON_NAME,
+  ...PERSON_SEARCH_TERMS,
   "portfolio",
   "research",
   "personal projects",
@@ -145,7 +158,7 @@ function pageName(route: RouteState, locale: Locale) {
     const entry = getEntry(locale, route.collection, route.slug);
     return entry ? entry.title : route.slug;
   }
-  return route.page === "home" ? "Takumi Tokunaga Portfolio" : t.nav[route.page];
+  return route.page === "home" ? "徳永拓未 / Takumi Tokunaga Portfolio" : t.nav[route.page];
 }
 
 function collectionPageType(page: PrimaryPage) {
@@ -162,7 +175,10 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
   const person = {
     "@type": "Person",
     "@id": `${origin}/#person`,
-    name: "Takumi Tokunaga",
+    name: PERSON_NAME,
+    alternateName: PERSON_ALTERNATE_NAMES,
+    givenName: "Takumi",
+    familyName: "Tokunaga",
     url: `${origin}/`,
     image: `${origin}/images/logo.png`,
     sameAs: SAME_AS,
@@ -174,6 +190,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
     "@id": `${origin}/#website`,
     url: `${origin}/`,
     name: "Takumi Tokunaga Portfolio",
+    alternateName: ["徳永拓未 個人ホームページ", "德永拓未 個人ホームページ", "Tokunaga Takumi Portfolio"],
     inLanguage,
     publisher: { "@id": `${origin}/#person` }
   };
@@ -240,8 +257,10 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
           "@type": "ProfilePage",
           "@id": `${origin}${hrefFor("home", locale)}#profile-page`,
           url: `${origin}${hrefFor("home", locale)}`,
-          name: "Takumi Tokunaga Portfolio",
+          name: pageName(route, locale),
+          alternateName: [PERSON_NAME, ...PERSON_ALTERNATE_NAMES],
           description: seo.description,
+          keywords: PERSON_SEARCH_TERMS,
           inLanguage,
           mainEntity: { "@id": `${origin}/#person` },
           isPartOf: { "@id": `${origin}/#website` }

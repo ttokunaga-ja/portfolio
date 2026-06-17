@@ -160,6 +160,35 @@ test.describe("portfolio accessibility", () => {
     expect(html).not.toContain("Knowledge Infrastructure");
   });
 
+  test("home page keeps personal search terms in source-only metadata", async ({ request, page }) => {
+    const response = await request.get("/");
+    expect(response.ok()).toBeTruthy();
+
+    const html = await response.text();
+    expect(html).toContain("<title>徳永拓未 | Takumi Tokunaga Portfolio</title>");
+    expect(html).toContain('name="keywords"');
+    expect(html).toContain("德永拓未");
+    expect(html).toContain("德永");
+    expect(html).toContain("拓未");
+    expect(html).toContain("とくながたくみ");
+    expect(html).toContain("とくなが");
+    expect(html).toContain("たくみ");
+    expect(html).toContain("トクナガタクミ");
+    expect(html).toContain("トクナガ");
+    expect(html).toContain("タクミ");
+    expect(html).toContain("Tokunaga Takumi");
+    expect(html).toMatch(/<h1 class="[^"]*">Takumi Tokunaga<\/h1>/);
+
+    await page.goto("/");
+    const visibleText = await page.locator("body").innerText();
+    expect(visibleText).not.toContain("徳永拓未");
+    expect(visibleText).not.toContain("德永拓未");
+    expect(visibleText).not.toContain("とくながたくみ");
+    expect(visibleText).not.toContain("トクナガタクミ");
+    expect(visibleText).not.toContain("德永");
+    expect(visibleText).not.toContain("拓未");
+  });
+
   test("head includes browser color and social metadata", async ({ page }) => {
     await page.goto("/experience/ritsumeikan-university/");
 
@@ -178,8 +207,10 @@ test.describe("portfolio accessibility", () => {
     );
 
     const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
-    const graph = JSON.parse(jsonLd ?? "{}")["@graph"] as Array<{ "@type": string }>;
-    expect(graph.some((node) => node["@type"] === "Person")).toBe(true);
+    const graph = JSON.parse(jsonLd ?? "{}")["@graph"] as Array<{ "@type": string; alternateName?: string[] }>;
+    const person = graph.find((node) => node["@type"] === "Person");
+    expect(person).toBeTruthy();
+    expect(person?.alternateName).toEqual(expect.arrayContaining(["Tokunaga Takumi", "徳永拓未", "德永拓未"]));
     expect(graph.some((node) => node["@type"] === "BreadcrumbList")).toBe(true);
   });
 
