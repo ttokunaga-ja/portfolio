@@ -2,7 +2,16 @@ import { getEntries, getEntry, getUniqueEntryPaths } from "./content";
 import { defaultLocale, resources } from "./i18n";
 import type { Collection, Locale, PrimaryPage, RouteState } from "./types";
 
-const primaryPages = new Set<PrimaryPage>(["home", "research", "projects", "experience", "skills", "contact"]);
+const primaryPages = new Set<PrimaryPage>([
+  "home",
+  "about",
+  "research",
+  "projects",
+  "experience",
+  "skills",
+  "contact",
+  "privacy"
+]);
 const collections = new Set<Collection>(["research", "projects", "experience"]);
 
 export const locales: Locale[] = ["ja", "en"];
@@ -57,11 +66,13 @@ export type PrerenderTarget = { path: string; basePath: string; locale: Locale }
 export function getStaticPathsForPrerender(): PrerenderTarget[] {
   const basePaths = [
     "/",
+    "/about/",
     "/research/",
     "/projects/",
     "/experience/",
     "/skills/",
     "/contact/",
+    "/privacy/",
     ...getUniqueEntryPaths().map((entry) => `/${entry.collection}/${entry.slug}/`)
   ];
 
@@ -89,20 +100,24 @@ export function getSeo(route: RouteState, locale: Locale) {
 
   const pageTitles: Record<PrimaryPage, string> = {
     home: locale === "ja" ? "徳永拓未 | Takumi Tokunaga Portfolio" : "Takumi Tokunaga Portfolio",
+    about: `${t.page.aboutTitle} | Takumi Tokunaga`,
     research: `${t.page.researchTitle} | Takumi Tokunaga`,
     projects: `${t.page.projectsTitle} | Takumi Tokunaga`,
     experience: `${t.page.experienceTitle} | Takumi Tokunaga`,
     skills: `${t.page.skillsTitle} | Takumi Tokunaga`,
-    contact: `${t.page.contactTitle} | Takumi Tokunaga`
+    contact: `${t.page.contactTitle} | Takumi Tokunaga`,
+    privacy: `${t.page.privacyTitle} | Takumi Tokunaga`
   };
 
   const pageDescriptions: Record<PrimaryPage, string> = {
     home: t.home.seoDescription,
+    about: t.page.aboutLead,
     research: t.page.researchLead,
     projects: t.page.projectsLead,
     experience: t.page.experienceLead,
     skills: t.page.skillsLead,
-    contact: t.page.contactLead
+    contact: t.page.contactLead,
+    privacy: t.page.privacyLead
   };
 
   const page = route.kind === "page" ? route.page : "home";

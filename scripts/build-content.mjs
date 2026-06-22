@@ -1,7 +1,7 @@
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, posix, relative } from "node:path";
-import matter from "gray-matter";
 import { marked } from "marked";
+import { parseFrontmatter } from "./frontmatter.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
@@ -356,7 +356,7 @@ for (const file of files) {
   }
 
   const raw = await readFile(file, "utf8");
-  const parsed = matter(raw);
+  const parsed = parseFrontmatter(raw);
   const data = parsed.data;
   const slug = toSlug(file, collection);
   const context = { collection, slug, normalized };

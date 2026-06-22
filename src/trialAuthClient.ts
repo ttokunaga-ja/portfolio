@@ -142,7 +142,9 @@ export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
     if (active) {
       unsubscribe = onAuthStateChanged(auth, onChange);
     }
-  })();
+  })().catch(() => {
+    if (active) onChange(null);
+  });
 
   return () => {
     active = false;

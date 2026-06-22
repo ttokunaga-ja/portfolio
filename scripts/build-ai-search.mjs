@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import matter from "gray-matter";
+import { parseFrontmatter } from "./frontmatter.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
@@ -85,7 +85,12 @@ function normalizeArray(value) {
 
 function normalizeLinks(value) {
   if (!value) return [];
-  const links = Array.isArray(value) ? value : [value];
+  const links =
+    typeof value === "object" && !Array.isArray(value)
+      ? Object.values(value).map((link) => (link && typeof link === "object" ? `[${link.label}](${link.url})` : link))
+      : Array.isArray(value)
+        ? value
+        : [value];
   return links
     .map((link) => {
       if (typeof link !== "string") return null;
@@ -203,7 +208,7 @@ async function readContentEntries() {
     }
 
     const raw = await readFile(file, "utf8");
-    const parsed = matter(raw);
+    const parsed = parseFrontmatter(raw);
     const data = parsed.data;
     const slug = toSlug(file, collection);
 

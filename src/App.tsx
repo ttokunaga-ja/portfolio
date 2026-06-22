@@ -5,11 +5,13 @@ import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import GoogleIcon from "@mui/icons-material/Google";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
+import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
 import LanguageRoundedIcon from "@mui/icons-material/LanguageRounded";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import MailOutlineRoundedIcon from "@mui/icons-material/MailOutlineRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
+import PrivacyTipRoundedIcon from "@mui/icons-material/PrivacyTipRounded";
 import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import {
@@ -109,6 +111,7 @@ function useLocale(): Locale {
 
 const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
   { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
+  { page: "about", labelKey: "nav.about", icon: <InfoRoundedIcon /> },
   { page: "research", labelKey: "nav.research", icon: <ScienceRoundedIcon /> },
   { page: "projects", labelKey: "nav.projects", icon: <AccountTreeRoundedIcon /> },
   { page: "experience", labelKey: "nav.experience", icon: <TimelineRoundedIcon /> },
@@ -118,7 +121,32 @@ const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNo
 
 const topNavItems = navItems.filter((item) => item.page !== "home");
 
-const skillGroups: Array<{ title: string; items: string[] }> = [];
+const skillGroups: Array<{ title: string; items: string[] }> = [
+  {
+    title: "Frontend / UX",
+    items: ["React", "TypeScript", "Vite", "MUI", "i18next", "Accessibility", "Responsive UI"]
+  },
+  {
+    title: "Backend / API",
+    items: ["Go", "Node.js", "Cloud Run", "Cloudflare Workers", "OpenAPI", "Firebase Auth", "API keys"]
+  },
+  {
+    title: "Data / Search",
+    items: ["PostgreSQL", "Neon", "CSV pipelines", "Autocomplete", "Education data", "Normalization"]
+  },
+  {
+    title: "Document / Media",
+    items: ["PDF", "pdf.js", "Local-first processing", "QR code generation", "Three.js", "Canvas"]
+  },
+  {
+    title: "Operations",
+    items: ["Cloudflare Pages", "GitHub Actions", "Security headers", "CSP", "Lighthouse", "Playwright"]
+  },
+  {
+    title: "Research interests",
+    items: ["AI in education", "Human-in-the-loop tools", "Privacy boundary design", "Reproducible datasets"]
+  }
+];
 
 function ZennIcon() {
   return (
@@ -221,6 +249,8 @@ function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
   }
 
   switch (route.page) {
+    case "about":
+      return <AboutPage />;
     case "research":
       return <ListingPage locale={locale} collection="research" />;
     case "projects":
@@ -231,6 +261,8 @@ function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
       return <SkillsPage />;
     case "contact":
       return <ContactPage />;
+    case "privacy":
+      return <PrivacyPage />;
     case "home":
     default:
       return <HomePage locale={locale} />;
@@ -517,10 +549,21 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
             alignItems="center"
             justifyContent="center"
             textAlign="center"
+            useFlexGap
+            flexWrap="wrap"
           >
             <Typography color="text.secondary" aria-label="Copyright Takumi Tokunaga">
               ©
             </Typography>
+            <Button href={hrefFor("about", locale)} variant="text">
+              {t("nav.about")}
+            </Button>
+            <Button href={hrefFor("privacy", locale)} variant="text">
+              {t("nav.privacy")}
+            </Button>
+            <Button href={hrefFor("contact", locale)} variant="text">
+              {t("nav.contact")}
+            </Button>
             <Button
               href="https://github.com/ttokunaga-ja"
               target="_blank"
@@ -591,6 +634,40 @@ function HomePage({ locale }: { locale: Locale }) {
           </Stack>
         </Container>
       </Box>
+
+      <Section title={t("home.aboutTitle")} lead={t("home.aboutLead")}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.1fr 0.9fr" }, gap: 2.5 }}>
+          <Card variant="outlined">
+            <Stack spacing={2} sx={{ p: 2.5 }}>
+              <Typography variant="h3">{t("home.editorialTitle")}</Typography>
+              <Typography color="text.secondary">{t("home.editorialLead")}</Typography>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                <Button href={hrefFor("about", locale)} variant="contained" endIcon={<ArrowForwardRoundedIcon />}>
+                  {t("nav.about")}
+                </Button>
+                <Button href={hrefFor("privacy", locale)} variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>
+                  {t("nav.privacy")}
+                </Button>
+              </Stack>
+            </Stack>
+          </Card>
+          <Card variant="outlined">
+            <Stack spacing={1.4} sx={{ p: 2.5 }}>
+              <Typography variant="h3">{t("label.sitePages")}</Typography>
+              <Typography color="text.secondary">
+                {locale === "ja"
+                  ? "運営者情報、問い合わせ先、広告とデータ利用の方針を公開し、各ページから確認できるようにしています。"
+                  : "Operator details, contact channels, and advertising or data-use policies are published and linked from the site."}
+              </Typography>
+              <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+                <Chip label={t("nav.about")} variant="outlined" />
+                <Chip label={t("nav.contact")} variant="outlined" />
+                <Chip label={t("nav.privacy")} variant="outlined" />
+              </Stack>
+            </Stack>
+          </Card>
+        </Box>
+      </Section>
 
       <Section title={t("home.contentTitle")}>
         <Box
@@ -991,6 +1068,81 @@ function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
   );
 }
 
+function AboutPage() {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const sections =
+    locale === "ja"
+      ? [
+          {
+            title: "運営者",
+            body: "徳永拓未 / Takumi Tokunaga が運営する個人サイトです。研究関心、個人開発プロジェクト、職務・学習経験を、公開できる範囲で継続的に整理しています。"
+          },
+          {
+            title: "公開している内容",
+            body: "教育データ検索、local-firstなPDF処理、QRコード生成、3Dブラウザゲームなど、自分で設計・実装・公開した成果物を中心に掲載しています。各プロジェクトページでは、目的、主な機能、技術構成、設計で重視した点、公開・運用方法を分けて説明しています。"
+          },
+          {
+            title: "編集方針",
+            body: "内容は、実装したリポジトリ、公開ページ、運用メモ、学習・活動履歴をもとに更新します。外部資料を参照する場合は、単なる転載ではなく、自分の実装や検証にどう関係するかを明確にします。"
+          },
+          {
+            title: "連絡先",
+            body: "不具合報告、掲載内容の訂正、API利用、共同開発などの連絡は Contact ページから受け付けています。"
+          }
+        ]
+      : [
+          {
+            title: "Operator",
+            body: "This is the personal website of Takumi Tokunaga. It documents research interests, independent software projects, and learning or work experience within the scope that can be published."
+          },
+          {
+            title: "Published scope",
+            body: "The site focuses on work I designed, implemented, and published myself, including education-data search, local-first PDF processing, QR code generation, and a browser-based 3D game. Project pages separate purpose, key features, stack choices, design focus, and operations."
+          },
+          {
+            title: "Editorial policy",
+            body: "Content is updated from implemented repositories, public pages, operation notes, and activity history. When external references are used, the page explains how they relate to my own implementation or evaluation."
+          },
+          {
+            title: "Contact",
+            body: "Bug reports, corrections, API access questions, and collaboration requests are accepted through the Contact page."
+          }
+        ];
+
+  return (
+    <>
+      <PageHead icon={<InfoRoundedIcon />} title={t("page.aboutTitle")} lead={t("page.aboutLead")} />
+      <Section title={t("page.aboutTitle")} lead={t("page.aboutLead")}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
+            gap: 2.5
+          }}
+        >
+          {sections.map((section) => (
+            <Card key={section.title} variant="outlined">
+              <Stack spacing={1.4} sx={{ p: 2.5 }}>
+                <Typography variant="h3">{section.title}</Typography>
+                <Typography color="text.secondary">{section.body}</Typography>
+              </Stack>
+            </Card>
+          ))}
+        </Box>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} sx={{ mt: 3 }}>
+          <Button href={hrefFor("projects", locale)} variant="contained" endIcon={<ArrowForwardRoundedIcon />}>
+            {t("nav.projects")}
+          </Button>
+          <Button href={hrefFor("contact", locale)} variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>
+            {t("nav.contact")}
+          </Button>
+        </Stack>
+      </Section>
+    </>
+  );
+}
+
 function SkillsPage() {
   const { t } = useTranslation();
 
@@ -1022,6 +1174,98 @@ function SkillsPage() {
             ))}
           </Box>
         )}
+      </Section>
+    </>
+  );
+}
+
+function PrivacyPage() {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const updatedLabel = locale === "ja" ? "最終更新: 2026年6月22日" : "Last updated: June 22, 2026";
+  const policies =
+    locale === "ja"
+      ? [
+          {
+            title: "基本方針",
+            body: "このサイトは、運営者の活動、研究、個人開発プロジェクトを紹介するために公開しています。必要以上の個人情報を収集しないこと、利用者が問い合わせや外部サービス利用の範囲を理解できることを重視します。"
+          },
+          {
+            title: "アクセス解析とログ",
+            body: "ホスティング、CDN、認証、API提供のため、Cloudflare、Firebase、Google Cloud などの外部サービスが標準的なアクセスログや技術情報を処理する場合があります。これらは不正利用対策、障害調査、品質改善のために使います。"
+          },
+          {
+            title: "広告について",
+            body: "このサイトでは Google AdSense などの広告配信サービスを利用する場合があります。広告配信事業者は Cookie や類似技術を使い、利用者の過去のアクセス情報に基づいて広告を表示することがあります。広告のパーソナライズ設定は Google の広告設定から変更できます。"
+          },
+          {
+            title: "問い合わせ",
+            body: "メール、GitHub、LinkedIn などから送られた内容は、返信、本人確認、依頼内容の確認、トラブル対応のために利用します。法令上必要な場合を除き、問い合わせ内容を第三者に販売することはありません。"
+          },
+          {
+            title: "外部リンク",
+            body: "このサイトには、GitHub、Zenn、LinkedIn、公開プロジェクト、APIドキュメントなど外部サイトへのリンクがあります。外部サイトでの情報の取り扱いは、それぞれの運営者のポリシーをご確認ください。"
+          },
+          {
+            title: "改定",
+            body: "この方針は、サイト構成、利用サービス、法令やポリシーの変更に合わせて更新することがあります。重要な変更がある場合は、このページの内容を更新します。"
+          }
+        ]
+      : [
+          {
+            title: "Basic policy",
+            body: "This site introduces the operator's activity, research, and independent software projects. It avoids collecting unnecessary personal information and explains the scope of contact channels and external services."
+          },
+          {
+            title: "Analytics and logs",
+            body: "Hosting, CDN, authentication, and API services such as Cloudflare, Firebase, and Google Cloud may process standard access logs and technical information. This is used for abuse prevention, troubleshooting, and quality improvement."
+          },
+          {
+            title: "Advertising",
+            body: "This site may use advertising services such as Google AdSense. Advertising providers may use cookies or similar technologies to show ads based on previous access information. Ad personalization can be managed through Google's ad settings."
+          },
+          {
+            title: "Contact",
+            body: "Messages sent by email, GitHub, LinkedIn, or other channels are used to reply, verify the sender, understand the request, and handle troubleshooting. Contact content is not sold to third parties unless required by law."
+          },
+          {
+            title: "External links",
+            body: "This site links to external services such as GitHub, Zenn, LinkedIn, public projects, and API documentation. Please check each external service's own policy for how it handles information."
+          },
+          {
+            title: "Updates",
+            body: "This policy may be updated when the site structure, services, laws, or platform policies change. Important changes are reflected on this page."
+          }
+        ];
+
+  return (
+    <>
+      <PageHead icon={<PrivacyTipRoundedIcon />} title={t("page.privacyTitle")} lead={t("page.privacyLead")} />
+      <Section title={t("page.privacyTitle")} lead={updatedLabel}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
+            gap: 2.5
+          }}
+        >
+          {policies.map((policy) => (
+            <Card key={policy.title} variant="outlined">
+              <Stack spacing={1.4} sx={{ p: 2.5 }}>
+                <Typography variant="h3">{policy.title}</Typography>
+                <Typography color="text.secondary">{policy.body}</Typography>
+              </Stack>
+            </Card>
+          ))}
+        </Box>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.2} sx={{ mt: 3 }}>
+          <Button href={hrefFor("contact", locale)} variant="contained" endIcon={<ArrowForwardRoundedIcon />}>
+            {t("nav.contact")}
+          </Button>
+          <Button href={hrefFor("about", locale)} variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>
+            {t("nav.about")}
+          </Button>
+        </Stack>
       </Section>
     </>
   );
