@@ -56,16 +56,10 @@ export const resources = {
       },
       home: {
         title: "Takumi Tokunaga",
-        lead: "研究、個人開発、教育支援システムの実装記録をまとめる個人サイトです。",
+        lead: "Research / Projects / Experience",
         seoDescription:
           "徳永拓未（德永拓未 / とくながたくみ / トクナガタクミ / Takumi Tokunaga / Tokunaga Takumi）の個人ホームページです。研究、個人開発プロジェクト、技術スタック、経歴、AI・機械学習、Cloud Run、Firebase、教育支援システムに関する活動を掲載しています。",
-        contentTitle: "Explore",
-        aboutTitle: "このサイトについて",
-        aboutLead:
-          "このサイトでは、運営者が取り組んでいる研究テーマ、公開プロジェクト、職務・学習経験を、実装背景や設計判断とあわせて整理しています。",
-        editorialTitle: "掲載方針",
-        editorialLead:
-          "公開している記事は、実際に作ったツール、検証した設計、所属・活動履歴をもとに更新しています。単なるリンク集ではなく、なぜ作ったか、どの技術を使ったか、どこを改善しているかが分かる記録にすることを重視しています。"
+        contentTitle: "Explore"
       },
       page: {
         aboutTitle: "About",
@@ -92,8 +86,7 @@ export const resources = {
         links: "Links",
         opensInNewTab: "新しいタブで開きます",
         latest: "最近の取り組み",
-        noContent: "近日公開予定です。",
-        sitePages: "サイト情報"
+        noContent: "近日公開予定です。"
       }
     }
   },
@@ -148,16 +141,10 @@ export const resources = {
       },
       home: {
         title: "Takumi Tokunaga",
-        lead: "A personal site documenting research, independent software projects, and education-support systems.",
+        lead: "Research / Projects / Experience",
         seoDescription:
           "Takumi Tokunaga's personal homepage, also written as Tokunaga Takumi, 徳永拓未, 德永拓未, とくながたくみ, and トクナガタクミ, covering research, personal projects, technical skills, experience, AI and machine learning, Cloud Run, Firebase, and education support systems.",
-        contentTitle: "Explore",
-        aboutTitle: "About this site",
-        aboutLead:
-          "This site organizes Takumi Tokunaga's research interests, public projects, and learning or work experience together with implementation background and design decisions.",
-        editorialTitle: "Editorial policy",
-        editorialLead:
-          "The content is based on tools I have built, designs I have tested, and verifiable activity history. The goal is not to publish a link collection, but to explain why each work exists, which technologies it uses, and what is being improved."
+        contentTitle: "Explore"
       },
       page: {
         aboutTitle: "About",
@@ -185,8 +172,7 @@ export const resources = {
         links: "Links",
         opensInNewTab: "Opens in a new tab",
         latest: "Recent",
-        noContent: "Coming soon.",
-        sitePages: "Site information"
+        noContent: "Coming soon."
       }
     }
   }

@@ -111,12 +111,16 @@ function useLocale(): Locale {
 
 const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
   { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
-  { page: "about", labelKey: "nav.about", icon: <InfoRoundedIcon /> },
   { page: "research", labelKey: "nav.research", icon: <ScienceRoundedIcon /> },
   { page: "projects", labelKey: "nav.projects", icon: <AccountTreeRoundedIcon /> },
   { page: "experience", labelKey: "nav.experience", icon: <TimelineRoundedIcon /> },
   { page: "skills", labelKey: "nav.skills", icon: <CodeRoundedIcon /> },
   { page: "contact", labelKey: "nav.contact", icon: <MailOutlineRoundedIcon /> }
+];
+
+const auxiliaryNavItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
+  { page: "about", labelKey: "nav.about", icon: <InfoRoundedIcon /> },
+  { page: "privacy", labelKey: "nav.privacy", icon: <PrivacyTipRoundedIcon /> }
 ];
 
 const topNavItems = navItems.filter((item) => item.page !== "home");
@@ -532,6 +536,24 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
             </ListItemButton>
           ))}
         </List>
+        <Divider />
+        <List component="nav" aria-label="Site information navigation" sx={{ p: 1.5 }}>
+          {auxiliaryNavItems.map((item) => (
+            <ListItemButton
+              key={item.page}
+              component="a"
+              href={hrefFor(item.page, locale)}
+              selected={currentPage === item.page}
+              onClick={() => closeMenu(false)}
+              sx={{ borderRadius: 1, mb: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: currentPage === item.page ? "primary.main" : "text.secondary" }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={t(item.labelKey)} />
+            </ListItemButton>
+          ))}
+        </List>
       </Drawer>
 
       <Box id="main-content" component="main" tabIndex={-1}>
@@ -555,15 +577,6 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
             <Typography color="text.secondary" aria-label="Copyright Takumi Tokunaga">
               ©
             </Typography>
-            <Button href={hrefFor("about", locale)} variant="text">
-              {t("nav.about")}
-            </Button>
-            <Button href={hrefFor("privacy", locale)} variant="text">
-              {t("nav.privacy")}
-            </Button>
-            <Button href={hrefFor("contact", locale)} variant="text">
-              {t("nav.contact")}
-            </Button>
             <Button
               href="https://github.com/ttokunaga-ja"
               target="_blank"
@@ -634,40 +647,6 @@ function HomePage({ locale }: { locale: Locale }) {
           </Stack>
         </Container>
       </Box>
-
-      <Section title={t("home.aboutTitle")} lead={t("home.aboutLead")}>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1.1fr 0.9fr" }, gap: 2.5 }}>
-          <Card variant="outlined">
-            <Stack spacing={2} sx={{ p: 2.5 }}>
-              <Typography variant="h3">{t("home.editorialTitle")}</Typography>
-              <Typography color="text.secondary">{t("home.editorialLead")}</Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                <Button href={hrefFor("about", locale)} variant="contained" endIcon={<ArrowForwardRoundedIcon />}>
-                  {t("nav.about")}
-                </Button>
-                <Button href={hrefFor("privacy", locale)} variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>
-                  {t("nav.privacy")}
-                </Button>
-              </Stack>
-            </Stack>
-          </Card>
-          <Card variant="outlined">
-            <Stack spacing={1.4} sx={{ p: 2.5 }}>
-              <Typography variant="h3">{t("label.sitePages")}</Typography>
-              <Typography color="text.secondary">
-                {locale === "ja"
-                  ? "運営者情報、問い合わせ先、広告とデータ利用の方針を公開し、各ページから確認できるようにしています。"
-                  : "Operator details, contact channels, and advertising or data-use policies are published and linked from the site."}
-              </Typography>
-              <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
-                <Chip label={t("nav.about")} variant="outlined" />
-                <Chip label={t("nav.contact")} variant="outlined" />
-                <Chip label={t("nav.privacy")} variant="outlined" />
-              </Stack>
-            </Stack>
-          </Card>
-        </Box>
-      </Section>
 
       <Section title={t("home.contentTitle")}>
         <Box
