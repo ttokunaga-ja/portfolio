@@ -8,11 +8,12 @@ const primaryPages = new Set<PrimaryPage>([
   "research",
   "projects",
   "experience",
+  "blog",
   "skills",
   "contact",
   "privacy"
 ]);
-const collections = new Set<Collection>(["research", "projects", "experience"]);
+const collections = new Set<Collection>(["research", "projects", "experience", "blog"]);
 
 export const locales: Locale[] = ["ja", "en"];
 
@@ -70,6 +71,7 @@ export function getStaticPathsForPrerender(): PrerenderTarget[] {
     "/research/",
     "/projects/",
     "/experience/",
+    "/blog/",
     "/skills/",
     "/contact/",
     "/privacy/",
@@ -104,6 +106,7 @@ export function getSeo(route: RouteState, locale: Locale) {
     research: `${t.page.researchTitle} | Takumi Tokunaga`,
     projects: `${t.page.projectsTitle} | Takumi Tokunaga`,
     experience: `${t.page.experienceTitle} | Takumi Tokunaga`,
+    blog: `${t.page.blogTitle} | Takumi Tokunaga`,
     skills: `${t.page.skillsTitle} | Takumi Tokunaga`,
     contact: `${t.page.contactTitle} | Takumi Tokunaga`,
     privacy: `${t.page.privacyTitle} | Takumi Tokunaga`
@@ -115,6 +118,7 @@ export function getSeo(route: RouteState, locale: Locale) {
     research: t.page.researchLead,
     projects: t.page.projectsLead,
     experience: t.page.experienceLead,
+    blog: t.page.blogLead,
     skills: t.page.skillsLead,
     contact: t.page.contactLead,
     privacy: t.page.privacyLead
@@ -177,7 +181,9 @@ function pageName(route: RouteState, locale: Locale) {
 }
 
 function collectionPageType(page: PrimaryPage) {
-  return page === "research" || page === "projects" || page === "experience" ? "CollectionPage" : "WebPage";
+  return page === "research" || page === "projects" || page === "experience" || page === "blog"
+    ? "CollectionPage"
+    : "WebPage";
 }
 
 // Build the JSON-LD graph for a page. Keep the Person and WebSite nodes stable
@@ -253,6 +259,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
           description: entry ? entry.abstract : seo.description,
           inLanguage,
           keywords: entry?.tags ?? [],
+          dateModified: entry?.updatedAt || entry?.publishedAt || undefined,
           creator: { "@id": `${origin}/#person` },
           author: { "@id": `${origin}/#person` },
           isPartOf: { "@id": `${origin}/#website` },
@@ -297,7 +304,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
     about: { "@id": `${origin}/#person` }
   };
 
-  if (page === "research" || page === "projects" || page === "experience") {
+  if (page === "research" || page === "projects" || page === "experience" || page === "blog") {
     const items = getEntries(locale, page).map((entry, index) => ({
       "@type": "ListItem",
       position: index + 1,

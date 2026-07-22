@@ -13,6 +13,7 @@ export default defineConfig({
         research: resolve(__dirname, "research/index.html"),
         projects: resolve(__dirname, "projects/index.html"),
         experience: resolve(__dirname, "experience/index.html"),
+        blog: resolve(__dirname, "blog/index.html"),
         skills: resolve(__dirname, "skills/index.html"),
         contact: resolve(__dirname, "contact/index.html"),
         privacy: resolve(__dirname, "privacy/index.html")

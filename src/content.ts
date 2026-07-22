@@ -14,7 +14,7 @@ export function getFeaturedEntries(locale: Locale, collection: Collection, limit
 }
 
 function entryTime(entry: PortfolioEntry) {
-  const candidate = entry.startDate || entry.endDate;
+  const candidate = entry.publishedAt || entry.updatedAt || entry.startDate || entry.endDate;
   const parsed = Date.parse(candidate);
   if (!Number.isNaN(parsed)) return parsed;
   return Number.MAX_SAFE_INTEGER - entry.sortOrder;

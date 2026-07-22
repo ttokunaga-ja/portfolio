@@ -6,6 +6,7 @@ role: "設計・フロントエンド実装・デプロイ"
 period: "2025 - 2026"
 startDate: "2025-11-01"
 endDate: "2026-06-05"
+updatedAt: "2025-11-01"
 sortOrder: 20
 featured: true
 tags:

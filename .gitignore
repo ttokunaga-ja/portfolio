@@ -6,4 +6,5 @@ test-results
 src/generated/content.generated.ts
 .wrangler
 .playwright-mcp
+.accessibility-reports
 .DS_Store

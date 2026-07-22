@@ -6,6 +6,7 @@ role: "3D実装・ゲームロジック・UI実装・デプロイ"
 period: "2026"
 startDate: "2026-06-07"
 endDate: "2026-06-07"
+updatedAt: "2026-06-07"
 sortOrder: 15
 featured: true
 tags:

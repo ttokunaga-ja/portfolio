@@ -6,7 +6,7 @@ import { parseFrontmatter } from "./frontmatter.mjs";
 const root = process.cwd();
 const contentDir = join(root, "content");
 const outFile = join(root, "src/generated/content.generated.ts");
-const collections = new Set(["research", "projects", "experience"]);
+const collections = new Set(["research", "projects", "experience", "blog"]);
 const locales = new Set(["ja", "en"]);
 const buildNow = new Date();
 
@@ -367,6 +367,8 @@ for (const file of files) {
   const tags = normalizeArray(data.tags);
   const startDate = firstString(data.startDate);
   const endDate = firstString(data.endDate);
+  const publishedAt = firstString(data.publishedAt);
+  const updatedAt = firstString(data.updatedAt);
   const startLabel =
     collection === "experience" ? formatMonth(startDate, locale) : firstString(data.startLabel, startDate);
   const baseEndLabel = collection === "experience" ? formatMonth(endDate, locale) : firstString(data.endLabel, endDate);
@@ -402,12 +404,15 @@ for (const file of files) {
     featured: Boolean(data.featured),
     tags,
     links: normalizeLinks(data.links),
+    publishedAt,
+    updatedAt,
+    canonicalUrl: firstString(data.canonicalUrl),
     bodyHtml
   });
 }
 
 function entryStartTime(entry) {
-  const parsed = Date.parse(entry.startDate);
+  const parsed = Date.parse(entry.publishedAt || entry.updatedAt || entry.startDate);
   if (!Number.isNaN(parsed)) return parsed;
   return Number.MIN_SAFE_INTEGER + entry.sortOrder;
 }
@@ -416,6 +421,12 @@ entries.sort((a, b) => {
   if (a.locale !== b.locale) return a.locale.localeCompare(b.locale);
   if (a.collection !== b.collection) return a.collection.localeCompare(b.collection);
   if (a.collection === "experience") {
+    return entryStartTime(b) - entryStartTime(a) || a.sortOrder - b.sortOrder || a.title.localeCompare(b.title);
+  }
+  if (a.collection === "blog") {
+    return entryStartTime(b) - entryStartTime(a) || a.title.localeCompare(b.title);
+  }
+  if (a.collection === "projects") {
     return entryStartTime(b) - entryStartTime(a) || a.sortOrder - b.sortOrder || a.title.localeCompare(b.title);
   }
   return a.sortOrder - b.sortOrder || a.title.localeCompare(b.title);

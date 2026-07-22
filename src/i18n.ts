@@ -13,6 +13,7 @@ export const resources = {
         research: "Research",
         projects: "Projects",
         experience: "Experience",
+        blog: "Blog",
         skills: "Skills",
         contact: "Contact",
         privacy: "Privacy"
@@ -70,6 +71,8 @@ export const resources = {
         projectsLead: "プロジェクトの概要、技術スタック、体験用リンクをまとめています。",
         experienceTitle: "Experience",
         experienceLead: "所属先や活動期間がわかるよう、経歴を時系列でまとめています。",
+        blogTitle: "Blog",
+        blogLead: "Zennで公開した技術・研究・個人開発に関する記事を掲載しています。",
         skillsTitle: "Skills",
         skillsLead: "実際のプロジェクトで使っている技術領域と、設計・運用上の関心をカテゴリごとにまとめています。",
         contactTitle: "Contact",
@@ -86,6 +89,8 @@ export const resources = {
         links: "Links",
         opensInNewTab: "新しいタブで開きます",
         latest: "最近の取り組み",
+        published: "公開日",
+        updated: "最終更新",
         noContent: "近日公開予定です。"
       }
     }
@@ -98,6 +103,7 @@ export const resources = {
         research: "Research",
         projects: "Projects",
         experience: "Experience",
+        blog: "Blog",
         skills: "Skills",
         contact: "Contact",
         privacy: "Privacy"
@@ -156,6 +162,8 @@ export const resources = {
         projectsLead: "Project summaries, technical stacks, and links to try them.",
         experienceTitle: "Experience",
         experienceLead: "Experience is organized by institution and period.",
+        blogTitle: "Blog",
+        blogLead: "Articles on technology, research, and independent development, originally published on Zenn.",
         skillsTitle: "Skills",
         skillsLead: "Technical areas used in real projects, grouped by implementation and operations focus.",
         contactTitle: "Contact",
@@ -172,6 +180,8 @@ export const resources = {
         links: "Links",
         opensInNewTab: "Opens in a new tab",
         latest: "Recent",
+        published: "Published",
+        updated: "Last updated",
         noContent: "Coming soon."
       }
     }

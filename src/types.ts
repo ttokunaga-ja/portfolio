@@ -1,8 +1,8 @@
 export type Locale = "ja" | "en";
 
-export type Collection = "research" | "projects" | "experience";
+export type Collection = "research" | "projects" | "experience" | "blog";
 
-export type PrimaryPage = "home" | "about" | "research" | "projects" | "experience" | "skills" | "contact" | "privacy";
+export type PrimaryPage = "home" | "about" | "research" | "projects" | "experience" | "blog" | "skills" | "contact" | "privacy";
 
 export type ExperienceType = "education" | "work" | "community";
 
@@ -31,6 +31,9 @@ export type PortfolioEntry = {
   featured: boolean;
   tags: string[];
   links: PortfolioLink[];
+  publishedAt: string;
+  updatedAt: string;
+  canonicalUrl: string;
   bodyHtml: string;
 };
 

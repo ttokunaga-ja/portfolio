@@ -6,6 +6,7 @@ role: "System design, data-processing scripts, API design, frontend implementati
 period: "2026"
 startDate: "2026-06-06"
 endDate: "2026-06-07"
+updatedAt: "2026-06-07"
 sortOrder: 10
 featured: true
 tags:

@@ -1,4 +1,5 @@
 import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
+import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
@@ -109,11 +110,24 @@ function useLocale(): Locale {
   return React.useContext(LocaleContext);
 }
 
+function formatTimestamp(value: string, locale: Locale) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Tokyo"
+  }).format(parsed);
+}
+
 const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
   { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
   { page: "research", labelKey: "nav.research", icon: <ScienceRoundedIcon /> },
   { page: "projects", labelKey: "nav.projects", icon: <AccountTreeRoundedIcon /> },
   { page: "experience", labelKey: "nav.experience", icon: <TimelineRoundedIcon /> },
+  { page: "blog", labelKey: "nav.blog", icon: <ArticleRoundedIcon /> },
   { page: "skills", labelKey: "nav.skills", icon: <CodeRoundedIcon /> },
   { page: "contact", labelKey: "nav.contact", icon: <MailOutlineRoundedIcon /> }
 ];
@@ -261,6 +275,8 @@ function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
       return <ListingPage locale={locale} collection="projects" />;
     case "experience":
       return <ExperiencePage locale={locale} />;
+    case "blog":
+      return <ListingPage locale={locale} collection="blog" />;
     case "skills":
       return <SkillsPage />;
     case "contact":
@@ -624,6 +640,13 @@ function HomePage({ locale }: { locale: Locale }) {
       lead: t("page.experienceLead"),
       href: hrefFor("experience", locale),
       icon: <TimelineRoundedIcon />
+    },
+    {
+      collection: "blog",
+      title: t("page.blogTitle"),
+      lead: t("page.blogLead"),
+      href: hrefFor("blog", locale),
+      icon: <ArticleRoundedIcon />
     }
   ];
 
@@ -652,7 +675,7 @@ function HomePage({ locale }: { locale: Locale }) {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
+            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" },
             gap: 2.5
           }}
         >
@@ -820,9 +843,11 @@ function PageHead({
 function ListingPage({ locale, collection }: { locale: Locale; collection: Collection }) {
   const { t } = useTranslation();
   const entries = getEntries(locale, collection);
-  const title = collection === "research" ? t("page.researchTitle") : t("page.projectsTitle");
-  const lead = collection === "research" ? t("page.researchLead") : t("page.projectsLead");
-  const icon = collection === "research" ? <ScienceRoundedIcon /> : <AccountTreeRoundedIcon />;
+  const title =
+    collection === "research" ? t("page.researchTitle") : collection === "projects" ? t("page.projectsTitle") : t("page.blogTitle");
+  const lead =
+    collection === "research" ? t("page.researchLead") : collection === "projects" ? t("page.projectsLead") : t("page.blogLead");
+  const icon = collection === "research" ? <ScienceRoundedIcon /> : collection === "projects" ? <AccountTreeRoundedIcon /> : <ArticleRoundedIcon />;
 
   return (
     <>
@@ -878,6 +903,8 @@ function EntryCard({ entry }: { entry: PortfolioEntry }) {
           <Typography variant="overline" color="primary" fontWeight={800}>
             {entry.collection}
           </Typography>
+          {entry.publishedAt && <Typography variant="overline" color="text.secondary">{entry.publishedAt}</Typography>}
+          {entry.updatedAt && <Typography variant="overline" color="text.secondary">{formatTimestamp(entry.updatedAt, locale)}</Typography>}
         </Stack>
         <Box>
           <Typography variant="h3">{entry.title}</Typography>
@@ -1646,6 +1673,8 @@ function DetailPage({ locale, collection, slug }: { locale: Locale; collection: 
             )}
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
               {entry.period && <Chip label={`${t("label.period")}: ${entry.period}`} />}
+              {entry.publishedAt && <Chip label={`${t("label.published")}: ${entry.publishedAt}`} />}
+              {entry.updatedAt && <Chip label={`${t("label.updated")}: ${formatTimestamp(entry.updatedAt, locale)}`} />}
             </Stack>
           </Stack>
         </Container>
@@ -1683,6 +1712,20 @@ function DetailPage({ locale, collection, slug }: { locale: Locale; collection: 
                 sx={{ mb: 3 }}
               >
                 {t("action.openDemo")}
+              </Button>
+            )}
+            {entry.canonicalUrl && (
+              <Button
+                href={entry.canonicalUrl}
+                target="_blank"
+                rel="noreferrer"
+                variant="outlined"
+                fullWidth
+                endIcon={<OpenInNewRoundedIcon />}
+                aria-label={`Zenn (${t("label.opensInNewTab")})`}
+                sx={{ mb: 3 }}
+              >
+                Zenn
               </Button>
             )}
             <Typography variant="h4" component="h2">

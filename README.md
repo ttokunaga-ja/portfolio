@@ -33,10 +33,12 @@ PORTFOLIO_SITE_ORIGIN=https://takumi-tokunaga.com pnpm build
 
 ## Content
 
-Markdown files live under `content/{ja,en}/{research,projects,experience}`.
+Markdown files live under `content/{ja,en}/{research,projects,experience,blog}`.
 Each file begins with frontmatter and an `## Abstract` section. List pages read the frontmatter `abstract` field, while detail pages render the Markdown body during the build.
 
-The content model is limited to Research, Projects, and Experience.
+Blog posts are generated from the sibling `zenn-content` repository. Do not edit
+`content/ja/blog` or `public/images/blog` directly; they are mirrored on the next
+`zenn-content` push.
 
 Example project frontmatter:
 

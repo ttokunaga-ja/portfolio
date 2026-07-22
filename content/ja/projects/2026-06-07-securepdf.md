@@ -6,6 +6,7 @@ role: "設計・PDF操作エンジン・フロントエンド実装・Worker/API
 period: "2026"
 startDate: "2026-06-05"
 endDate: "2026-06-07"
+updatedAt: "2026-06-07"
 sortOrder: 12
 featured: true
 tags:

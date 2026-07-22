@@ -6,6 +6,7 @@ role: "設計・データ加工スクリプト・API設計・フロントエン�
 period: "2026"
 startDate: "2026-06-06"
 endDate: "2026-06-07"
+updatedAt: "2026-06-07"
 sortOrder: 10
 featured: true
 tags:
