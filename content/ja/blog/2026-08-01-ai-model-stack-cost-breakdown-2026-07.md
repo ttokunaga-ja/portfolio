@@ -181,26 +181,24 @@ GPT-5.5の$5 / $30と比べると、Terraは入出力とも**50%安く**、Luna�
 
 この影響は、今回の269.9億トークンへ当てはめると分かりやすいです。同じ比率でもSol換算の約925.1万円に対し、Terraなら約462.5万円、Lunaなら約185.0万円まで下がります。
 
-### LunaはGeminiの主力Flashより安い
+### OpenAIの最安値はGeminiの最安値より安い
 
-Googleの現行主力である[Gemini 3.6 Flash](https://ai.google.dev/gemini-api/docs/latest-model)は、通常入力**$1.50**、出力**$7.50**です。GPT-5.6 Lunaの$1 / $6は、Gemini 3.6 Flashより入力が約**33.3%安く**、出力が**20%安い**ことになります。キャッシュ入力もLunaの$0.10に対してGemini 3.6 Flashは$0.15です。
+OpenAIの直近のAPI料金引き下げ後、現行最安の[GPT-5 nano](https://developers.openai.com/api/docs/models/gpt-5-nano)は、100万トークンあたり通常入力**$0.05**、出力**$0.40**、キャッシュ入力**$0.005**です。[Gemini APIの料金表](https://ai.google.dev/gemini-api/docs/pricing)で現行GAモデルの最安となるGemini 3.5 Flash-Liteは、入力**$0.30**、出力**$2.50**、キャッシュ入力**$0.03**です。GPT-5 nanoのほうが入力とキャッシュ入力で約**83.3%安く**、出力でも**84%安い**計算になります。
 
-一方で、[Gemini APIの料金表](https://ai.google.dev/gemini-api/docs/pricing)にあるGemini 3.5 Flash-Liteは入力$0.30、出力$2.50なので、最安値だけを比べればGemini側が安いモデルも残っています。「OpenAIがすべてのGeminiより安い」わけではなく、**Lunaが主力Flash層より安くなった**と捉えるのが正確です。
+主力層でも、GPT-5.6 Lunaの$1 / $6は、Gemini 3.6 Flashの$1.50 / $7.50より入力が約**33.3%安く**、出力が**20%安い**価格です。最安モデルと主力モデルの両方でOpenAIがGeminiを下回ったため、**価格だけを理由にGeminiを選ぶ意味はほぼなくなりました**。
 
-### Geminiの存在意義はなくなるのか
+### Geminiの存在意義はほとんどなくなった
 
-コード生成やエージェント用途だけを見れば、Lunaの価格とGPT-5.6ファミリーの性能によって、Geminiを選ぶ理由は以前より薄くなったと感じます。OpenAIの同一ファミリー内で、難しい仕事はSol、量を回す仕事はTerraやLunaと切り替えられるためです。
+コード生成やエージェント用途では、GPT-5.6ファミリーの性能と価格によって、Geminiを選ぶ理由はほぼなくなったと考えています。OpenAIの同一ファミリー内で、難しい仕事はSol、量を回す仕事はTerraやLuna、さらに単純な大量処理はGPT-5 nanoへ切り替えられるためです。
 
-それでも、Geminiの存在意義がすぐになくなるとは考えていません。[Gemini 3.5 Flashのモデル仕様](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash)は、テキストだけでなく画像、動画、音声、PDFを入力でき、1Mトークンのコンテキストを持ちます。GoogleもGemini 3.6 Flashの強みとしてマルチモーダル・空間推論を、Flash-Liteの用途として文書抽出を挙げています。
-
-今後、私がGeminiを使う場面は、汎用的なコーディングよりも次の領域へ寄る可能性があります。
+残る可能性があるのは、Geminiが得意としてきたネイティブなマルチモーダル処理です。今後、私がGeminiを使うとすれば、汎用的なコーディングではなく次の領域に限られます。
 
 - スキャン画像や写真からのOCR、帳票の構造化
 - PDF、画像、音声、動画をまとめて扱う処理
 - 図表や画面レイアウトを読むマルチモーダル推論
 - Google SearchやMapsとのグラウンディング
 
-言い換えると、Geminiは「安い汎用モデル」という立ち位置をLunaに削られ、**マルチモーダル性能を生かしたOCR・文書理解などで差別化できるか**が、より重要になったと見ています。これは価格と公開仕様からの筆者の所感であり、Geminiの性能や将来を断定するものではありません。
+言い換えると、Geminiは「安い汎用モデル」という立ち位置を失い、存在意義は**マルチモーダル性能を生かしたOCR・文書理解などの限定的な用途**にほぼ絞られました。ここでもOpenAI側の画像・文書処理が追いつけば、私のAIスタックからGeminiが外れる可能性は高いと見ています。
 
 ### Claudeも7月にモデル構成が大きく変わった
 
@@ -222,7 +220,7 @@ Anthropicは7月1日にFable 5へのアクセスを再開し、7月24日にはCl
 
 CodexをGPT-5.6 Sol、Claudeを各モデルの標準API料金で換算すると、合計**$72,149.33（約1,082.2万円）**です。2つのサブスク料金$400との差額は、**$71,749.33（約1,076.2万円）**になりました。
 
-7月はGPT-5.6の登場によって、TerraはGPT-5.5比で50%、Lunaは80%低い入出力単価になりました。LunaはGemini 3.6 Flashの主力価格も下回っています。汎用のコード生成やエージェントではOpenAIの価格競争力が増し、GeminiはOCRや文書理解など、ネイティブなマルチモーダル性能を生かせる用途での価値がより重要になったと感じます。
+7月はGPT-5.6の登場によって、TerraはGPT-5.5比で50%、Lunaは80%低い入出力単価になりました。主力層ではLunaがGemini 3.6 Flashを下回り、最安モデルでもGPT-5 nanoがGemini 3.5 Flash-Liteを下回っています。汎用のコード生成やエージェントでGeminiを選ぶ理由はほぼなくなり、残る可能性があるのはOCRや文書理解など、ネイティブなマルチモーダル性能を生かす限定的な用途です。
 
 そして、Codexでは1週間で100億トークンを超える消費が現実になりました。サブスクの費用対効果は非常に大きい一方、トークン消費量そのものを成果とみなさず、リセット後の再読み込みや重複処理も含めて使い方を見直していきます。
 
@@ -230,6 +228,8 @@ CodexをGPT-5.6 Sol、Claudeを各モデルの標準API料金で換算すると�
 
 * [GPT-5.6: Frontier intelligence that scales with your ambition](https://openai.com/index/gpt-5-6/)
 * [GPT-5.6 Lunaのモデル仕様とAPI料金](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
+* [GPT-5 nanoのモデル仕様とAPI料金](https://developers.openai.com/api/docs/models/gpt-5-nano)
+* [Gemini Developer APIの料金](https://ai.google.dev/gemini-api/docs/pricing)
 * [ChatGPT Proの料金とCodex利用](https://help.openai.com/en/articles/9793128)
 * [Claude Platformのモデル別API料金](https://platform.claude.com/docs/en/about-claude/pricing)
 * [Claude Maxの料金](https://support.claude.com/ja/articles/11049741-max-%E3%83%97%E3%83%A9%E3%83%B3%E3%81%A8%E3%81%AF%E4%BD%95%E3%81%A7%E3%81%99%E3%81%8B)
