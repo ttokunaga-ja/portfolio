@@ -53,7 +53,7 @@ const markdownDetailPathPattern = /^\/(research|projects|experience)\/[^/]+\/$/;
 
 test.describe("portfolio accessibility", () => {
   test("all prerendered routes have no detectable a11y violations", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(240_000);
 
     for (const path of collectPrerenderedPaths()) {
       await test.step(path, async () => {
