@@ -844,10 +844,25 @@ function ListingPage({ locale, collection }: { locale: Locale; collection: Colle
   const { t } = useTranslation();
   const entries = getEntries(locale, collection);
   const title =
-    collection === "research" ? t("page.researchTitle") : collection === "projects" ? t("page.projectsTitle") : t("page.blogTitle");
+    collection === "research"
+      ? t("page.researchTitle")
+      : collection === "projects"
+        ? t("page.projectsTitle")
+        : t("page.blogTitle");
   const lead =
-    collection === "research" ? t("page.researchLead") : collection === "projects" ? t("page.projectsLead") : t("page.blogLead");
-  const icon = collection === "research" ? <ScienceRoundedIcon /> : collection === "projects" ? <AccountTreeRoundedIcon /> : <ArticleRoundedIcon />;
+    collection === "research"
+      ? t("page.researchLead")
+      : collection === "projects"
+        ? t("page.projectsLead")
+        : t("page.blogLead");
+  const icon =
+    collection === "research" ? (
+      <ScienceRoundedIcon />
+    ) : collection === "projects" ? (
+      <AccountTreeRoundedIcon />
+    ) : (
+      <ArticleRoundedIcon />
+    );
 
   return (
     <>
@@ -903,8 +918,16 @@ function EntryCard({ entry }: { entry: PortfolioEntry }) {
           <Typography variant="overline" color="primary" fontWeight={800}>
             {entry.collection}
           </Typography>
-          {entry.publishedAt && <Typography variant="overline" color="text.secondary">{entry.publishedAt}</Typography>}
-          {entry.updatedAt && <Typography variant="overline" color="text.secondary">{formatTimestamp(entry.updatedAt, locale)}</Typography>}
+          {entry.publishedAt && (
+            <Typography variant="overline" color="text.secondary">
+              {entry.publishedAt}
+            </Typography>
+          )}
+          {entry.updatedAt && (
+            <Typography variant="overline" color="text.secondary">
+              {formatTimestamp(entry.updatedAt, locale)}
+            </Typography>
+          )}
         </Stack>
         <Box>
           <Typography variant="h3">{entry.title}</Typography>

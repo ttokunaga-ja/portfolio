@@ -1,6 +1,7 @@
 dist
 node_modules
 src/generated
+content/ja/blog
 .accessibility-reports
 test-results
 playwright-report

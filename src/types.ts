@@ -2,7 +2,8 @@ export type Locale = "ja" | "en";
 
 export type Collection = "research" | "projects" | "experience" | "blog";
 
-export type PrimaryPage = "home" | "about" | "research" | "projects" | "experience" | "blog" | "skills" | "contact" | "privacy";
+export type PrimaryPage =
+  "home" | "about" | "research" | "projects" | "experience" | "blog" | "skills" | "contact" | "privacy";
 
 export type ExperienceType = "education" | "work" | "community";
 
