@@ -174,10 +174,10 @@ API価格は入力と出力で異なります。主ケースは入力:出力=4:1
 | モデル | input / 1M | output / 1M | 混合価格 / 1M | 価格の地域 |
 | --- | ---: | ---: | ---: | --- |
 | Qwen3.6-27B | 3元 | 18元 | **約138.6円** | Alibaba中国内地 |
-| DeepSeek-V4-Pro | $0.435 | $0.87 | **約82.5円** | DeepSeek標準 |
-| Kimi K2.6 | $0.95 | $4.00 | **約246.5円** | Kimi Global |
+| DeepSeek-V4-Pro | \$0.435 | \$0.87 | **約82.5円** | DeepSeek標準 |
+| Kimi K2.6 | \$0.95 | \$4.00 | **約246.5円** | Kimi Global |
 | GLM-5.2 | 8元 | 28元 | **約277.2円** | Z.ai中国 |
-| MiniMax-M3、512K以下 | $0.30 | $1.20 | **約75.8円** | 現行50%割引価格 |
+| MiniMax-M3、512K以下 | \$0.30 | \$1.20 | **約75.8円** | 現行50%割引価格 |
 | Hy3 | 1元 | 4元 | **約37.0円** | Tencent TokenHub広州 |
 
 価格の出典は[Alibaba Model Studio](https://help.aliyun.com/zh/model-studio/model-pricing)、[DeepSeek API](https://api-docs.deepseek.com/quick_start/pricing)、[Kimi K2.6](https://www.kimi.com/resources/kimi-k2-6-pricing)、[Z.ai](https://open.bigmodel.cn/pricing)、[MiniMax PAYG](https://platform.minimax.io/docs/guides/pricing-paygo)、[Tencent TokenHub](https://cloud.tencent.com/product/tokenhub)です。

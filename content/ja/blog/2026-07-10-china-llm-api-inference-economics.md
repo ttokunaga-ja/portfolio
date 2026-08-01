@@ -63,13 +63,13 @@ API売上
 | 開発元／モデル | Cache miss input | Cache hit | Output | 4:1混合価格 |
 | --- | ---: | ---: | ---: | ---: |
 | Alibaba / Qwen3.6-27B、中国内地 | 3元 | 別価格なし | 18元 | **6元 / 約138.6円** |
-| DeepSeek / V4-Pro | $0.435 | $0.003625 | $0.87 | **$0.522 / 約82.5円** |
-| Moonshot / Kimi K2.6 | $0.95 | $0.16 | $4.00 | **$1.56 / 約246.5円** |
+| DeepSeek / V4-Pro | \$0.435 | \$0.003625 | \$0.87 | **\$0.522 / 約82.5円** |
+| Moonshot / Kimi K2.6 | \$0.95 | \$0.16 | \$4.00 | **\$1.56 / 約246.5円** |
 | Z.ai / GLM-5.2、中国 | 8元 | 2元 | 28元 | **12元 / 約277.2円** |
-| MiniMax / M3、512K以下 | $0.30 | $0.06 | $1.20 | **$0.48 / 約75.8円** |
+| MiniMax / M3、512K以下 | \$0.30 | \$0.06 | \$1.20 | **\$0.48 / 約75.8円** |
 | Tencent / Hy3、広州 | 1元 | 0.25元 | 4元 | **1.6元 / 約37.0円** |
 
-換算は1ドル158円、[日本銀行の2026年7月報告省令レート](https://www.boj.or.jp/about/services/tame/tame_rate/syorei/hou2607.htm)にある1元0.146ドルから1元23.1円へ丸めます。Qwen、GLM、Hy3は安い中国国内価格を使います。QwenのSingaporeは$0.60/$3.60、GLMのGlobalは$1.40/$4.40なので、海外価格で見ればセルフホストとの価格差は広がります。
+換算は1ドル158円、[日本銀行の2026年7月報告省令レート](https://www.boj.or.jp/about/services/tame/tame_rate/syorei/hou2607.htm)にある1元0.146ドルから1元23.1円へ丸めます。Qwen、GLM、Hy3は安い中国国内価格を使います。QwenのSingaporeは\$0.60/\$3.60、GLMのGlobalは\$1.40/\$4.40なので、海外価格で見ればセルフホストとの価格差は広がります。
 
 価格の出典は[Alibaba Model Studio](https://help.aliyun.com/zh/model-studio/model-pricing)、[DeepSeek API](https://api-docs.deepseek.com/quick_start/pricing)、[Kimi K2.6](https://www.kimi.com/resources/kimi-k2-6-pricing)、[Z.ai](https://open.bigmodel.cn/pricing)、[MiniMax PAYG](https://platform.minimax.io/docs/guides/pricing-paygo)、[Tencent TokenHub](https://cloud.tencent.com/product/tokenhub)です。中国内地、広州、Globalが混在し、税、利用可能地域、長文tierも統一されていません。これは同一地域で利用できる6モデルの横並び比較ではなく、各社の公式標準価格を観測する表です。
 
@@ -107,7 +107,7 @@ AlibabaのFY2026 [Cloud Intelligence売上は1,581.32億元、adjusted EBITAは1
 
 **判断：Qwenは単GPUに収まり固定費を小さくしやすい一方、必要な平均287 tok/sをSLO内で満たす公式実測はありません。セルフホスト採算もAlibabaのQwen3.6 API固有の利益率も未確定です。**
 
-## DeepSeek：旧世代の自己開示ではGPU費proxyが約$0.112/M
+## DeepSeek：旧世代の自己開示ではGPU費proxyが約\$0.112/M
 
 DeepSeekは6社の中で、過去の推論運用を最も具体的に公開しています。2025年の[DeepSeek-V3/R1推論システム概要](https://github.com/deepseek-ai/open-infra-index/blob/main/202502OpenSourceWeek/day_6_one_more_thing_deepseekV3R1_inference_system_overview.md)では、24時間平均226.75ノード、1ノード8×H800、608B input tokenと168B output tokenを処理した例を示しました。
 
