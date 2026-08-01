@@ -58,7 +58,7 @@ Debeziumは一般的に **Apache Kafka** および **Kafka Connect** と組み�
 3.  **Apache Kafka**: 変更イベントをメッセージとして保持（トピック）。
 4.  **ターゲット**: Elasticsearch（検索用）、Snowflake（分析用）、Redis（キャッシュ）など。
 
-![Debezium Architecture Placeholder](https://debezium.io/images/debezium-architecture.png)
+![Debezium Architecture](/images/blog/2026-02-03-debezium-cdc-introduction/2026-02-03-debezium-cdc-introduction/debezium-architecture.png)
 *引用元：Debezium公式ドキュメントより*
 
 ## 5. 主なユースケース
