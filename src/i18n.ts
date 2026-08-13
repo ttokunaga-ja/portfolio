@@ -91,15 +91,11 @@ export const resources = {
         contents: "目次",
         topics: "トピック",
         source: "公開元",
-        articleBy: "著者",
         opensInNewTab: "新しいタブで開きます",
         latest: "最近の取り組み",
         published: "公開日",
         updated: "最終更新",
         noContent: "近日公開予定です。"
-      },
-      profile: {
-        articleBio: "教育×生成AI、個人開発、情報設計に関する研究と実装の記録を公開しています。"
       }
     }
   },
@@ -190,16 +186,11 @@ export const resources = {
         contents: "Contents",
         topics: "Topics",
         source: "Published on",
-        articleBy: "Author",
         opensInNewTab: "Opens in a new tab",
         latest: "Recent",
         published: "Published",
         updated: "Last updated",
         noContent: "Coming soon."
-      },
-      profile: {
-        articleBio:
-          "Notes on research, independent development, and information design around education and generative AI."
       }
     }
   }

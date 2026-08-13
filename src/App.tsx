@@ -1908,22 +1908,31 @@ function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: Portfolio
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "minmax(0, 1fr)", lg: "minmax(0, 760px) minmax(250px, 300px)" },
+            gridTemplateColumns: {
+              xs: "minmax(0, 1fr)",
+              md: "minmax(0, 1fr) minmax(220px, 260px)",
+              lg: "minmax(0, 760px) minmax(250px, 300px)"
+            },
             justifyContent: "center",
-            gap: { xs: 4, lg: 7 },
+            gap: { xs: 4, md: 4, lg: 7 },
             alignItems: "start"
           }}
         >
-          <MarkdownArticle html={entry.bodyHtml} />
+          <Box sx={{ order: { xs: 2, md: 1 }, minWidth: 0 }}>
+            <MarkdownArticle html={entry.bodyHtml} />
+          </Box>
 
           <Box
             component="aside"
             aria-label={`${entry.title} ${t("label.contents")}`}
-            sx={{ position: { lg: "sticky" }, top: { lg: 96 }, minWidth: 0 }}
+            sx={{
+              order: { xs: 1, md: 2 },
+              position: { md: "sticky" },
+              top: { md: 96 },
+              minWidth: 0
+            }}
           >
             <Stack spacing={2.25}>
-              <ArticleAuthorCard />
-
               {entry.toc.length > 0 && <ArticleTableOfContents toc={entry.toc} />}
 
               {(entry.canonicalUrl || visibleLinks.length > 0) && (
@@ -1967,54 +1976,6 @@ function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: Portfolio
         </Box>
       </Container>
     </>
-  );
-}
-
-function ArticleAuthorCard() {
-  const { t } = useTranslation();
-
-  return (
-    <Card variant="outlined">
-      <Stack spacing={1.5} sx={{ p: 2.25 }}>
-        <Stack direction="row" spacing={1.35} alignItems="center">
-          <Box
-            component="img"
-            src="/images/logo.png"
-            alt=""
-            aria-hidden="true"
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              objectFit: "contain",
-              border: "1px solid",
-              borderColor: "divider"
-            }}
-          />
-          <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={800}>
-              {t("label.articleBy")}
-            </Typography>
-            <Typography fontWeight={800}>Takumi Tokunaga</Typography>
-          </Box>
-        </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-          {t("profile.articleBio")}
-        </Typography>
-        <Button
-          href="https://github.com/ttokunaga-ja"
-          target="_blank"
-          rel="noreferrer"
-          variant="text"
-          startIcon={<GitHubIcon />}
-          endIcon={<OpenInNewRoundedIcon />}
-          aria-label={`GitHub (${t("label.opensInNewTab")})`}
-          sx={{ alignSelf: "flex-start", px: 0.5 }}
-        >
-          GitHub
-        </Button>
-      </Stack>
-    </Card>
   );
 }
 

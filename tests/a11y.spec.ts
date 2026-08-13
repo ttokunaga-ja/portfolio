@@ -183,6 +183,22 @@ test.describe("portfolio accessibility", () => {
     expect(detailsHtml).not.toContain(":::details");
   });
 
+  test("article table of contents remains in the side rail on laptop widths", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto("/blog/2026-08-02-switch-before-router-network-incident/");
+
+    const article = page.locator(".markdown-article");
+    const contents = page.getByRole("navigation", { name: "目次" });
+    await expect(article).toBeVisible();
+    await expect(contents).toBeVisible();
+
+    const [articleBox, contentsBox] = await Promise.all([article.boundingBox(), contents.boundingBox()]);
+    expect(articleBox).not.toBeNull();
+    expect(contentsBox).not.toBeNull();
+    expect(contentsBox!.x).toBeGreaterThan(articleBox!.x + articleBox!.width);
+    await expect(page.getByText("著者", { exact: true })).toHaveCount(0);
+  });
+
   test("home page keeps personal search terms in source-only metadata", async ({ request, page }) => {
     const response = await request.get("/");
     expect(response.ok()).toBeTruthy();
