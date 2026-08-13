@@ -13,6 +13,12 @@ export type PortfolioLink = {
   kind: string;
 };
 
+export type PortfolioTocItem = {
+  id: string;
+  text: string;
+  level: 2 | 3 | 4;
+};
+
 export type PortfolioEntry = {
   locale: Locale;
   collection: Collection;
@@ -36,6 +42,7 @@ export type PortfolioEntry = {
   updatedAt: string;
   canonicalUrl: string;
   bodyHtml: string;
+  toc: PortfolioTocItem[];
 };
 
 export type RouteState = { kind: "page"; page: PrimaryPage } | { kind: "detail"; collection: Collection; slug: string };

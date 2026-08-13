@@ -49,7 +49,7 @@ function collectPrerenderedPaths() {
   });
 }
 
-const markdownDetailPathPattern = /^\/(research|projects|experience)\/[^/]+\/$/;
+const markdownDetailPathPattern = /^\/(research|projects|experience|blog)\/[^/]+\/$/;
 
 test.describe("portfolio accessibility", () => {
   test("all prerendered routes have no detectable a11y violations", async ({ page }) => {
@@ -78,6 +78,8 @@ test.describe("portfolio accessibility", () => {
   });
 
   test("markdown images expose alt text and load successfully", async ({ page }) => {
+    test.setTimeout(240_000);
+
     for (const path of collectPrerenderedPaths().filter((routePath) => markdownDetailPathPattern.test(routePath))) {
       await test.step(path, async () => {
         await page.goto(path);
@@ -85,13 +87,17 @@ test.describe("portfolio accessibility", () => {
         const images = page.locator(".markdown-article img");
         const imageCount = await images.count();
         for (let index = 0; index < imageCount; index += 1) {
-          await images.nth(index).scrollIntoViewIfNeeded();
+          const image = images.nth(index);
+          await image.scrollIntoViewIfNeeded();
+          await expect
+            .poll(() =>
+              image.evaluate((element) => {
+                const htmlImage = element as HTMLImageElement;
+                return htmlImage.complete && htmlImage.naturalWidth > 0 && htmlImage.naturalHeight > 0;
+              })
+            )
+            .toBe(true);
         }
-        await page.waitForFunction(() =>
-          Array.from(document.querySelectorAll<HTMLImageElement>(".markdown-article img")).every(
-            (image) => !image.currentSrc || (image.complete && image.naturalWidth > 0 && image.naturalHeight > 0)
-          )
-        );
 
         const imageIssues = await page.locator(".markdown-article img").evaluateAll((images) =>
           images
@@ -158,6 +164,23 @@ test.describe("portfolio accessibility", () => {
     expect(html).toMatch(/<h1 class="[^"]*">立命館大学<\/h1>/);
     expect(html).not.toContain("AI systems, XR");
     expect(html).not.toContain("Knowledge Infrastructure");
+  });
+
+  test("article details expose generated contents anchors and Zenn directives", async ({ request }) => {
+    const articleResponse = await request.get("/blog/2026-08-02-switch-before-router-network-incident/");
+    expect(articleResponse.ok()).toBeTruthy();
+
+    const articleHtml = await articleResponse.text();
+    expect(articleHtml).toContain('id="heading-');
+    expect(articleHtml).toContain('aria-label="スイッチングハブをルーターの手前に置いた反省');
+
+    const detailsResponse = await request.get("/blog/2026-02-16-lab-git-branch-naming-rules/");
+    expect(detailsResponse.ok()).toBeTruthy();
+
+    const detailsHtml = await detailsResponse.text();
+    expect(detailsHtml).toContain('<details class="markdown-details">');
+    expect(detailsHtml).toContain("<summary>参考文献</summary>");
+    expect(detailsHtml).not.toContain(":::details");
   });
 
   test("home page keeps personal search terms in source-only metadata", async ({ request, page }) => {

@@ -122,6 +122,18 @@ function formatTimestamp(value: string, locale: Locale) {
   }).format(parsed);
 }
 
+function formatArticleDate(value: string, locale: Locale) {
+  if (!value) return "";
+
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00Z`) : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+    dateStyle: "medium",
+    timeZone: "UTC"
+  }).format(parsed);
+}
+
 const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
   { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
   { page: "research", labelKey: "nav.research", icon: <ScienceRoundedIcon /> },
@@ -843,34 +855,193 @@ function PageHead({
 function ListingPage({ locale, collection }: { locale: Locale; collection: Collection }) {
   const { t } = useTranslation();
   const entries = getEntries(locale, collection);
-  const title =
-    collection === "research"
-      ? t("page.researchTitle")
-      : collection === "projects"
-        ? t("page.projectsTitle")
-        : t("page.blogTitle");
-  const lead =
-    collection === "research"
-      ? t("page.researchLead")
-      : collection === "projects"
-        ? t("page.projectsLead")
-        : t("page.blogLead");
-  const icon =
-    collection === "research" ? (
-      <ScienceRoundedIcon />
-    ) : collection === "projects" ? (
-      <AccountTreeRoundedIcon />
-    ) : (
-      <ArticleRoundedIcon />
-    );
+
+  if (collection === "research" || collection === "blog") {
+    return <ArticleListingPage locale={locale} collection={collection} entries={entries} />;
+  }
+
+  const title = t("page.projectsTitle");
+  const lead = t("page.projectsLead");
 
   return (
     <>
-      <PageHead icon={icon} title={title} lead={lead} />
+      <PageHead icon={<AccountTreeRoundedIcon />} title={title} lead={lead} />
       <Section title={title} lead={t("label.abstract")}>
         <EntryGrid entries={entries} />
       </Section>
     </>
+  );
+}
+
+function ArticleListingPage({
+  locale,
+  collection,
+  entries
+}: {
+  locale: Locale;
+  collection: "research" | "blog";
+  entries: PortfolioEntry[];
+}) {
+  const { t } = useTranslation();
+  const title = collection === "research" ? t("page.researchTitle") : t("page.blogTitle");
+  const lead = collection === "research" ? t("page.researchLead") : t("page.blogLead");
+  const collectionLabel = collection === "research" ? t("nav.research") : t("nav.blog");
+
+  return (
+    <>
+      <Box
+        component="header"
+        sx={{
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          backgroundColor: "background.paper"
+        }}
+      >
+        <Container maxWidth="lg" sx={{ py: { xs: 5, md: 7 } }}>
+          <Stack spacing={1.5} sx={{ maxWidth: 800 }}>
+            <Typography variant="overline" color="primary" fontWeight={800} letterSpacing="0.12em">
+              {collectionLabel}
+            </Typography>
+            <Typography variant="h1" sx={{ fontSize: "clamp(2.7rem, 6vw, 4.5rem)", lineHeight: 1 }}>
+              {title}
+            </Typography>
+            <Typography color="text.secondary" sx={{ fontSize: { xs: "1rem", md: "1.12rem" }, lineHeight: 1.75 }}>
+              {lead}
+            </Typography>
+          </Stack>
+        </Container>
+      </Box>
+
+      <Container component="section" maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        <ArticleEntryList entries={entries} />
+      </Container>
+    </>
+  );
+}
+
+function ArticleEntryList({ entries }: { entries: PortfolioEntry[] }) {
+  const { t } = useTranslation();
+
+  if (entries.length === 0) {
+    return <EmptyState message={t("label.noContent")} />;
+  }
+
+  return (
+    <Box component="ol" sx={{ listStyle: "none", p: 0, m: 0, borderTop: "1px solid", borderColor: "divider" }}>
+      {entries.map((entry) => (
+        <ArticleListItem key={`${entry.collection}-${entry.slug}`} entry={entry} />
+      ))}
+    </Box>
+  );
+}
+
+function ArticleListItem({ entry }: { entry: PortfolioEntry }) {
+  const { t } = useTranslation();
+  const locale = useLocale();
+  const collectionLabel = entry.collection === "research" ? t("nav.research") : t("nav.blog");
+  const metadata = entry.publishedAt
+    ? `${t("label.published")} · ${formatArticleDate(entry.publishedAt, locale)}`
+    : entry.period
+      ? `${t("label.period")} · ${entry.period}`
+      : entry.updatedAt
+        ? `${t("label.updated")} · ${formatArticleDate(entry.updatedAt, locale)}`
+        : "";
+
+  return (
+    <Box component="li" sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) auto" },
+          gap: { xs: 2.25, md: 3 },
+          py: { xs: 3, md: 4 },
+          alignItems: "start"
+        }}
+      >
+        <Stack spacing={1.35} sx={{ minWidth: 0 }}>
+          <Stack direction="row" spacing={1.1} useFlexGap flexWrap="wrap" alignItems="center">
+            <Typography variant="overline" color="primary" fontWeight={800} letterSpacing="0.08em">
+              {collectionLabel}
+            </Typography>
+            {metadata && (
+              <Typography variant="body2" color="text.secondary">
+                {metadata}
+              </Typography>
+            )}
+          </Stack>
+
+          <Link
+            href={hrefFor({ collection: entry.collection, slug: entry.slug }, locale)}
+            underline="none"
+            color="text.primary"
+            sx={{
+              width: "fit-content",
+              maxWidth: "100%",
+              "&:hover": { color: "primary.main" },
+              "&:focus-visible": { borderRadius: 0.5 }
+            }}
+          >
+            <Typography component="h2" variant="h2" sx={{ fontSize: "clamp(1.45rem, 2.8vw, 2rem)", lineHeight: 1.28 }}>
+              {entry.title}
+            </Typography>
+          </Link>
+
+          {entry.subtitle && (
+            <Typography color="text.secondary" sx={{ fontWeight: 650 }}>
+              {entry.subtitle}
+            </Typography>
+          )}
+
+          <Typography
+            color="text.secondary"
+            sx={{
+              display: "-webkit-box",
+              overflow: "hidden",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: { xs: 3, md: 2 },
+              lineHeight: 1.75
+            }}
+          >
+            {entry.abstract}
+          </Typography>
+
+          {entry.tags.length > 0 && (
+            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+              {entry.tags.slice(0, 5).map((tag) => (
+                <Chip key={tag} label={tag} size="small" variant="outlined" />
+              ))}
+            </Stack>
+          )}
+        </Stack>
+
+        <Stack
+          direction={{ xs: "row", md: "column" }}
+          spacing={0.75}
+          sx={{ alignItems: { xs: "flex-start", md: "flex-end" } }}
+        >
+          <Button
+            href={hrefFor({ collection: entry.collection, slug: entry.slug }, locale)}
+            variant="outlined"
+            endIcon={<ArrowForwardRoundedIcon />}
+            aria-label={`${entry.title}: ${t("action.readMore")}`}
+          >
+            {t("action.readMore")}
+          </Button>
+          {entry.canonicalUrl && (
+            <Button
+              href={entry.canonicalUrl}
+              target="_blank"
+              rel="noreferrer"
+              variant="text"
+              endIcon={<OpenInNewRoundedIcon />}
+              aria-label={`Zenn (${t("label.opensInNewTab")})`}
+            >
+              Zenn
+            </Button>
+          )}
+        </Stack>
+      </Box>
+    </Box>
   );
 }
 
@@ -1661,6 +1832,231 @@ function ApiAccessPanel() {
   );
 }
 
+function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: PortfolioEntry }) {
+  const { t } = useTranslation();
+  const collectionLabel = entry.collection === "research" ? t("nav.research") : t("nav.blog");
+  const visibleLinks = entry.links.filter((link) => {
+    return !["demo", "experience", "trial", "preview", "play"].includes(link.kind);
+  });
+  const canonicalIsZenn = /(^|\.)zenn\.dev$/i.test(
+    (() => {
+      try {
+        return new URL(entry.canonicalUrl).hostname;
+      } catch {
+        return "";
+      }
+    })()
+  );
+
+  return (
+    <>
+      <Box
+        component="header"
+        sx={{ borderBottom: "1px solid", borderColor: "divider", backgroundColor: "background.paper" }}
+      >
+        <Container maxWidth="lg" sx={{ py: { xs: 5, md: 8 } }}>
+          <Stack spacing={2.15} sx={{ maxWidth: 1120 }}>
+            <Typography variant="overline" color="primary" fontWeight={800} letterSpacing="0.12em">
+              {collectionLabel}
+            </Typography>
+            <Typography component="h1" variant="h1" sx={{ fontSize: "clamp(2.25rem, 3vw, 3.25rem)", lineHeight: 1.22 }}>
+              {entry.title}
+            </Typography>
+            {entry.subtitle && (
+              <Typography
+                component="p"
+                color="text.secondary"
+                sx={{ fontSize: { xs: "1.04rem", md: "1.25rem" }, lineHeight: 1.65 }}
+              >
+                {entry.subtitle}
+              </Typography>
+            )}
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+              {entry.publishedAt && (
+                <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+                  {t("label.published")} · {formatArticleDate(entry.publishedAt, locale)}
+                </Typography>
+              )}
+              {entry.updatedAt && (
+                <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+                  {t("label.updated")} · {formatArticleDate(entry.updatedAt, locale)}
+                </Typography>
+              )}
+              {entry.period && (
+                <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+                  {t("label.period")} · {entry.period}
+                </Typography>
+              )}
+            </Stack>
+            {entry.tags.length > 0 && (
+              <Box>
+                <Typography variant="body2" color="text.secondary" fontWeight={800} sx={{ mb: 1 }}>
+                  {t("label.topics")}
+                </Typography>
+                <Stack direction="row" spacing={0.8} useFlexGap flexWrap="wrap">
+                  {entry.tags.map((tag) => (
+                    <Chip key={tag} label={tag} size="small" color="primary" variant="outlined" />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </Container>
+      </Box>
+
+      <Container maxWidth="xl" sx={{ py: { xs: 4, md: 6 } }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "minmax(0, 1fr)", lg: "minmax(0, 760px) minmax(250px, 300px)" },
+            justifyContent: "center",
+            gap: { xs: 4, lg: 7 },
+            alignItems: "start"
+          }}
+        >
+          <MarkdownArticle html={entry.bodyHtml} />
+
+          <Box
+            component="aside"
+            aria-label={`${entry.title} ${t("label.contents")}`}
+            sx={{ position: { lg: "sticky" }, top: { lg: 96 }, minWidth: 0 }}
+          >
+            <Stack spacing={2.25}>
+              <ArticleAuthorCard />
+
+              {entry.toc.length > 0 && <ArticleTableOfContents toc={entry.toc} />}
+
+              {(entry.canonicalUrl || visibleLinks.length > 0) && (
+                <Card variant="outlined">
+                  <Stack spacing={1.25} sx={{ p: 2.25 }}>
+                    <Typography variant="h4" component="h2">
+                      {t("label.links")}
+                    </Typography>
+                    {entry.canonicalUrl && (
+                      <Button
+                        href={entry.canonicalUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        variant="outlined"
+                        fullWidth
+                        endIcon={<OpenInNewRoundedIcon />}
+                        aria-label={`${canonicalIsZenn ? "Zenn" : t("label.source")} (${t("label.opensInNewTab")})`}
+                      >
+                        {canonicalIsZenn ? t("action.readOnZenn") : t("label.source")}
+                      </Button>
+                    )}
+                    {visibleLinks.map((link) => (
+                      <Button
+                        key={`${link.label}-${link.url}`}
+                        href={link.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        variant="text"
+                        endIcon={<OpenInNewRoundedIcon />}
+                        aria-label={`${link.label} (${t("label.opensInNewTab")})`}
+                        sx={{ justifyContent: "space-between" }}
+                      >
+                        {link.label}
+                      </Button>
+                    ))}
+                  </Stack>
+                </Card>
+              )}
+            </Stack>
+          </Box>
+        </Box>
+      </Container>
+    </>
+  );
+}
+
+function ArticleAuthorCard() {
+  const { t } = useTranslation();
+
+  return (
+    <Card variant="outlined">
+      <Stack spacing={1.5} sx={{ p: 2.25 }}>
+        <Stack direction="row" spacing={1.35} alignItems="center">
+          <Box
+            component="img"
+            src="/images/logo.png"
+            alt=""
+            aria-hidden="true"
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              objectFit: "contain",
+              border: "1px solid",
+              borderColor: "divider"
+            }}
+          />
+          <Box>
+            <Typography variant="body2" color="text.secondary" fontWeight={800}>
+              {t("label.articleBy")}
+            </Typography>
+            <Typography fontWeight={800}>Takumi Tokunaga</Typography>
+          </Box>
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+          {t("profile.articleBio")}
+        </Typography>
+        <Button
+          href="https://github.com/ttokunaga-ja"
+          target="_blank"
+          rel="noreferrer"
+          variant="text"
+          startIcon={<GitHubIcon />}
+          endIcon={<OpenInNewRoundedIcon />}
+          aria-label={`GitHub (${t("label.opensInNewTab")})`}
+          sx={{ alignSelf: "flex-start", px: 0.5 }}
+        >
+          GitHub
+        </Button>
+      </Stack>
+    </Card>
+  );
+}
+
+function ArticleTableOfContents({ toc }: { toc: PortfolioEntry["toc"] }) {
+  const { t } = useTranslation();
+
+  return (
+    <Card variant="outlined">
+      <Box component="nav" aria-label={t("label.contents")} sx={{ p: 2.25 }}>
+        <Typography variant="h4" component="h2" sx={{ mb: 1.25 }}>
+          {t("label.contents")}
+        </Typography>
+        <Stack component="ol" spacing={0.15} sx={{ listStyle: "none", p: 0, m: 0 }}>
+          {toc.map((item) => (
+            <Box component="li" key={item.id} sx={{ ml: `${Math.max(0, item.level - 2) * 0.85}rem` }}>
+              <Link
+                href={`#${item.id}`}
+                underline="none"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  py: 0.65,
+                  pl: 1,
+                  borderLeft: "2px solid",
+                  borderColor: item.level === 2 ? "primary.main" : "divider",
+                  fontSize: item.level === 2 ? "0.9rem" : "0.84rem",
+                  fontWeight: item.level === 2 ? 750 : 600,
+                  lineHeight: 1.45,
+                  "&:hover": { color: "primary.main", borderColor: "primary.main" },
+                  "&:focus-visible": { borderRadius: 0.5 }
+                }}
+              >
+                {item.text}
+              </Link>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
+    </Card>
+  );
+}
+
 function DetailPage({ locale, collection, slug }: { locale: Locale; collection: Collection; slug: string }) {
   const { t } = useTranslation();
   const entry = getEntry(locale, collection, slug);
@@ -1673,6 +2069,10 @@ function DetailPage({ locale, collection, slug }: { locale: Locale; collection: 
         </Button>
       </Section>
     );
+  }
+
+  if (collection === "research" || collection === "blog") {
+    return <ArticleDetailPage locale={locale} entry={entry} />;
   }
 
   const demoHref = entry.collection === "projects" ? getDemoHref(entry) : "";
@@ -1795,36 +2195,57 @@ function MarkdownArticle({ html }: { html: string }) {
       className="markdown-article"
       dangerouslySetInnerHTML={{ __html: html }}
       sx={{
-        fontSize: "1.06rem",
-        lineHeight: 1.78,
+        minWidth: 0,
+        fontSize: { xs: "1.02rem", md: "1.08rem" },
+        lineHeight: 1.88,
         color: "text.primary",
         "& > *:first-of-type": {
           mt: 0
         },
         "& h2": {
-          mt: 5,
-          mb: 1.5,
-          fontSize: "1.8rem",
-          lineHeight: 1.2
+          mt: { xs: 5, md: 6 },
+          mb: 1.75,
+          pt: 0.25,
+          fontSize: { xs: "1.6rem", md: "1.95rem" },
+          lineHeight: 1.28,
+          fontWeight: 800,
+          letterSpacing: "-0.015em",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          scrollMarginTop: 112
         },
         "& h3": {
-          mt: 3.5,
+          mt: { xs: 3.75, md: 4.25 },
+          mb: 1.25,
+          fontSize: { xs: "1.28rem", md: "1.42rem" },
+          lineHeight: 1.4,
+          fontWeight: 800,
+          scrollMarginTop: 112
+        },
+        "& h4": {
+          mt: 3,
           mb: 1,
-          fontSize: "1.25rem"
+          fontSize: "1.1rem",
+          lineHeight: 1.45,
+          fontWeight: 800,
+          scrollMarginTop: 112
         },
         "& p": {
-          color: "text.secondary"
+          color: "text.primary",
+          my: 1.7
         },
-        "& ul": {
-          pl: 3
+        "& ul, & ol": {
+          pl: { xs: 2.75, md: 3.25 },
+          my: 1.7
         },
         "& li": {
-          mb: 0.7,
-          color: "text.secondary"
+          mb: 0.75,
+          color: "text.primary"
         },
         "& a": {
           color: "primary.main",
-          fontWeight: 700
+          fontWeight: 750,
+          textUnderlineOffset: "0.16em"
         },
         "& img": {
           display: "block",
@@ -1836,6 +2257,60 @@ function MarkdownArticle({ html }: { html: string }) {
           border: "1px solid",
           borderColor: "divider",
           backgroundColor: "background.paper"
+        },
+        "& p > img + em": {
+          display: "block",
+          mt: -2,
+          mb: 3,
+          color: "text.secondary",
+          fontSize: "0.9rem",
+          lineHeight: 1.6
+        },
+        "& table": {
+          display: "block",
+          width: "100%",
+          maxWidth: "100%",
+          overflowX: "auto",
+          borderCollapse: "collapse",
+          my: 3,
+          fontSize: { xs: "0.9rem", md: "0.96rem" },
+          lineHeight: 1.6
+        },
+        "& th, & td": {
+          minWidth: 120,
+          border: "1px solid",
+          borderColor: "divider",
+          px: 1.25,
+          py: 1,
+          textAlign: "left",
+          verticalAlign: "top"
+        },
+        "& th": {
+          fontWeight: 800,
+          backgroundColor: "action.hover"
+        },
+        "& blockquote": {
+          m: 0,
+          my: 2.5,
+          pl: 2,
+          borderLeft: "4px solid",
+          borderColor: "primary.main",
+          color: "text.secondary"
+        },
+        "& pre": {
+          overflowX: "auto",
+          my: 3,
+          p: { xs: 1.5, md: 2 },
+          borderRadius: 1,
+          backgroundColor: "action.hover",
+          border: "1px solid",
+          borderColor: "divider",
+          fontSize: { xs: "0.84rem", md: "0.92rem" },
+          lineHeight: 1.65
+        },
+        "& pre code": {
+          p: 0,
+          backgroundColor: "transparent"
         },
         "& .markdown-video": {
           width: "100%",
@@ -1863,7 +2338,46 @@ function MarkdownArticle({ html }: { html: string }) {
           px: 0.6,
           py: 0.2,
           borderRadius: 1,
+          backgroundColor: "action.hover",
+          fontSize: "0.9em"
+        },
+        "& .markdown-callout": {
+          my: 3,
+          px: { xs: 1.5, md: 2 },
+          py: { xs: 1.25, md: 1.6 },
+          borderLeft: "4px solid",
+          borderColor: "primary.main",
+          borderRadius: 1,
           backgroundColor: "action.hover"
+        },
+        "& .markdown-callout[data-callout-kind='alert']": {
+          borderColor: "secondary.main"
+        },
+        "& .markdown-callout > *:first-of-type": {
+          mt: 0
+        },
+        "& .markdown-callout > *:last-child": {
+          mb: 0
+        },
+        "& .markdown-details": {
+          my: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 1,
+          backgroundColor: "background.paper"
+        },
+        "& .markdown-details summary": {
+          cursor: "pointer",
+          px: { xs: 1.5, md: 2 },
+          py: 1.3,
+          color: "primary.main",
+          fontWeight: 800
+        },
+        "& .markdown-details > :not(summary)": {
+          mx: { xs: 1.5, md: 2 }
+        },
+        "& .markdown-details > *:last-child": {
+          mb: { xs: 1.5, md: 2 }
         }
       }}
     />

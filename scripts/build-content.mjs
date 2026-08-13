@@ -1,4 +1,5 @@
 import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { dirname, join, posix, relative } from "node:path";
 import { marked } from "marked";
 import { parseFrontmatter } from "./frontmatter.mjs";
@@ -55,14 +56,61 @@ function normalizeMarkdownImageHref(value, context) {
   return `${imageBase}${relativeHref}`;
 }
 
-function createMarkdownRenderer(context) {
+function decodeHtmlEntities(value) {
+  return value
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replace(/&#(\d+);/g, (_, codePoint) => String.fromCodePoint(Number(codePoint)))
+    .replace(/&#x([\da-f]+);/gi, (_, codePoint) => String.fromCodePoint(Number.parseInt(codePoint, 16)));
+}
+
+function headingTextFromHtml(html) {
+  return decodeHtmlEntities(html.replace(/<[^>]*>/g, ""))
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function createHeadingId(text, occurrences) {
+  const digest = createHash("sha256").update(text.normalize("NFKC")).digest("hex").slice(0, 12);
+  const baseId = `heading-${digest}`;
+  const occurrence = (occurrences.get(baseId) ?? 0) + 1;
+  occurrences.set(baseId, occurrence);
+  return occurrence === 1 ? baseId : `${baseId}-${occurrence}`;
+}
+
+function createMarkdownRenderer(context, toc) {
   const renderer = new marked.Renderer();
+  const headingOccurrences = new Map();
 
   renderer.image = (token) => {
     const src = normalizeMarkdownImageHref(token.href, context);
     const title = token.title ? ` title="${escapeHtmlAttribute(token.title)}"` : "";
 
     return `<img src="${escapeHtmlAttribute(src)}" alt="${escapeHtmlAttribute(token.text)}"${title} loading="lazy" decoding="async">`;
+  };
+
+  renderer.code = ({ text, lang }) => {
+    const language = String(lang ?? "").match(/^\S+/)?.[0] ?? "";
+    const className = language ? ` class="language-${escapeHtmlAttribute(language)}"` : "";
+    const normalizedText = text.replace(/\n$/, "");
+
+    return `<pre tabindex="0"><code${className}>${escapeHtmlAttribute(normalizedText)}\n</code></pre>\n`;
+  };
+
+  renderer.heading = function heading({ tokens, depth }) {
+    const html = this.parser.parseInline(tokens);
+
+    if (depth < 2 || depth > 4) {
+      return `<h${depth}>${html}</h${depth}>\n`;
+    }
+
+    const text = headingTextFromHtml(html);
+    const id = createHeadingId(text, headingOccurrences);
+    toc.push({ id, text, level: depth });
+    return `<h${depth} id="${escapeHtmlAttribute(id)}">${html}</h${depth}>\n`;
   };
 
   return renderer;
@@ -148,6 +196,47 @@ function embedStandaloneYouTubeUrls(markdown) {
 
       const embedUrl = toYouTubeEmbedUrl(unwrapStandaloneUrl(trimmed));
       return embedUrl ? createYouTubeEmbedHtml(embedUrl) : line;
+    })
+    .join("\n");
+}
+
+function normalizeZennDirectives(markdown) {
+  let inFence = false;
+  let directive = null;
+
+  return markdown
+    .split(/\r?\n/)
+    .map((line) => {
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+        inFence = !inFence;
+        return line;
+      }
+
+      if (inFence) return line;
+
+      const messageMatch = trimmed.match(/^:::\s*message(?:\s+([\w-]+))?\s*$/);
+      if (messageMatch && !directive) {
+        directive = "message";
+        const calloutKind = messageMatch[1] ?? "message";
+        return `<aside class="markdown-callout" data-callout-kind="${escapeHtmlAttribute(calloutKind)}">\n`;
+      }
+
+      const detailsMatch = trimmed.match(/^:::\s*details(?:\s+(.+?))?\s*$/);
+      if (detailsMatch && !directive) {
+        directive = "details";
+        const summary = detailsMatch[1]?.trim() || "Details";
+        return `<details class="markdown-details"><summary>${escapeHtmlAttribute(summary)}</summary>\n`;
+      }
+
+      if (trimmed === ":::" && directive) {
+        const closingTag = directive === "details" ? "</details>" : "</aside>";
+        directive = null;
+        return `\n${closingTag}`;
+      }
+
+      return line;
     })
     .join("\n");
 }
@@ -360,8 +449,9 @@ for (const file of files) {
   const data = parsed.data;
   const slug = toSlug(file, collection);
   const context = { collection, slug, normalized };
-  const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(parsed.content), {
-    renderer: createMarkdownRenderer(context)
+  const toc = [];
+  const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(normalizeZennDirectives(parsed.content)), {
+    renderer: createMarkdownRenderer(context, toc)
   });
   await validateMarkdownImages(bodyHtml, context);
   const tags = normalizeArray(data.tags);
@@ -407,7 +497,8 @@ for (const file of files) {
     publishedAt,
     updatedAt,
     canonicalUrl: firstString(data.canonicalUrl),
-    bodyHtml
+    bodyHtml,
+    toc
   });
 }
 
