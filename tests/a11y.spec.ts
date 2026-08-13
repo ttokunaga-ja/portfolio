@@ -183,6 +183,32 @@ test.describe("portfolio accessibility", () => {
     expect(detailsHtml).not.toContain(":::details");
   });
 
+  test("wide article tables are focusable, labelled scroll regions", async ({ page, request }) => {
+    const path = "/blog/2026-08-01-ai-model-stack-cost-breakdown-2026-07/";
+    const response = await request.get(path);
+    expect(response.ok()).toBeTruthy();
+
+    const html = await response.text();
+    expect(html).toContain('class="markdown-table-scroll"');
+    expect(html).toContain(
+      'role="region" aria-label="横にスクロール可能な表: 利用形態, サービス, この記事での扱い, 支出（税抜）" tabindex="0"'
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(path);
+    const tableScrollRegion = page
+      .getByRole("region", { name: "横にスクロール可能な表: 利用形態, サービス, この記事での扱い, 支出（税抜）" })
+      .first();
+    await expect(tableScrollRegion).toBeVisible();
+    const { clientWidth, scrollWidth } = await tableScrollRegion.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth
+    }));
+    expect(scrollWidth).toBeGreaterThan(clientWidth);
+    await tableScrollRegion.focus();
+    await expect(tableScrollRegion).toBeFocused();
+  });
+
   test("article table of contents remains in the side rail on laptop widths", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
     await page.goto("/blog/2026-08-02-switch-before-router-network-incident/");

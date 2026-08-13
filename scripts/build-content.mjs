@@ -84,6 +84,7 @@ function createHeadingId(text, occurrences) {
 function createMarkdownRenderer(context, toc) {
   const renderer = new marked.Renderer();
   const headingOccurrences = new Map();
+  const tableLabel = context.locale === "ja" ? "横にスクロール可能な表" : "Horizontally scrollable table";
 
   renderer.image = (token) => {
     const src = normalizeMarkdownImageHref(token.href, context);
@@ -98,6 +99,20 @@ function createMarkdownRenderer(context, toc) {
     const normalizedText = text.replace(/\n$/, "");
 
     return `<pre tabindex="0"><code${className}>${escapeHtmlAttribute(normalizedText)}\n</code></pre>\n`;
+  };
+
+  renderer.table = ({ header, rows }) => {
+    const headerTexts = header
+      .map((cell) => headingTextFromHtml(renderer.parser.parseInline(cell.tokens)))
+      .filter(Boolean);
+    const tableLabelWithHeaders = headerTexts.length > 0 ? `${tableLabel}: ${headerTexts.join(", ")}` : tableLabel;
+    const headerHtml = header.map((cell) => renderer.tablecell(cell)).join("");
+    const bodyHtml = rows
+      .map((row) => renderer.tablerow({ text: row.map((cell) => renderer.tablecell(cell)).join("") }))
+      .join("");
+    const body = bodyHtml ? `<tbody>${bodyHtml}</tbody>` : "";
+
+    return `<div class="markdown-table-scroll" role="region" aria-label="${escapeHtmlAttribute(tableLabelWithHeaders)}" tabindex="0"><table>\n<thead>\n${renderer.tablerow({ text: headerHtml })}</thead>\n${body}</table>\n</div>\n`;
   };
 
   renderer.heading = function heading({ tokens, depth }) {
@@ -448,7 +463,7 @@ for (const file of files) {
   const parsed = parseFrontmatter(raw);
   const data = parsed.data;
   const slug = toSlug(file, collection);
-  const context = { collection, slug, normalized };
+  const context = { collection, locale, slug, normalized };
   const toc = [];
   const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(normalizeZennDirectives(parsed.content)), {
     renderer: createMarkdownRenderer(context, toc)

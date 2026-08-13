@@ -2227,13 +2227,22 @@ function MarkdownArticle({ html }: { html: string }) {
           fontSize: "0.9rem",
           lineHeight: 1.6
         },
-        "& table": {
-          display: "block",
+        "& .markdown-table-scroll": {
           width: "100%",
           maxWidth: "100%",
           overflowX: "auto",
-          borderCollapse: "collapse",
           my: 3,
+          "&:focus-visible": {
+            outline: "3px solid",
+            outlineColor: "primary.main",
+            outlineOffset: 2
+          }
+        },
+        "& .markdown-table-scroll table": {
+          width: "max-content",
+          minWidth: "100%",
+          maxWidth: "none",
+          borderCollapse: "collapse",
           fontSize: { xs: "0.9rem", md: "0.96rem" },
           lineHeight: 1.6
         },
