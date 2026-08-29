@@ -79,6 +79,27 @@ const clientKey = findManifestEntry(manifest, (_key, entry) => entry.name === "e
 const base = staticClosure(manifest, [clientKey]);
 const baseGzip = await gzipBytesFor(base.files);
 const clientDynamicImports = new Set(manifest[clientKey].dynamicImports ?? []);
+const detailContentKey = findManifestEntry(
+  manifest,
+  (key, entry) => key === "src/content.ts" && entry.src === "src/content.ts",
+  "detail content wrapper dynamic entry"
+);
+if (!clientDynamicImports.has(detailContentKey)) {
+  throw new Error("Client manifest no longer declares the pre-hydration detail content wrapper dynamic entry.");
+}
+function pageSourceKey(route) {
+  if (route === "/404.html") return "src/pages/detail.tsx";
+  if (/^\/(?:en\/)?(?:research|projects|experience|blog)\/[^/]+\/index\.html$/.test(route)) {
+    return "src/pages/detail.tsx";
+  }
+  if (/^\/(?:en\/)?(?:research|projects|blog)\/index\.html$/.test(route)) return "src/pages/listing.tsx";
+  if (/^\/(?:en\/)?experience\/index\.html$/.test(route)) return "src/pages/experience.tsx";
+  if (/^\/(?:en\/)?about\/index\.html$/.test(route)) return "src/pages/about.tsx";
+  if (/^\/(?:en\/)?skills\/index\.html$/.test(route)) return "src/pages/skills.tsx";
+  if (/^\/(?:en\/)?contact\/index\.html$/.test(route)) return "src/pages/contact.tsx";
+  if (/^\/(?:en\/)?privacy\/index\.html$/.test(route)) return "src/pages/privacy.tsx";
+  return "src/pages/home.tsx";
+}
 
 const firebaseSourceKeys = [
   findManifestEntry(
@@ -92,18 +113,28 @@ const firebaseSourceKeys = [
     "Firebase auth dynamic entry"
   )
 ];
-if (!firebaseSourceKeys.every((key) => clientDynamicImports.has(key))) {
-  throw new Error("Client manifest no longer declares both Firebase preload dynamic entries.");
-}
 
 const routeMeasurements = [];
 for (const htmlFile of htmlFiles) {
   const route = routeForHtml(htmlFile);
-  const automatic = [];
-  const extraFiles = new Set();
+  const pageKey = pageSourceKey(route);
+  if (!manifest[pageKey] || !clientDynamicImports.has(pageKey)) {
+    throw new Error(`Route ${route} is missing its client dynamic page entry ${pageKey}.`);
+  }
+  const page = staticClosure(manifest, [pageKey]);
+  const pageGraphDynamicImports = new Set([...page.keys].flatMap((key) => manifest[key]?.dynamicImports ?? []));
+  const automatic = [{ kind: "pre-hydration page", sourceKeys: [...page.keys], files: [...page.files] }];
+  const extraFiles = new Set(page.files);
   const detailKey = detailSourceKey(route);
   if (detailKey) {
-    if (!manifest[detailKey] || !clientDynamicImports.has(detailKey)) {
+    const detailContent = staticClosure(manifest, [detailContentKey]);
+    for (const file of detailContent.files) extraFiles.add(file);
+    automatic.push({
+      kind: "pre-hydration detail content wrapper",
+      sourceKeys: [...detailContent.keys],
+      files: [...detailContent.files]
+    });
+    if (!manifest[detailKey] || !pageGraphDynamicImports.has(detailKey)) {
       throw new Error(`Detail route ${route} is missing its manifest dynamic entry ${detailKey}.`);
     }
     const detail = staticClosure(manifest, [detailKey]);
@@ -111,6 +142,9 @@ for (const htmlFile of htmlFiles) {
     automatic.push({ kind: "pre-hydration detail", sourceKeys: [...detail.keys], files: [...detail.files] });
   }
   if (/^\/(?:en\/)?contact\/index\.html$/.test(route)) {
+    if (!firebaseSourceKeys.every((key) => pageGraphDynamicImports.has(key))) {
+      throw new Error("Contact page no longer declares both Firebase mount-time dynamic entries.");
+    }
     const firebase = staticClosure(manifest, firebaseSourceKeys);
     for (const file of firebase.files) extraFiles.add(file);
     automatic.push({ kind: "mount-time Firebase preload", sourceKeys: [...firebase.keys], files: [...firebase.files] });

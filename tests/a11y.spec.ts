@@ -198,6 +198,33 @@ test.describe("portfolio accessibility", () => {
     expect(hydrationMessages).toEqual([]);
   });
 
+  test("unknown detail URLs hydrate their localized not-found page", async ({ page }) => {
+    const hydrationMessages: string[] = [];
+    page.on("console", (message) => {
+      const text = message.text();
+      if (
+        (message.type() === "error" || message.type() === "warning") &&
+        /hydration|hydrated|did not match|server rendered/i.test(text)
+      ) {
+        hydrationMessages.push(text);
+      }
+    });
+    page.on("pageerror", (error) => hydrationMessages.push(error.message));
+
+    for (const [path, heading] of [
+      ["/blog/nonexistent-slug/", "ページが見つかりません"],
+      ["/en/blog/nonexistent-slug/", "Page not found"]
+    ] as const) {
+      await test.step(path, async () => {
+        await page.goto(path);
+        await page.waitForLoadState("networkidle");
+        await expect(page.getByRole("heading", { level: 2, name: heading })).toBeVisible();
+      });
+    }
+
+    expect(hydrationMessages).toEqual([]);
+  });
+
   test("detail pages retain prerendered content and navigation when their detail chunk fails", async ({ page }) => {
     await page.route(/\/assets\/rione-[^/]+\.js(?:\?.*)?$/, (route) => route.abort("failed"));
     await page.goto("/experience/rione/");

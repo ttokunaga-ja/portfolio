@@ -1,6 +1,7 @@
 import React from "react";
 import { renderToString } from "react-dom/server";
 import App from "./App";
+import RouteView from "./RouteViewServer";
 import { loadEntryDetail } from "./content";
 import { setI18nLanguage } from "./i18n";
 import { getAlternateLocales, getJsonLd, getSeo, getStaticPathsForPrerender, parsePath } from "./routes";
@@ -12,7 +13,11 @@ export async function render(pathname: string) {
   setI18nLanguage(locale);
   const entryDetail = route.kind === "detail" ? await loadEntryDetail(locale, route.collection, route.slug) : undefined;
   return {
-    html: renderToString(<App initialRoute={route} initialLocale={locale} initialEntryDetail={entryDetail} />),
+    html: renderToString(
+      <App initialRoute={route} initialLocale={locale}>
+        <RouteView route={route} locale={locale} entryDetail={entryDetail} />
+      </App>
+    ),
     locale,
     route,
     seo: getSeo(route, locale)
