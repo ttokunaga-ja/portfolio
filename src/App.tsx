@@ -1196,13 +1196,13 @@ function ExperienceTimeline({ entries }: { entries: PortfolioEntry[] }) {
               }}
             >
               <Typography fontWeight={800} sx={{ fontSize: { xs: "0.72rem", md: "0.84rem" } }}>
-                {entry.startLabel || entry.startDate || entry.period || "-"}
+                {entry.endLabel || entry.endDate || t("label.present")}
               </Typography>
               <Typography aria-hidden="true" sx={{ lineHeight: 1 }}>
                 -
               </Typography>
               <Typography fontWeight={800} sx={{ fontSize: { xs: "0.72rem", md: "0.84rem" } }}>
-                {entry.endLabel || entry.endDate || t("label.present")}
+                {entry.startLabel || entry.startDate || entry.period || "-"}
               </Typography>
             </Stack>
             <Box
