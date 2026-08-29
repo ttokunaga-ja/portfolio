@@ -56,6 +56,14 @@ jobs:
         run: pnpm build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      - name: Reject retired asset references
+        shell: bash
+        run: |
+          set -euo pipefail
+          if rg --hidden --ignore-case --fixed-strings 'rione_expo_pass' content public dist src/generated; then
+            echo "::error::The retired Ri-one pass remains in deployable content"
+            exit 1
+          fi
       - name: Check performance budgets
         run: pnpm budget
       - name: Accessibility tests
@@ -98,6 +106,8 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    outputs:
+      deployment-url: ${{ steps.cloudflare-deploy.outputs.deployment-url }}
     env:
       CF_PAGES_BRANCH: main
     steps:
@@ -122,16 +132,34 @@ jobs:
           name: portfolio-dist
           path: dist
       - name: Deploy to Cloudflare Pages
-        run: pnpm exec wrangler pages deploy dist --project-name="$PROJECT_NAME" --branch="$CF_PAGES_BRANCH"
+        id: cloudflare-deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deploy-diagnostics
+          pnpm exec wrangler pages deploy dist --project-name="$PROJECT_NAME" --branch="$CF_PAGES_BRANCH" 2>&1 | tee deploy-diagnostics/wrangler-output.txt
+          deployment_url="$(grep -Eo 'https://[^[:space:]]+\.pages\.dev[^[:space:]]*' deploy-diagnostics/wrangler-output.txt | tail -n 1 || true)"
+          printf 'github_sha=%s\ndeployment_url=%s\n' "$GITHUB_SHA" "$deployment_url" > deploy-diagnostics/summary.txt
+          printf 'deployment-url=%s\n' "$deployment_url" >> "$GITHUB_OUTPUT"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Upload deployment diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: deployment-diagnostics
+          path: deploy-diagnostics
+          if-no-files-found: warn
+          retention-days: 7
 
   smoke:
     name: Smoke test production
     runs-on: ubuntu-latest
     needs: deploy
     if: ${{ github.ref == 'refs/heads/main' }}
+    env:
+      DEPLOYMENT_URL: ${{ needs.deploy.outputs.deployment-url }}
     steps:
       - name: Check public routes with bounded retries
         shell: bash
@@ -139,6 +167,8 @@ jobs:
           set -euo pipefail
           scratch_dir="$(mktemp -d)"
           trap 'rm -rf "$scratch_dir"' EXIT
+          mkdir -p smoke-diagnostics
+          printf 'github_sha=%s\ndeployment_url=%s\n' "$GITHUB_SHA" "$DEPLOYMENT_URL" > smoke-diagnostics/summary.txt
 
           verify_response() {
             local route="$1" headers="$2" body="$3"
@@ -153,13 +183,15 @@ jobs:
                 grep -Eqi '^content-type:.*text/html' "$headers" &&
                   grep -Fq '<title>Ri-one | Takumi Tokunaga</title>' "$body" &&
                   grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/experience/rione/"' "$body" &&
-                  grep -Fq 'Ri-one' "$body"
+                  grep -Fq 'Ri-one' "$body" &&
+                  ! grep -Fq 'rione_expo_pass.JPG' "$body"
                 ;;
               /en/experience/rione/)
                 grep -Eqi '^content-type:.*text/html' "$headers" &&
                   grep -Fq '<title>Ri-one | Takumi Tokunaga</title>' "$body" &&
                   grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/en/experience/rione/"' "$body" &&
-                  grep -Fq 'Ri-one' "$body"
+                  grep -Fq 'Ri-one' "$body" &&
+                  ! grep -Fq 'rione_expo_pass.JPG' "$body"
                 ;;
               /robots.txt)
                 grep -Eqi '^content-type:.*(text/plain|text/)' "$headers" &&
@@ -192,3 +224,89 @@ jobs:
               sleep $((attempt * 3))
             done
           done
+
+          verify_retired_path() {
+            local label="$1" retired_path="$2"
+            local attempt headers metrics status content_type cache_control header_hash header_size http_hops
+            local curl_status curl_type curl_bytes
+
+            for attempt in 1 2 3 4 5; do
+              headers="${scratch_dir}/retired-${label}-headers-${attempt}"
+              metrics="${scratch_dir}/retired-${label}-metrics-${attempt}"
+              # Preserve the requested spelling and do not follow redirects:
+              # every first hop must itself be the tombstone. The GET body is
+              # discarded and never written to an artifact.
+              curl --silent --show-error --path-as-is --globoff --max-time 20 --dump-header "$headers" \
+                --write-out '%{http_code}|%{content_type}|%{size_download}\n' --output /dev/null \
+                "${PORTFOLIO_SITE_ORIGIN}${retired_path}" > "$metrics" || true
+              status="$(awk '/^HTTP\// { value=$2 } END { print value }' "$headers")"
+              http_hops="$(awk '/^HTTP\// { count += 1 } END { print count + 0 }' "$headers")"
+              # A transport failure can leave write-out empty. Keep parsing
+              # non-fatal so the bounded retry loop, rather than `set -e`,
+              # decides whether the production check has failed.
+              IFS='|' read -r curl_status curl_type curl_bytes < "$metrics" || true
+              content_type="$(awk 'BEGIN { IGNORECASE=1 } /^content-type:/ { value=$0 } END { print value }' "$headers")"
+              cache_control="$(awk 'BEGIN { IGNORECASE=1 } /^cache-control:/ { value=$0 } END { print value }' "$headers")"
+              header_hash="$(shasum -a 256 "$headers" | awk '{ print $1 }')"
+              header_size="$(wc -c < "$headers" | tr -d ' ')"
+              printf 'path=%s attempt=%s status=%s hops=%s content_type=%s cache_control=%s header_sha256=%s header_bytes=%s curl=%s\n' \
+                "$label" "$attempt" "$status" "$http_hops" "$content_type" "$cache_control" "$header_hash" "$header_size" \
+                "$(tr '\n' ' ' < "$metrics")" >> smoke-diagnostics/retired-asset.txt
+              if [ "$status" = "410" ] && [ "$curl_status" = "410" ] && [ "$http_hops" = "1" ] &&
+                [ "$curl_bytes" = "0" ] &&
+                grep -Eqi '^cache-control:.*no-store.*max-age=0|^cache-control:.*max-age=0.*no-store' "$headers" &&
+                ! grep -Eqi '^content-type:.*image/' "$headers"; then
+                return 0
+              fi
+              sleep $((attempt * 3))
+            done
+            return 1
+          }
+
+          retired_paths=(
+            'canonical|/images/experience/rione/rione_expo_pass.JPG'
+            "query|/images/experience/rione/rione_expo_pass.JPG?retired_check=${GITHUB_SHA}"
+            'repeated-slash|//images//experience/rione//rione_expo_pass.JPG'
+            'percent-encoded|/%69mages%2Fexperience%2Frione%2Frione_expo_pass%2EJPG'
+            'case-variant|/IMAGES/EXPERIENCE/RIONE/RIONE_EXPO_PASS.jpg'
+          )
+          for retired_case in "${retired_paths[@]}"; do
+            label="${retired_case%%|*}"
+            retired_path="${retired_case#*|}"
+            if ! verify_retired_path "$label" "$retired_path"; then
+              echo "::error::Retired asset spelling '${label}' remains retrievable or has incorrect tombstone headers"
+              exit 1
+            fi
+          done
+
+          known_good_headers="${scratch_dir}/known-good-image-headers"
+          known_good_metrics="${scratch_dir}/known-good-image-metrics"
+          curl --fail --silent --show-error --path-as-is --globoff --max-time 20 --dump-header "$known_good_headers" \
+            --write-out '%{http_code}|%{content_type}|%{size_download}\n' --output /dev/null \
+            "${PORTFOLIO_SITE_ORIGIN}/images/experience/rione/rione_expo_discription.webp?control=${GITHUB_SHA}" \
+            > "$known_good_metrics"
+          IFS='|' read -r known_good_status known_good_type known_good_bytes < "$known_good_metrics"
+          if [ "$known_good_status" != "200" ] || [[ "$known_good_type" != image/* ]] || [ "$known_good_bytes" -le 0 ]; then
+            echo "::error::Known-good Ri-one image control failed"
+            exit 1
+          fi
+          if ! grep -Eqi '^cache-control:.*public' "$known_good_headers" ||
+            ! grep -Eqi '^cache-control:.*max-age=604800' "$known_good_headers" ||
+            ! grep -Eqi '^cache-control:.*stale-while-revalidate=86400' "$known_good_headers" ||
+            grep -Eqi '^cache-control:.*max-age=0([^0-9]|$)' "$known_good_headers" ||
+            [ "$(grep -Eic '^cache-control:' "$known_good_headers")" -ne 1 ]; then
+            echo "::error::Known-good Ri-one image cache contract changed"
+            exit 1
+          fi
+          printf 'status=%s content_type=%s bytes=%s header_sha256=%s\n' \
+            "$known_good_status" "$known_good_type" "$known_good_bytes" \
+            "$(shasum -a 256 "$known_good_headers" | awk '{ print $1 }')" \
+            > smoke-diagnostics/known-good-image.txt
+      - name: Upload production smoke diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: production-smoke-diagnostics
+          path: smoke-diagnostics
+          if-no-files-found: warn
+          retention-days: 7

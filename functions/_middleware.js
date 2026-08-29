@@ -8,6 +8,24 @@
 // links and crawlers always reach the URL they asked for.
 
 const SUPPORTED = ["ja", "en"];
+const RETIRED_RIONE_PASS_PATH = "/images/experience/rione/rione_expo_pass.JPG";
+
+// Cloudflare normalizes the URL before static-asset lookup less strictly than
+// applications tend to normalize route paths. Compare a decoded, collapsed
+// pathname here so alternate spellings of this one retired public asset cannot
+// bypass its permanent tombstone. A decode error is deliberately treated as a
+// non-match: malformed URLs must never make the middleware throw or broaden
+// the block to unrelated assets.
+function isRetiredRionePass(pathname) {
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch {
+    return false;
+  }
+
+  return decodedPath.replace(/\/{2,}/g, "/").toLowerCase() === RETIRED_RIONE_PASS_PATH.toLowerCase();
+}
 
 function readLocaleCookie(cookieHeader) {
   if (!cookieHeader) return null;
@@ -48,6 +66,16 @@ export function localeFromAcceptLanguage(header) {
 export async function onRequest(context) {
   const { request, next } = context;
   const url = new URL(request.url);
+
+  if (isRetiredRionePass(url.pathname)) {
+    return new Response(null, {
+      status: 410,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+        "X-Robots-Tag": "noindex"
+      }
+    });
+  }
 
   if (url.pathname !== "/") {
     return next();

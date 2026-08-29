@@ -107,4 +107,6 @@ GitHub repository secrets:
 
 Repository variables consumed by the production build are `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, and `VITE_TRIAL_AUTH_API_ORIGIN`.
 
+The optional Claude PR review uses the `claude-security-review` GitHub Environment. Keep `CLAUDE_API_KEY` only as a secret in that environment, never as a repository secret. The repository variable `CLAUDE_SECURITY_REVIEW_ENABLED` is the explicit feature switch: leave it at `false` until the environment secret is configured and an intentional owner PR has verified the approval gate. As last verified on 2026-08-30, the environment exists with the repository owner as its required reviewer, the environment secret is not configured, and the switch is `false`.
+
 See [the deployment and rollback runbook](docs/deployment-and-rollback.md) for the production-only smoke check, rollback procedure, and the protected `claude-security-review` environment.

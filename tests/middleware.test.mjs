@@ -48,3 +48,32 @@ test("onRequest gives a valid locale cookie precedence and leaves non-root paths
   const nonRoot = context("https://takumi-tokunaga.com/research/?ref=shared", { Cookie: "locale=en" });
   assert.equal(await onRequest(nonRoot), nonRoot.nextResponse);
 });
+
+test("onRequest permanently tombstones every safe spelling of the retired Ri-one pass", async () => {
+  const spellings = [
+    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass.JPG",
+    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass.JPG?cache=bust",
+    "https://takumi-tokunaga.com//images//experience/rione//rione_expo_pass.JPG",
+    "https://takumi-tokunaga.com/%69mages%2Fexperience%2Frione%2Frione_expo_pass%2EJPG",
+    "https://takumi-tokunaga.com/IMAGES/EXPERIENCE/RIONE/RIONE_EXPO_PASS.jpg"
+  ];
+
+  for (const url of spellings) {
+    const response = await onRequest(context(url));
+    assert.equal(response.status, 410, url);
+    assert.equal(response.headers.get("Cache-Control"), "no-store, max-age=0", url);
+    assert.equal(response.headers.get("X-Robots-Tag"), "noindex", url);
+    assert.equal(await response.text(), "", url);
+  }
+});
+
+test("onRequest leaves malformed and legitimate image paths untouched", async () => {
+  for (const url of [
+    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass-2.JPG",
+    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass.WEBP",
+    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass%ZZ.JPG"
+  ]) {
+    const input = context(url);
+    assert.equal(await onRequest(input), input.nextResponse, url);
+  }
+});

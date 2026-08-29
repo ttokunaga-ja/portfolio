@@ -165,7 +165,7 @@ jobs:
     name: Claude Security Reviewer
     # Never use pull_request_target here. The API key is released only after
     # GitHub Environment protection, and only for a PR authored by the owner.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    if: ${{ vars.CLAUDE_SECURITY_REVIEW_ENABLED == 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
     environment: claude-security-review
     permissions:
