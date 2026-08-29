@@ -50,8 +50,50 @@ function collectPrerenderedPaths() {
 }
 
 const markdownDetailPathPattern = /^\/(research|projects|experience|blog)\/[^/]+\/$/;
+const contentGutterViewports = [
+  { name: "mobile", width: 390, height: 844 },
+  { name: "laptop", width: 1024, height: 900 }
+];
 
 test.describe("portfolio accessibility", () => {
+  test("Containers retain the shared viewport gutter without page overflow", async ({ page }) => {
+    test.setTimeout(240_000);
+
+    for (const viewport of contentGutterViewports) {
+      await page.setViewportSize(viewport);
+
+      for (const path of collectPrerenderedPaths()) {
+        await test.step(`${viewport.name} ${path}`, async () => {
+          await page.goto(path);
+          await expect(page.locator("main")).toBeVisible();
+
+          const containerSelector =
+            (await page.locator(".MuiContainer-root").count()) > 0 ? ".MuiContainer-root" : "main > section";
+          const measurements = await page.locator(containerSelector).evaluateAll((containers) => {
+            const viewportWidth = window.innerWidth;
+            return {
+              documentScrollWidth: document.documentElement.scrollWidth,
+              viewportWidth,
+              containers: containers.map((container) => {
+                const bounds = container.getBoundingClientRect();
+                return { left: bounds.left, right: viewportWidth - bounds.right };
+              })
+            };
+          });
+
+          expect(measurements.containers.length).toBeGreaterThan(0);
+          expect(measurements.documentScrollWidth).toBeLessThanOrEqual(measurements.viewportWidth);
+
+          const minimumGutter = measurements.viewportWidth * 0.05 - 1;
+          for (const container of measurements.containers) {
+            expect(container.left).toBeGreaterThanOrEqual(minimumGutter);
+            expect(container.right).toBeGreaterThanOrEqual(minimumGutter);
+          }
+        });
+      }
+    }
+  });
+
   test("all prerendered routes have no detectable a11y violations", async ({ page }) => {
     test.setTimeout(240_000);
 

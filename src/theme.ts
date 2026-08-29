@@ -89,6 +89,16 @@ export const theme = createTheme({
     }
   },
   components: {
+    MuiContainer: {
+      defaultProps: {
+        disableGutters: true
+      },
+      styleOverrides: {
+        root: {
+          width: "90%"
+        }
+      }
+    },
     MuiButtonBase: {
       styleOverrides: {
         root: {

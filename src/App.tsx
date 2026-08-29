@@ -2206,7 +2206,8 @@ function MarkdownArticle({ html }: { html: string }) {
         "& a": {
           color: "primary.main",
           fontWeight: 750,
-          textUnderlineOffset: "0.16em"
+          textUnderlineOffset: "0.16em",
+          overflowWrap: "anywhere"
         },
         "& img": {
           display: "block",
@@ -2309,7 +2310,8 @@ function MarkdownArticle({ html }: { html: string }) {
           py: 0.2,
           borderRadius: 1,
           backgroundColor: "action.hover",
-          fontSize: "0.9em"
+          fontSize: "0.9em",
+          overflowWrap: "anywhere"
         },
         "& .markdown-callout": {
           my: 3,
