@@ -22,8 +22,6 @@ Participate in Ri-one, an official project organization of Ritsumeikan Universit
 
 ![Ri-one exhibit at EXPO 2025](rione_expo_discription.png)
 
-![EXPO 2025 day pass](rione_expo_pass.JPG)
-
 ## Highlights
 
 - Work within an official project organization of the College of Information Science and Engineering

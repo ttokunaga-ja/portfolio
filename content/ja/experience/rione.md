@@ -22,8 +22,6 @@ links:
 
 ![EXPO 2025でのRi-one展示](rione_expo_discription.png)
 
-![EXPO 2025の入場パス](rione_expo_pass.JPG)
-
 ## 主な内容
 
 - 立命館大学情報理工学部の公認プロジェクト団体で活動
