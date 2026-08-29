@@ -1,23 +1,17 @@
 import type { FirebaseApp } from "firebase/app";
-import type { Auth, GoogleAuthProvider, User, UserCredential } from "firebase/auth";
+import type { Auth, User } from "firebase/auth";
 
 const firebaseAppName = "trial-auth";
 const trialAuthApiOrigin = import.meta.env.VITE_TRIAL_AUTH_API_ORIGIN || "https://auth.api.takumi-tokunaga.com";
 
+type FirebaseRuntime = { app: typeof import("firebase/app"); auth: typeof import("firebase/auth") };
+
+let firebaseRuntime: FirebaseRuntime | null = null;
+let firebaseRuntimePromise: Promise<FirebaseRuntime> | null = null;
 let authInstance: Auth | null = null;
 let persistencePromise: Promise<void> | null = null;
-let authPreparationPromise: Promise<void> | null = null;
-let GoogleAuthProviderCtor: (new () => GoogleAuthProvider) | null = null;
-let signInWithPopupFn: ((auth: Auth, provider: GoogleAuthProvider) => Promise<UserCredential>) | null = null;
-let reauthenticateWithPopupFn: ((user: User, provider: GoogleAuthProvider) => Promise<UserCredential>) | null = null;
 
-export type DailyCredits = {
-  date: string;
-  dailyLimit: number;
-  usedCredits: number;
-  remainingCredits: number;
-};
-
+export type DailyCredits = { date: string; dailyLimit: number; usedCredits: number; remainingCredits: number };
 export type IssueAPIKeyResponse = {
   hasKey: boolean;
   apiKey: string | null;
@@ -26,7 +20,6 @@ export type IssueAPIKeyResponse = {
   createdAt?: string;
   dailyCredits: DailyCredits;
 };
-
 export type APIKeyState = {
   hasKey: boolean;
   keyPrefix?: string;
@@ -75,125 +68,79 @@ function getFirebaseConfig() {
   };
 }
 
-async function getTrialFirebaseApp(): Promise<FirebaseApp> {
-  const { getApps, initializeApp } = await import("firebase/app");
-  const existing = getApps().find((app) => app.name === firebaseAppName);
-  return existing ?? initializeApp(getFirebaseConfig(), firebaseAppName);
+function loadFirebaseRuntime(): Promise<FirebaseRuntime> {
+  if (firebaseRuntime) return Promise.resolve(firebaseRuntime);
+
+  firebaseRuntimePromise ??= Promise.all([import("firebase/app"), import("firebase/auth")]).then(([app, auth]) => {
+    firebaseRuntime = { app, auth };
+    return firebaseRuntime;
+  });
+  return firebaseRuntimePromise;
 }
 
-async function getTrialAuth(): Promise<Auth> {
+function getTrialFirebaseApp(runtime: FirebaseRuntime): FirebaseApp {
+  const existing = runtime.app.getApps().find((app) => app.name === firebaseAppName);
+  return existing ?? runtime.app.initializeApp(getFirebaseConfig(), firebaseAppName);
+}
+
+function getReadyRuntimeAndAuth(): { runtime: FirebaseRuntime; auth: Auth } {
   if (!isBrowser()) {
     throw new TrialAuthClientError("BROWSER_ONLY", "Google sign-in is available only in a browser.");
   }
-
-  const { getAuth } = await import("firebase/auth");
-  if (!authInstance) {
-    authInstance = getAuth(await getTrialFirebaseApp());
+  if (!firebaseRuntime || !authInstance) {
+    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still preparing.");
   }
-
-  return authInstance;
+  return { runtime: firebaseRuntime, auth: authInstance };
 }
 
-async function getReadyAuth(): Promise<Auth> {
-  const auth = await getTrialAuth();
-  const { browserSessionPersistence, setPersistence } = await import("firebase/auth");
-  persistencePromise ??= setPersistence(auth, browserSessionPersistence);
+export async function preloadTrialAuth(): Promise<void> {
+  if (!isBrowser()) return;
+
+  const runtime = await loadFirebaseRuntime();
+  authInstance ??= runtime.auth.getAuth(getTrialFirebaseApp(runtime));
+  persistencePromise ??= runtime.auth.setPersistence(authInstance, runtime.auth.browserSessionPersistence);
   await persistencePromise;
-  return auth;
-}
-
-export function preloadTrialAuth(): Promise<void> {
-  if (!isBrowser()) {
-    return Promise.resolve();
-  }
-
-  if (authPreparationPromise) {
-    return authPreparationPromise;
-  }
-
-  authPreparationPromise = (async () => {
-    const auth = await getReadyAuth();
-    const authModule = await import("firebase/auth");
-    GoogleAuthProviderCtor = authModule.GoogleAuthProvider;
-    signInWithPopupFn = authModule.signInWithPopup;
-    reauthenticateWithPopupFn = authModule.reauthenticateWithPopup;
-    authInstance = auth;
-  })();
-
-  authPreparationPromise = authPreparationPromise.catch((error: unknown) => {
-    authPreparationPromise = null;
-    throw error;
-  });
-
-  return authPreparationPromise;
 }
 
 export function subscribeTrialAuthState(onChange: (user: User | null) => void) {
-  if (!isBrowser()) {
+  if (!isBrowser()) return () => undefined;
+
+  try {
+    const { runtime, auth } = getReadyRuntimeAndAuth();
+    return runtime.auth.onAuthStateChanged(auth, onChange);
+  } catch {
+    // Subscription is allowed only after preload resolves; fail closed otherwise.
+    onChange(null);
     return () => undefined;
   }
-
-  let active = true;
-  let unsubscribe: () => void = () => undefined;
-
-  void (async () => {
-    const auth = await getReadyAuth();
-    const { onAuthStateChanged } = await import("firebase/auth");
-    if (active) {
-      unsubscribe = onAuthStateChanged(auth, onChange);
-    }
-  })().catch(() => {
-    if (active) onChange(null);
-  });
-
-  return () => {
-    active = false;
-    unsubscribe();
-  };
 }
 
-type GoogleSignInOptions = {
-  forceLogin?: boolean;
-};
+type GoogleSignInOptions = { forceLogin?: boolean };
 
-function createGoogleProvider(options: GoogleSignInOptions = {}) {
-  if (!GoogleAuthProviderCtor) {
-    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
-  }
-
-  const provider = new GoogleAuthProviderCtor();
+function createGoogleProvider(runtime: FirebaseRuntime, options: GoogleSignInOptions = {}) {
+  const provider = new runtime.auth.GoogleAuthProvider();
   provider.setCustomParameters({ prompt: options.forceLogin ? "login" : "select_account" });
   return provider;
 }
 
-export async function signInToTrialAuthWithGoogle(options: GoogleSignInOptions = {}): Promise<User> {
-  await preloadTrialAuth();
-
-  if (!authInstance || !GoogleAuthProviderCtor || !signInWithPopupFn) {
-    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
-  }
-
-  const provider = createGoogleProvider(options);
-  const credential = await signInWithPopupFn(authInstance, provider);
-  return credential.user;
+export function signInToTrialAuthWithGoogle(options: GoogleSignInOptions = {}): Promise<User> {
+  // Contact-only preload makes this cached call synchronous in the click event,
+  // preserving user activation without loading Firebase on other routes.
+  const { runtime, auth } = getReadyRuntimeAndAuth();
+  const provider = createGoogleProvider(runtime, options);
+  return runtime.auth.signInWithPopup(auth, provider).then((credential) => credential.user);
 }
 
 export async function reauthenticateTrialAuthWithGoogle(user: User): Promise<User> {
-  await preloadTrialAuth();
-
-  if (!reauthenticateWithPopupFn) {
-    throw new TrialAuthClientError("AUTH_NOT_READY", "Google sign-in is still loading.");
-  }
-
-  const provider = createGoogleProvider({ forceLogin: true });
-  const credential = await reauthenticateWithPopupFn(user, provider);
+  const { runtime } = getReadyRuntimeAndAuth();
+  const provider = createGoogleProvider(runtime, { forceLogin: true });
+  const credential = await runtime.auth.reauthenticateWithPopup(user, provider);
   return credential.user;
 }
 
 export async function signOutTrialAuth(): Promise<void> {
-  const auth = await getTrialAuth();
-  const { signOut } = await import("firebase/auth");
-  await signOut(auth);
+  const { runtime, auth } = getReadyRuntimeAndAuth();
+  await runtime.auth.signOut(auth);
 }
 
 async function requestTrialAuth<T>(
@@ -219,7 +166,6 @@ async function requestTrialAuth<T>(
     const message = typeof payload?.message === "string" ? payload.message : "trialAuth request failed.";
     throw new TrialAuthClientError(code, message, response.status);
   }
-
   return response.json() as Promise<T>;
 }
 

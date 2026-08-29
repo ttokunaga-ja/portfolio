@@ -5,6 +5,7 @@ abstract: "立命館大学 情報理工学部 情報理工学科に在学して�
 role: "情報理工学部 情報理工学科"
 startDate: "2023-04-01"
 endDate: "2027-03-31"
+endDateExpected: true
 experienceType: "education"
 sortOrder: 50
 featured: true

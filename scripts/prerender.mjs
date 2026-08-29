@@ -53,13 +53,13 @@ function canonicalFor(routePath) {
   return siteOrigin ? `${siteOrigin}${routePath}` : routePath;
 }
 
-function alternatesFor(basePath) {
-  const enPath = `/en${basePath}`;
-  return [
-    { hreflang: "ja", href: canonicalFor(basePath) },
-    { hreflang: "en", href: canonicalFor(enPath) },
-    { hreflang: "x-default", href: canonicalFor(basePath) }
-  ];
+function alternatesFor(basePath, locales) {
+  const alternates = locales.map((locale) => ({
+    hreflang: locale,
+    href: canonicalFor(locale === "ja" ? basePath : `/${locale}${basePath}`)
+  }));
+  if (locales.includes("ja")) alternates.push({ hreflang: "x-default", href: canonicalFor(basePath) });
+  return alternates;
 }
 
 function upsertMetaByName(html, name, content) {
@@ -86,8 +86,8 @@ function upsertMetaByProperty(html, property, content) {
   return html.replace(/\n\s*<\/head>/i, `\n    ${tag}\n  </head>`);
 }
 
-function upsertCanonical(html, routePath) {
-  const tag = `<link rel="canonical" href="${escapeHtmlAttr(canonicalFor(routePath))}" />`;
+function upsertCanonical(html, canonicalUrl) {
+  const tag = `<link rel="canonical" href="${escapeHtmlAttr(canonicalUrl)}" />`;
   const pattern = /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i;
   if (pattern.test(html)) {
     return html.replace(pattern, tag);
@@ -95,10 +95,10 @@ function upsertCanonical(html, routePath) {
   return html.replace(/\n\s*<\/head>/i, `\n    ${tag}\n  </head>`);
 }
 
-function upsertAlternates(html, basePath) {
+function upsertAlternates(html, basePath, locales) {
   // Drop any previously-injected alternates, then add the current set.
   let next = html.replace(/\s*<link\s+rel="alternate"\s+hreflang="[^"]*"\s+href="[^"]*"\s*\/?>/gi, "");
-  const tags = alternatesFor(basePath)
+  const tags = alternatesFor(basePath, locales)
     .map((alt) => `<link rel="alternate" hreflang="${alt.hreflang}" href="${escapeHtmlAttr(alt.href)}" />`)
     .join("\n    ");
   return next.replace(/\n\s*<\/head>/i, `\n    ${tags}\n  </head>`);
@@ -125,16 +125,22 @@ function inject(shell, rendered) {
   html = upsertMetaByProperty(html, "og:title", rendered.seo.title);
   html = upsertMetaByProperty(html, "og:description", rendered.seo.description);
   html = upsertMetaByProperty(html, "og:locale", ogLocales[rendered.locale]);
-  html = upsertMetaByProperty(html, "og:url", canonicalFor(rendered.routePath));
+  const canonicalUrl = rendered.seo.canonicalUrl || canonicalFor(rendered.routePath);
+  html = upsertMetaByProperty(html, "og:url", canonicalUrl);
   html = upsertMetaByProperty(html, "og:site_name", "Takumi Tokunaga");
-  html = upsertCanonical(html, rendered.routePath);
-  html = upsertAlternates(html, rendered.basePath);
+  html = upsertCanonical(html, canonicalUrl);
+  html = upsertAlternates(html, rendered.basePath, rendered.alternateLocales);
+  if (rendered.seo.noIndex) {
+    html = html.replace(/\n\s*<\/head>/i, `\n    <meta name="robots" content="noindex, follow" />\n  </head>`);
+  }
   html = html.replace(/\n\s*<\/head>/i, `\n    ${jsonLdScript(rendered.jsonLd)}\n  </head>`);
   html = html.replace('<div id="root"></div>', `<div id="root">${rendered.html}</div>`);
   return html;
 }
 
-const { render, getJsonLd, getStaticPathsForPrerender } = await import(pathToFileURL(serverEntry).href);
+const { render, getAlternateLocales, getJsonLd, getStaticPathsForPrerender } = await import(
+  pathToFileURL(serverEntry).href
+);
 const targets = getStaticPathsForPrerender();
 const templates = new Map();
 
@@ -147,9 +153,13 @@ for (const { basePath } of targets) {
 
 for (const { path, basePath } of targets) {
   const shell = templates.get(shellPathFor(basePath));
-  const rendered = render(path);
+  const rendered = await render(path);
   rendered.routePath = path;
   rendered.basePath = basePath;
+  rendered.alternateLocales = getAlternateLocales(rendered.route, rendered.locale);
+  if (rendered.seo.canonicalUrl && rendered.alternateLocales.length > 0) {
+    throw new Error(`Externally canonical content must not emit local alternates: ${path}`);
+  }
   rendered.jsonLd = getJsonLd(rendered.route, rendered.locale, siteOrigin);
   const out = outputPathFor(path);
   await mkdir(dirname(out), { recursive: true });

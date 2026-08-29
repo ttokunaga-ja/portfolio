@@ -1,29 +1,86 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { parseFrontmatter } from "./frontmatter.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
 const dist = join(root, "dist");
-const siteOrigin = (process.env.PORTFOLIO_SITE_ORIGIN ?? "https://takumi-tokunaga.com").replace(/\/+$/, "");
-const collections = new Set(["research", "projects", "experience"]);
+const siteOrigin = validateSiteOrigin(process.env.PORTFOLIO_SITE_ORIGIN ?? "https://takumi-tokunaga.com");
+const collections = new Set(["research", "projects", "experience", "blog"]);
 const locales = new Set(["ja", "en"]);
 
 const collectionLabels = {
   research: { ja: "研究", en: "Research" },
   projects: { ja: "プロジェクト", en: "Projects" },
-  experience: { ja: "経歴", en: "Experience" }
+  experience: { ja: "経歴", en: "Experience" },
+  blog: { ja: "ブログ", en: "Blog" }
 };
 
 const staticPages = [
-  { label: "Home", href: "/" },
-  { label: "Research", href: "/research/" },
-  { label: "Projects", href: "/projects/" },
-  { label: "Experience", href: "/experience/" },
-  { label: "Skills", href: "/skills/" },
-  { label: "Contact", href: "/contact/" },
-  { label: "English Home", href: "/en/" }
+  { label: "JA Home", href: "/" },
+  { label: "JA About", href: "/about/" },
+  { label: "JA Research", href: "/research/" },
+  { label: "JA Projects", href: "/projects/" },
+  { label: "JA Experience", href: "/experience/" },
+  { label: "JA Blog", href: "/blog/" },
+  { label: "JA Skills", href: "/skills/" },
+  { label: "JA Contact", href: "/contact/" },
+  { label: "JA Privacy", href: "/privacy/" },
+  { label: "EN Home", href: "/en/" },
+  { label: "EN About", href: "/en/about/" },
+  { label: "EN Research", href: "/en/research/" },
+  { label: "EN Projects", href: "/en/projects/" },
+  { label: "EN Experience", href: "/en/experience/" },
+  { label: "EN Blog", href: "/en/blog/" },
+  { label: "EN Skills", href: "/en/skills/" },
+  { label: "EN Contact", href: "/en/contact/" },
+  { label: "EN Privacy", href: "/en/privacy/" }
 ];
+
+function validateSiteOrigin(value) {
+  const raw = String(value ?? "")
+    .trim()
+    .replace(/\/+$/, "");
+  let url;
+
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error("PORTFOLIO_SITE_ORIGIN must be an absolute HTTPS origin.");
+  }
+
+  if (
+    url.protocol !== "https:" ||
+    !url.hostname ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("PORTFOLIO_SITE_ORIGIN must be a credential-free HTTPS origin without a path, query, or fragment.");
+  }
+
+  return url.origin;
+}
+
+function validateExternalCanonicalUrl(value, source) {
+  const raw = compact(value);
+  if (!raw) return "";
+
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`${source} canonicalUrl must be an absolute http(s) URL.`);
+  }
+
+  if (!/^https?:$/.test(url.protocol) || !url.hostname || url.username || url.password) {
+    throw new Error(`${source} canonicalUrl must be a credential-free absolute http(s) URL.`);
+  }
+
+  return url.href;
+}
 
 function absoluteUrl(path) {
   return `${siteOrigin}${path}`;
@@ -37,6 +94,10 @@ function markdownPathFor(entry) {
 function canonicalPathFor(entry) {
   const prefix = entry.locale === "ja" ? "" : `/${entry.locale}`;
   return `${prefix}/${entry.collection}/${entry.slug}/`;
+}
+
+function canonicalUrlFor(entry) {
+  return entry.collection === "blog" && entry.canonicalUrl ? entry.canonicalUrl : absoluteUrl(canonicalPathFor(entry));
 }
 
 function contentImageBase(collection, slug) {
@@ -112,7 +173,7 @@ function compact(value) {
 
 function createEntryMarkdown(entry) {
   const language = entry.locale === "ja" ? "ja-JP" : "en-US";
-  const canonical = absoluteUrl(canonicalPathFor(entry));
+  const canonical = canonicalUrlFor(entry);
   const rewrittenBody = rewriteMarkdownImages(entry.body, entry);
   const label = collectionLabels[entry.collection]?.[entry.locale] ?? entry.collection;
 
@@ -150,8 +211,9 @@ function createEntryMarkdown(entry) {
 }
 
 function createLlmsTxt(entries) {
-  const featuredEntries = entries.filter((entry) => entry.locale === "ja" && entry.featured);
-  const englishFeatured = entries.filter((entry) => entry.locale === "en" && entry.featured);
+  const japaneseEntries = entries.filter((entry) => entry.locale === "ja" && entry.collection !== "blog");
+  const englishEntries = entries.filter((entry) => entry.locale === "en" && entry.collection !== "blog");
+  const blogEntries = entries.filter((entry) => entry.collection === "blog");
 
   return [
     "# Takumi Tokunaga Portfolio",
@@ -165,11 +227,17 @@ function createLlmsTxt(entries) {
     "",
     "## AI-Readable Markdown Pages",
     "",
-    ...featuredEntries.map((entry) => `- [${entry.title}](${absoluteUrl(markdownPathFor(entry))})`),
+    ...japaneseEntries.map((entry) => `- [${entry.title}](${absoluteUrl(markdownPathFor(entry))})`),
     "",
     "## English Markdown Pages",
     "",
-    ...englishFeatured.map((entry) => `- [${entry.title}](${absoluteUrl(markdownPathFor(entry))})`),
+    ...englishEntries.map((entry) => `- [${entry.title}](${absoluteUrl(markdownPathFor(entry))})`),
+    "",
+    "## Blog Markdown Pages",
+    "",
+    "Blog entries are included regardless of their featured status. Their metadata identifies the original canonical URL when an entry is mirrored from Zenn.",
+    "",
+    ...blogEntries.map((entry) => `- [${entry.title}](${absoluteUrl(markdownPathFor(entry))})`),
     "",
     "## Main Technical Areas",
     "",
@@ -191,7 +259,7 @@ function createLlmsTxt(entries) {
     "",
     "- Canonical HTML pages are the primary indexable pages.",
     "- Markdown pages are provided for AI-readable summaries and should not be indexed as duplicate search results.",
-    "- Sitemap: https://takumi-tokunaga.com/sitemap.xml",
+    `- Sitemap: ${absoluteUrl("/sitemap.xml")}`,
     ""
   ].join("\n");
 }
@@ -216,12 +284,14 @@ async function readContentEntries() {
       locale,
       collection,
       slug,
+      source: normalized,
       title: compact(data.title),
       subtitle: compact(data.subtitle),
       abstract: compact(data.abstract),
       role: compact(data.role),
       period: [compact(data.startDate), compact(data.endDate)].filter(Boolean).join(" - "),
       featured: Boolean(data.featured),
+      canonicalUrl: collection === "blog" ? validateExternalCanonicalUrl(data.canonicalUrl, normalized) : "",
       tags: normalizeArray(data.tags),
       links: normalizeLinks(data.links),
       body: parsed.content
@@ -241,7 +311,7 @@ function createHeadersAppendix(entries) {
       markdownPathFor(entry),
       "  Content-Type: text/markdown; charset=utf-8",
       "  X-Robots-Tag: noindex",
-      `  Link: <${absoluteUrl(canonicalPathFor(entry))}>; rel="canonical"`,
+      `  Link: <${canonicalUrlFor(entry)}>; rel="canonical"`,
       "  Cache-Control: public, max-age=3600, must-revalidate"
     ].join("\n")
   );
@@ -258,6 +328,36 @@ function createHeadersAppendix(entries) {
   ].join("\n");
 }
 
+async function assertGeneratedOutputs(entries) {
+  const staticHrefSet = new Set(staticPages.map((page) => page.href));
+  if (staticHrefSet.size !== staticPages.length) {
+    throw new Error("llms.txt static page hrefs must be unique.");
+  }
+
+  const expectedMarkdownPaths = entries.map((entry) => markdownPathFor(entry));
+  const expectedPathSet = new Set(expectedMarkdownPaths);
+  if (expectedPathSet.size !== expectedMarkdownPaths.length) {
+    throw new Error("AI-search output paths must be unique for every content entry.");
+  }
+
+  await Promise.all(expectedMarkdownPaths.map((path) => access(join(dist, path.replace(/^\//, "")))));
+
+  const headers = await readFile(join(dist, "_headers"), "utf8");
+  const generatedHeaderCount = (
+    headers.match(/^\/(?:en\/)?(?:research|projects|experience|blog)\/[^\n]+\.md$/gmu) ?? []
+  ).length;
+  if (generatedHeaderCount !== entries.length) {
+    throw new Error(`AI-search header count mismatch: expected ${entries.length}, received ${generatedHeaderCount}.`);
+  }
+
+  for (const entry of entries.filter((candidate) => candidate.collection === "blog" && candidate.canonicalUrl)) {
+    const block = `${markdownPathFor(entry)}\n  Content-Type: text/markdown; charset=utf-8\n  X-Robots-Tag: noindex\n  Link: <${entry.canonicalUrl}>; rel="canonical"`;
+    if (!headers.includes(block)) {
+      throw new Error(`${entry.source} must retain its external canonical Link header.`);
+    }
+  }
+}
+
 const entries = await readContentEntries();
 
 for (const entry of entries) {
@@ -272,5 +372,7 @@ const headersPath = join(dist, "_headers");
 const existingHeaders = await readFile(headersPath, "utf8").catch(() => "");
 const strippedHeaders = existingHeaders.replace(/\n# AI-readable text surfaces[\s\S]*$/u, "").trimEnd();
 await writeFile(headersPath, `${strippedHeaders}${createHeadersAppendix(entries)}`, "utf8");
+
+await assertGeneratedOutputs(entries);
 
 console.log(`[ai-search] dist/llms.txt and ${entries.length} markdown pages`);

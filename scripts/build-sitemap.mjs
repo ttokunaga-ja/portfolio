@@ -1,4 +1,4 @@
-import { readdir, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 const root = process.cwd();
@@ -34,38 +34,56 @@ function routeForIndexFile(file) {
   return routeDir ? `/${routeDir}/` : "/";
 }
 
-function enCounterpart(jaRoute) {
-  return jaRoute === "/" ? "/en/" : `/en${jaRoute}`;
+function routeForLocale(baseRoute, locale) {
+  return locale === "ja" ? baseRoute : baseRoute === "/" ? "/en/" : `/en${baseRoute}`;
 }
 
-const allRoutes = (await collectIndexFiles(dist)).map(routeForIndexFile);
-// Each prerendered page exists in both locales; build the sitemap from the
-// Japanese (default) routes and attach the English alternate to each pair.
-const baseRoutes = allRoutes
-  .filter((route) => route !== "/en" && !route.startsWith("/en/"))
+async function isLocallyCanonical(file, route) {
+  const html = await readFile(file, "utf8");
+  const canonical = html.match(/<link\s+rel="canonical"\s+href="([^"]+)"\s*\/?>/i)?.[1];
+  return canonical === `${siteOrigin}${route}`;
+}
+
+const indexFiles = await collectIndexFiles(dist);
+const allRoutes = new Set(
+  (
+    await Promise.all(
+      indexFiles.map(async (file) => {
+        const route = routeForIndexFile(file);
+        return (await isLocallyCanonical(file, route)) ? route : null;
+      })
+    )
+  ).filter(Boolean)
+);
+const baseRoutes = [...allRoutes]
+  .map((route) => (route === "/en/" ? "/" : route.startsWith("/en/") ? route.slice(3) : route))
+  .filter((route, index, routes) => routes.indexOf(route) === index)
   .sort((a, b) => {
     if (a === "/") return -1;
     if (b === "/") return 1;
     return a.localeCompare(b);
   });
 
-function urlEntry(loc, jaRoute) {
-  const jaUrl = `${siteOrigin}${jaRoute}`;
-  const enUrl = `${siteOrigin}${enCounterpart(jaRoute)}`;
-  return [
-    "  <url>",
-    `    <loc>${escapeXml(loc)}</loc>`,
-    `    <xhtml:link rel="alternate" hreflang="ja" href="${escapeXml(jaUrl)}" />`,
-    `    <xhtml:link rel="alternate" hreflang="en" href="${escapeXml(enUrl)}" />`,
-    `    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(jaUrl)}" />`,
-    "  </url>"
-  ].join("\n");
+function urlEntry(route, baseRoute) {
+  const locales = ["ja", "en"].filter((locale) => allRoutes.has(routeForLocale(baseRoute, locale)));
+  const alternates = locales.map((locale) => {
+    const href = `${siteOrigin}${routeForLocale(baseRoute, locale)}`;
+    return `    <xhtml:link rel="alternate" hreflang="${locale}" href="${escapeXml(href)}" />`;
+  });
+  if (locales.includes("ja")) {
+    alternates.push(
+      `    <xhtml:link rel="alternate" hreflang="x-default" href="${escapeXml(`${siteOrigin}${baseRoute}`)}" />`
+    );
+  }
+  return ["  <url>", `    <loc>${escapeXml(`${siteOrigin}${route}`)}</loc>`, ...alternates, "  </url>"].join("\n");
 }
 
-const urls = baseRoutes.flatMap((jaRoute) => [
-  urlEntry(`${siteOrigin}${jaRoute}`, jaRoute),
-  urlEntry(`${siteOrigin}${enCounterpart(jaRoute)}`, jaRoute)
-]);
+const urls = baseRoutes.flatMap((baseRoute) =>
+  ["ja", "en"]
+    .map((locale) => routeForLocale(baseRoute, locale))
+    .filter((route) => allRoutes.has(route))
+    .map((route) => urlEntry(route, baseRoute))
+);
 
 const xml = [
   '<?xml version="1.0" encoding="UTF-8"?>',

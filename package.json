@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "packageManager": "pnpm@11.0.8",
   "scripts": {
     "dev": "pnpm build:content && vite --host 127.0.0.1",
@@ -16,8 +19,11 @@
     "lint:a11y": "eslint 'src/**/*.{ts,tsx}'",
     "test:a11y": "playwright test",
     "a11y:lighthouse": "node scripts/accessibility/run-lighthouse.mjs",
+    "budget": "node scripts/check-performance-budget.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:middleware": "node --test tests/middleware.test.mjs",
     "lighthouse": "pnpm a11y:lighthouse",
-    "quality": "pnpm lint && pnpm typecheck && pnpm build && pnpm test:a11y && pnpm a11y:lighthouse"
+    "quality": "pnpm lint && pnpm typecheck && pnpm test:unit && pnpm build && pnpm budget && pnpm test:a11y && pnpm a11y:lighthouse"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -44,6 +50,7 @@
     "lighthouse": "^13.4.1",
     "marked": "^18.0.7",
     "prettier": "^3.9.6",
+    "sharp": "0.35.4",
     "typescript": "^5.9.3",
     "vite": "^8.2.2",
     "wrangler": "^4.127.1"

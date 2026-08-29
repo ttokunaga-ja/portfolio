@@ -30,6 +30,7 @@ export type PortfolioEntry = {
   period: string;
   startDate: string;
   endDate: string;
+  endDateExpected: boolean;
   startLabel: string;
   endLabel: string;
   demoUrl: string;
@@ -41,8 +42,12 @@ export type PortfolioEntry = {
   publishedAt: string;
   updatedAt: string;
   canonicalUrl: string;
+};
+
+export type PortfolioEntryDetail = {
   bodyHtml: string;
   toc: PortfolioTocItem[];
 };
 
-export type RouteState = { kind: "page"; page: PrimaryPage } | { kind: "detail"; collection: Collection; slug: string };
+export type RouteState =
+  { kind: "page"; page: PrimaryPage } | { kind: "detail"; collection: Collection; slug: string } | { kind: "notFound" };

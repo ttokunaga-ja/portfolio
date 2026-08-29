@@ -21,15 +21,22 @@ function readLocaleCookie(cookieHeader) {
   return null;
 }
 
-function localeFromAcceptLanguage(header) {
+export function localeFromAcceptLanguage(header) {
   if (!header) return "ja";
   const ranked = header
     .split(",")
-    .map((entry) => {
-      const [tag, q] = entry.trim().split(";q=");
-      return { tag: tag.toLowerCase(), q: q ? Number.parseFloat(q) : 1 };
+    .map((entry, index) => {
+      const [rawTag, ...parameters] = entry.trim().split(";");
+      const quality = parameters.find((parameter) => parameter.trim().toLowerCase().startsWith("q="));
+      const qValue = quality?.trim().slice(2);
+      // RFC 9110 quality values are bounded decimals with at most three
+      // fractional digits. A malformed or out-of-range explicit q never
+      // becomes an implicit preference.
+      const q = qValue === undefined || /^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/.test(qValue) ? Number(qValue ?? 1) : 0;
+      return { tag: rawTag.toLowerCase(), q, index };
     })
-    .sort((a, b) => b.q - a.q);
+    .filter((entry) => entry.tag && entry.q > 0)
+    .sort((a, b) => b.q - a.q || a.index - b.index);
 
   for (const { tag } of ranked) {
     if (tag.startsWith("ja")) return "ja";

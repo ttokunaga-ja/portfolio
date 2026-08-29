@@ -20,7 +20,7 @@ links:
 
 立命館大学情報理工学部の公認プロジェクト団体であるRi-oneで、RoboCupに向けたロボット開発に取り組んでいます。
 
-![EXPO 2025でのRi-one展示](rione_expo_discription.png)
+![EXPO 2025でのRi-one展示](rione_expo_discription.webp)
 
 ## 主な内容
 

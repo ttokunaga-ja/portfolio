@@ -1,15 +1,19 @@
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname, join, posix, relative } from "node:path";
 import { marked } from "marked";
+import sharp from "sharp";
 import { parseFrontmatter } from "./frontmatter.mjs";
+import { assertSafeMarkdownTokens } from "./markdown-security.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
 const outFile = join(root, "src/generated/content.generated.ts");
+const detailsDir = join(root, "src/generated/content-details");
 const collections = new Set(["research", "projects", "experience", "blog"]);
 const locales = new Set(["ja", "en"]);
-const buildNow = new Date();
+const imageDimensions = new Map();
+const imageDimensionTasks = new Map();
 
 marked.setOptions({
   gfm: true,
@@ -88,9 +92,13 @@ function createMarkdownRenderer(context, toc) {
 
   renderer.image = (token) => {
     const src = normalizeMarkdownImageHref(token.href, context);
+    const dimensions = imageDimensions.get(src);
+    if (!dimensions) {
+      throw new Error(`${context.normalized} is missing image dimensions for public${src}.`);
+    }
     const title = token.title ? ` title="${escapeHtmlAttribute(token.title)}"` : "";
 
-    return `<img src="${escapeHtmlAttribute(src)}" alt="${escapeHtmlAttribute(token.text)}"${title} loading="lazy" decoding="async">`;
+    return `<img src="${escapeHtmlAttribute(src)}" alt="${escapeHtmlAttribute(token.text)}"${title} width="${dimensions.width}" height="${dimensions.height}" loading="lazy" decoding="async">`;
   };
 
   renderer.code = ({ text, lang }) => {
@@ -256,21 +264,59 @@ function normalizeZennDirectives(markdown) {
     .join("\n");
 }
 
-async function validateMarkdownImages(html, context) {
-  const imageBase = contentImageBase(context.collection, context.slug);
-  const imageSources = [...html.matchAll(/<img\b[^>]*\bsrc=(["'])(.*?)\1/gi)].map((match) => match[2]);
+function collectMarkdownImageHrefs(markdown) {
+  const imageHrefs = [];
+  const pending = [...marked.lexer(markdown)];
 
-  await Promise.all(
-    imageSources.map(async (src) => {
-      if (!src.startsWith(imageBase)) {
-        throw new Error(`${context.normalized} image path must start with ${imageBase}.`);
-      }
+  while (pending.length > 0) {
+    const token = pending.pop();
+    if (!token || typeof token !== "object") continue;
+    if (token.type === "image") imageHrefs.push(token.href);
+    if (Array.isArray(token.tokens)) pending.push(...token.tokens);
+    if (Array.isArray(token.items)) pending.push(...token.items);
+  }
 
-      await access(join(root, "public", src.slice(1))).catch(() => {
-        throw new Error(`${context.normalized} references missing image: public${src}`);
-      });
-    })
+  return imageHrefs;
+}
+
+async function getImageDimensions(src, context) {
+  if (!imageDimensionTasks.has(src)) {
+    imageDimensionTasks.set(
+      src,
+      (async () => {
+        const imagePath = join(root, "public", src.slice(1));
+        await access(imagePath).catch(() => {
+          throw new Error(`${context.normalized} references missing image: public${src}`);
+        });
+
+        let metadata;
+        try {
+          metadata = await sharp(imagePath).metadata();
+        } catch (error) {
+          throw new Error(`${context.normalized} has unreadable image metadata for public${src}.`, { cause: error });
+        }
+
+        const { width, height } = metadata;
+        if (!Number.isSafeInteger(width) || width <= 0 || !Number.isSafeInteger(height) || height <= 0) {
+          throw new Error(`${context.normalized} has invalid image dimensions for public${src}.`);
+        }
+
+        const dimensions = { width, height };
+        imageDimensions.set(src, dimensions);
+        return dimensions;
+      })()
+    );
+  }
+
+  return imageDimensionTasks.get(src);
+}
+
+async function cacheMarkdownImageDimensions(markdown, context) {
+  const imageSources = new Set(
+    collectMarkdownImageHrefs(markdown).map((href) => normalizeMarkdownImageHref(href, context))
   );
+
+  await Promise.all([...imageSources].map((src) => getImageDimensions(src, context)));
 }
 
 async function listMarkdownFiles(dir) {
@@ -282,6 +328,18 @@ async function listMarkdownFiles(dir) {
         return listMarkdownFiles(next);
       }
       return entry.isFile() && entry.name.endsWith(".md") ? [next] : [];
+    })
+  );
+  return files.flat();
+}
+
+async function listTypeScriptFiles(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const next = join(dir, entry.name);
+      if (entry.isDirectory()) return listTypeScriptFiles(next);
+      return entry.isFile() && entry.name.endsWith(".ts") ? [next] : [];
     })
   );
   return files.flat();
@@ -301,7 +359,14 @@ function normalizeLinkKind(value) {
 }
 
 function isAllowedExternalLinkURL(value) {
-  return /^https?:\/\//.test(value);
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === "https:" || url.protocol === "http:") && Boolean(url.hostname) && !url.username && !url.password
+    );
+  } catch {
+    return false;
+  }
 }
 
 function normalizeLink(value, fallbackKind = "") {
@@ -397,11 +462,22 @@ function parseIsoDate(value) {
   const matched = String(value).match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
   if (!matched) return null;
 
-  return {
+  const parsed = {
     year: Number(matched[1]),
     month: Number(matched[2]),
     day: Number(matched[3] ?? "1")
   };
+
+  const date = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day));
+  if (
+    date.getUTCFullYear() !== parsed.year ||
+    date.getUTCMonth() !== parsed.month - 1 ||
+    date.getUTCDate() !== parsed.day
+  ) {
+    return null;
+  }
+
+  return parsed;
 }
 
 function formatMonth(value, locale) {
@@ -419,18 +495,6 @@ function formatMonth(value, locale) {
   }).format(new Date(Date.UTC(parsed.year, parsed.month - 1, 1)));
 }
 
-function isFutureDate(value) {
-  const parsed = parseIsoDate(value);
-  if (!parsed) return false;
-
-  return Date.UTC(parsed.year, parsed.month - 1, parsed.day) > buildNow.getTime();
-}
-
-function withPlannedSuffix(label, locale) {
-  if (!label) return "";
-  return locale === "ja" ? `${label}（予定）` : `${label} expected`;
-}
-
 function presentLabel(locale) {
   return locale === "ja" ? "現在" : "Present";
 }
@@ -442,6 +506,11 @@ function formatExperiencePeriod(startLabel, endLabel, locale) {
   return `${startLabel} - ${endLabel}`;
 }
 
+function withExpectedSuffix(label, locale) {
+  if (!label) return "";
+  return locale === "ja" ? `${label}（予定）` : `${label} expected`;
+}
+
 function toSlug(filePath, collection) {
   const collectionRoot = `${collection}/`;
   const normalized = relative(contentDir, filePath).replaceAll("\\", "/");
@@ -449,8 +518,33 @@ function toSlug(filePath, collection) {
   return normalized.slice(start + collectionRoot.length).replace(/\.md$/, "");
 }
 
+function validateDate(value, field, context) {
+  if (value && !parseIsoDate(value)) {
+    throw new Error(`${context.normalized} has an invalid ${field}: ${value}. Use a real YYYY-MM-DD calendar date.`);
+  }
+}
+
+function validateExternalUrl(value, field, context) {
+  if (value && !isAllowedExternalLinkURL(value)) {
+    throw new Error(
+      `${context.normalized} has an unsafe ${field}. Only absolute http(s) URLs without credentials are allowed.`
+    );
+  }
+}
+
+function detailModulePath(context) {
+  return join(detailsDir, context.locale, context.collection, `${context.slug}.ts`);
+}
+
+function detailModuleImportPath(context) {
+  return `./content-details/${context.locale}/${context.collection}/${context.slug}`;
+}
+
 const files = await listMarkdownFiles(contentDir);
 const entries = [];
+const detailModules = [];
+
+await rm(detailsDir, { recursive: true, force: true });
 
 for (const file of files) {
   const normalized = relative(contentDir, file).replaceAll("\\", "/");
@@ -464,23 +558,37 @@ for (const file of files) {
   const data = parsed.data;
   const slug = toSlug(file, collection);
   const context = { collection, locale, slug, normalized };
+  assertSafeMarkdownTokens(marked.lexer(parsed.content), context);
+  await cacheMarkdownImageDimensions(parsed.content, context);
   const toc = [];
   const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(normalizeZennDirectives(parsed.content)), {
     renderer: createMarkdownRenderer(context, toc)
   });
-  await validateMarkdownImages(bodyHtml, context);
   const tags = normalizeArray(data.tags);
   const startDate = firstString(data.startDate);
   const endDate = firstString(data.endDate);
+  if (data.endDateExpected !== undefined && typeof data.endDateExpected !== "boolean") {
+    throw new Error(`${normalized} has a non-boolean endDateExpected value.`);
+  }
+  const endDateExpected = data.endDateExpected === true;
   const publishedAt = firstString(data.publishedAt);
   const updatedAt = firstString(data.updatedAt);
+  const demoUrl = firstString(data.demoUrl);
+  const canonicalUrl = firstString(data.canonicalUrl);
+  for (const [field, value] of [
+    ["startDate", startDate],
+    ["endDate", endDate],
+    ["publishedAt", publishedAt],
+    ["updatedAt", updatedAt]
+  ]) {
+    validateDate(value, field, context);
+  }
+  validateExternalUrl(demoUrl, "demoUrl", context);
+  validateExternalUrl(canonicalUrl, "canonicalUrl", context);
   const startLabel =
     collection === "experience" ? formatMonth(startDate, locale) : firstString(data.startLabel, startDate);
   const baseEndLabel = collection === "experience" ? formatMonth(endDate, locale) : firstString(data.endLabel, endDate);
-  const endLabel =
-    collection === "experience" && endDate && isFutureDate(endDate)
-      ? withPlannedSuffix(baseEndLabel, locale)
-      : baseEndLabel;
+  const endLabel = endDateExpected ? withExpectedSuffix(baseEndLabel, locale) : baseEndLabel;
   const period =
     collection === "experience" ? formatExperiencePeriod(startLabel, endLabel, locale) : firstString(data.period);
 
@@ -501,9 +609,10 @@ for (const file of files) {
     period,
     startDate,
     endDate,
+    endDateExpected,
     startLabel,
     endLabel,
-    demoUrl: firstString(data.demoUrl),
+    demoUrl,
     experienceType: collection === "experience" ? normalizeExperienceType(data.experienceType, tags) : "",
     sortOrder: Number(data.sortOrder ?? 999),
     featured: Boolean(data.featured),
@@ -511,10 +620,9 @@ for (const file of files) {
     links: normalizeLinks(data.links),
     publishedAt,
     updatedAt,
-    canonicalUrl: firstString(data.canonicalUrl),
-    bodyHtml,
-    toc
+    canonicalUrl
   });
+  detailModules.push({ context, bodyHtml, toc });
 }
 
 function entryStartTime(entry) {
@@ -538,12 +646,43 @@ entries.sort((a, b) => {
   return a.sortOrder - b.sortOrder || a.title.localeCompare(b.title);
 });
 
-const source = `import type { PortfolioEntry } from "../types";
+const source = `import type { PortfolioEntry, PortfolioEntryDetail } from "../types";
 
 export const entries: PortfolioEntry[] = ${JSON.stringify(entries, null, 2)};
 
-export const generatedAt = ${JSON.stringify(new Date().toISOString())};
+export const detailLoaders: Record<string, () => Promise<{ default: PortfolioEntryDetail }>> = {
+${detailModules
+  .map(
+    ({ context }) =>
+      `  ${JSON.stringify(`${context.locale}/${context.collection}/${context.slug}`)}: () => import(${JSON.stringify(detailModuleImportPath(context))}),`
+  )
+  .join("\n")}
+};
 `;
 
 await mkdir(dirname(outFile), { recursive: true });
 await writeFile(outFile, source, "utf8");
+await Promise.all(
+  detailModules.map(async ({ context, bodyHtml, toc }) => {
+    const file = detailModulePath(context);
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(
+      file,
+      `import type { PortfolioEntryDetail } from "../../../../types";\n\nconst detail: PortfolioEntryDetail = ${JSON.stringify(
+        { bodyHtml, toc },
+        null,
+        2
+      )};\n\nexport default detail;\n`,
+      "utf8"
+    );
+  })
+);
+
+const expectedDetailModules = new Set(detailModules.map(({ context }) => detailModulePath(context)));
+const generatedDetailModules = new Set(await listTypeScriptFiles(detailsDir));
+if (
+  generatedDetailModules.size !== expectedDetailModules.size ||
+  [...generatedDetailModules].some((file) => !expectedDetailModules.has(file))
+) {
+  throw new Error("Generated detail modules do not exactly match the current content set.");
+}

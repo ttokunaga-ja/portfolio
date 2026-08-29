@@ -20,7 +20,7 @@ links:
 
 Participate in Ri-one, an official project organization of Ritsumeikan University's College of Information Science and Engineering, working on robotics development for RoboCup.
 
-![Ri-one exhibit at EXPO 2025](rione_expo_discription.png)
+![Ri-one exhibit at EXPO 2025](rione_expo_discription.webp)
 
 ## Highlights
 

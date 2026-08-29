@@ -58,12 +58,21 @@ import {
   TrialAuthClientError,
   type DailyCredits
 } from "./trialAuthClient";
-import type { Collection, ExperienceType, Locale, PortfolioEntry, PrimaryPage, RouteState } from "./types";
+import type {
+  Collection,
+  ExperienceType,
+  Locale,
+  PortfolioEntry,
+  PortfolioEntryDetail,
+  PrimaryPage,
+  RouteState
+} from "./types";
 import type { User as FirebaseUser } from "firebase/auth";
 
 type AppProps = {
   initialRoute: RouteState;
   initialLocale: Locale;
+  initialEntryDetail?: PortfolioEntryDetail;
 };
 
 const LocaleContext = React.createContext<Locale>(defaultLocale);
@@ -232,7 +241,7 @@ function setPropertyMeta(property: string, content: string) {
   meta.content = content;
 }
 
-export default function App({ initialRoute, initialLocale }: AppProps) {
+export default function App({ initialRoute, initialLocale, initialEntryDetail }: AppProps) {
   const locale = initialLocale;
 
   React.useEffect(() => {
@@ -266,17 +275,27 @@ export default function App({ initialRoute, initialLocale }: AppProps) {
       />
       <LocaleContext.Provider value={locale}>
         <Layout locale={locale} route={initialRoute}>
-          <RouteSwitch route={initialRoute} locale={locale} />
+          <RouteSwitch route={initialRoute} locale={locale} entryDetail={initialEntryDetail} />
         </Layout>
       </LocaleContext.Provider>
     </ThemeProvider>
   );
 }
 
-function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
+function RouteSwitch({
+  route,
+  locale,
+  entryDetail
+}: {
+  route: RouteState;
+  locale: Locale;
+  entryDetail?: PortfolioEntryDetail;
+}) {
   if (route.kind === "detail") {
-    return <DetailPage locale={locale} collection={route.collection} slug={route.slug} />;
+    return <DetailPage locale={locale} collection={route.collection} slug={route.slug} entryDetail={entryDetail} />;
   }
+
+  if (route.kind === "notFound") return <NotFoundPage locale={locale} />;
 
   switch (route.page) {
     case "about":
@@ -301,6 +320,24 @@ function RouteSwitch({ route, locale }: { route: RouteState; locale: Locale }) {
   }
 }
 
+function NotFoundPage({ locale }: { locale: Locale }) {
+  const isJapanese = locale === "ja";
+  return (
+    <Section
+      title={isJapanese ? "ページが見つかりません" : "Page not found"}
+      lead={
+        isJapanese
+          ? "お探しのコンテンツは存在しないか、移動しました。"
+          : "The requested content does not exist or has moved."
+      }
+    >
+      <Button href={hrefFor("home", locale)} variant="contained">
+        {isJapanese ? "ホームへ戻る" : "Back home"}
+      </Button>
+    </Section>
+  );
+}
+
 function Layout({ children, locale, route }: { children: React.ReactNode; locale: Locale; route: RouteState }) {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -308,7 +345,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
   const firstMenuItemRef = React.useRef<HTMLAnchorElement | null>(null);
   const appBarRef = React.useRef<HTMLElement | null>(null);
   const [appBarHeight, setAppBarHeight] = React.useState(0);
-  const currentPage = route.kind === "page" ? route.page : route.collection;
+  const currentPage = route.kind === "detail" ? route.collection : route.kind === "page" ? route.page : undefined;
 
   React.useEffect(() => {
     const el = appBarRef.current;
@@ -331,7 +368,12 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
 
   React.useEffect(() => {
     const activeMobileNavItem = document.querySelector<HTMLElement>("[data-mobile-nav-active='true']");
+    const pageScrollX = window.scrollX;
     activeMobileNavItem?.scrollIntoView({ block: "nearest", inline: "center" });
+    // Keep centering within the horizontal nav from moving the entire document.
+    if (window.scrollX !== pageScrollX) {
+      window.scrollTo({ left: pageScrollX, top: window.scrollY });
+    }
   }, [currentPage]);
 
   const closeMenu = React.useCallback((restoreFocus = false) => {
@@ -401,7 +443,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
                 ref={menuButtonRef}
                 aria-label={t("action.openMenu")}
                 aria-controls={isMenuOpen ? "site-navigation" : undefined}
-                aria-expanded={isMenuOpen ? "true" : undefined}
+                aria-expanded={isMenuOpen}
                 onClick={() => setIsMenuOpen(true)}
                 color="primary"
                 edge="start"
@@ -436,7 +478,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
               component="nav"
               direction="row"
               spacing={0.5}
-              aria-label="Primary navigation"
+              aria-label={t("landmark.primaryNavigation")}
               sx={{ display: { xs: "none", md: "flex" }, alignItems: "center" }}
             >
               {topNavItems.map((item) => {
@@ -446,6 +488,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
                   <Button
                     key={item.page}
                     href={hrefFor(item.page, locale)}
+                    aria-current={isActive ? "page" : undefined}
                     variant="text"
                     color="primary"
                     sx={{
@@ -480,7 +523,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
             component="nav"
             direction="row"
             spacing={0.5}
-            aria-label="Primary navigation"
+            aria-label={t("landmark.primaryNavigation")}
             sx={{
               display: { xs: "flex", md: "none" },
               alignItems: "center",
@@ -499,6 +542,7 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
                 <Button
                   key={item.page}
                   href={hrefFor(item.page, locale)}
+                  aria-current={isActive ? "page" : undefined}
                   variant="text"
                   color="primary"
                   data-mobile-nav-active={isActive ? "true" : undefined}
@@ -546,13 +590,14 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
           </Link>
         </Box>
         <Divider />
-        <List component="nav" aria-label="Site navigation" sx={{ p: 1.5 }}>
+        <List component="nav" aria-label={t("landmark.siteNavigation")} sx={{ p: 1.5 }}>
           {navItems.map((item) => (
             <ListItemButton
               key={item.page}
               ref={item.page === "home" ? firstMenuItemRef : undefined}
               component="a"
               href={hrefFor(item.page, locale)}
+              aria-current={currentPage === item.page ? "page" : undefined}
               selected={currentPage === item.page}
               onClick={() => closeMenu(false)}
               sx={{ borderRadius: 1, mb: 0.5 }}
@@ -565,12 +610,13 @@ function Layout({ children, locale, route }: { children: React.ReactNode; locale
           ))}
         </List>
         <Divider />
-        <List component="nav" aria-label="Site information navigation" sx={{ p: 1.5 }}>
+        <List component="nav" aria-label={t("landmark.siteInformationNavigation")} sx={{ p: 1.5 }}>
           {auxiliaryNavItems.map((item) => (
             <ListItemButton
               key={item.page}
               component="a"
               href={hrefFor(item.page, locale)}
+              aria-current={currentPage === item.page ? "page" : undefined}
               selected={currentPage === item.page}
               onClick={() => closeMenu(false)}
               sx={{ borderRadius: 1, mb: 0.5 }}
@@ -1588,7 +1634,9 @@ function ApiAccessPanel() {
   const [, setAuthUser] = React.useState<FirebaseUser | null>(null);
   const [sessionAPIKey, setSessionAPIKey] = React.useState<SessionTrialAPIKey | null>(null);
   const [isBusy, setIsBusy] = React.useState(false);
+  const [authPreparation, setAuthPreparation] = React.useState<"preparing" | "ready" | "unavailable">("preparing");
   const toastIdRef = React.useRef(0);
+  const trialAuthUnsubscribeRef = React.useRef<(() => void) | null>(null);
   const [toast, setToast] = React.useState<{
     id: number;
     message: string;
@@ -1599,9 +1647,27 @@ function ApiAccessPanel() {
 
   React.useEffect(() => {
     clearLegacyTrialAPIKeySessionCache();
-    const unsubscribe = subscribeTrialAuthState(setAuthUser);
-    void preloadTrialAuth().catch(() => undefined);
-    return unsubscribe;
+    let active = true;
+
+    // This panel only renders on Contact, so preload here keeps Firebase out of
+    // other routes while guaranteeing a cached, activation-safe popup on click.
+    void preloadTrialAuth()
+      .then(() => {
+        if (!active) return;
+        setAuthPreparation("ready");
+        if (!trialAuthUnsubscribeRef.current) {
+          trialAuthUnsubscribeRef.current = subscribeTrialAuthState(setAuthUser);
+        }
+      })
+      .catch(() => {
+        if (active) setAuthPreparation("unavailable");
+      });
+
+    return () => {
+      active = false;
+      trialAuthUnsubscribeRef.current?.();
+      trialAuthUnsubscribeRef.current = null;
+    };
   }, []);
 
   React.useEffect(() => {
@@ -1630,10 +1696,6 @@ function ApiAccessPanel() {
 
   const closeToast = () => {
     setToast(null);
-  };
-
-  const warmUpTrialAuth = () => {
-    void preloadTrialAuth().catch(() => undefined);
   };
 
   const creditSummary = (credits?: DailyCredits) => {
@@ -1676,6 +1738,9 @@ function ApiAccessPanel() {
   };
 
   const handleIssueAPIKey = async () => {
+    if (authPreparation !== "ready" || isBusy) {
+      return;
+    }
     setIsBusy(true);
     try {
       if (sessionAPIKey) {
@@ -1691,8 +1756,8 @@ function ApiAccessPanel() {
       clearLegacyTrialAPIKeySessionCache();
       setSessionAPIKey(null);
       setAuthUser(null);
-      await signOutTrialAuth().catch(() => undefined);
-
+      // Call signInWithPopup synchronously from this user gesture. Waiting for a
+      // sign-out or module preparation first can make browsers reject the popup.
       const user = await signInToTrialAuthWithGoogle({ forceLogin: true });
       setAuthUser(user);
 
@@ -1733,9 +1798,26 @@ function ApiAccessPanel() {
     if (!toast?.apiKey) {
       return;
     }
-    await navigator.clipboard.writeText(toast.apiKey);
-    showToast(t("apiAccess.apiKeyCopied"), "success");
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard API is unavailable.");
+      }
+      await navigator.clipboard.writeText(toast.apiKey);
+      showToast(t("apiAccess.apiKeyCopied"), "success");
+    } catch {
+      // Keep the key in the alert so it remains selectable for a manual copy.
+      showToast(t("apiAccess.apiKeyCopyFailed"), "error", toast.apiKey, toast.detail);
+    }
   };
+
+  const apiAccessStatusLabel = isBusy
+    ? t("apiAccess.issuingApiKey")
+    : authPreparation === "preparing"
+      ? t("apiAccess.preparingApiAccess")
+      : authPreparation === "unavailable"
+        ? t("apiAccess.authUnavailable")
+        : t("action.getApiKey");
 
   return (
     <>
@@ -1743,12 +1825,9 @@ function ApiAccessPanel() {
         id="api-access"
         component="button"
         type="button"
-        disabled={isBusy}
-        aria-busy={isBusy}
+        disabled={isBusy || authPreparation !== "ready"}
+        aria-busy={isBusy || authPreparation === "preparing"}
         onClick={handleIssueAPIKey}
-        onFocus={warmUpTrialAuth}
-        onMouseEnter={warmUpTrialAuth}
-        onPointerDown={warmUpTrialAuth}
         sx={{
           display: "flex",
           flexDirection: "column",
@@ -1781,10 +1860,27 @@ function ApiAccessPanel() {
         <Stack spacing={0.25} alignItems="center">
           <Typography fontWeight={800}>{t("action.getApiKey")}</Typography>
           <Typography variant="body2" color="text.secondary" fontWeight={700}>
-            {t("action.continueWithGoogle")}
+            {authPreparation === "ready" && !isBusy ? t("action.continueWithGoogle") : apiAccessStatusLabel}
           </Typography>
         </Stack>
       </Box>
+      <Typography
+        role="status"
+        aria-live="polite"
+        sx={{
+          position: "absolute",
+          width: "1px",
+          height: "1px",
+          p: 0,
+          m: -1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+          border: 0
+        }}
+      >
+        {isBusy || authPreparation === "preparing" ? apiAccessStatusLabel : ""}
+      </Typography>
       <Snackbar
         key={toast?.id ?? "api-access-toast"}
         open={Boolean(toast)}
@@ -1832,7 +1928,15 @@ function ApiAccessPanel() {
   );
 }
 
-function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: PortfolioEntry }) {
+function ArticleDetailPage({
+  locale,
+  entry,
+  detail
+}: {
+  locale: Locale;
+  entry: PortfolioEntry;
+  detail: PortfolioEntryDetail;
+}) {
   const { t } = useTranslation();
   const collectionLabel = entry.collection === "research" ? t("nav.research") : t("nav.blog");
   const visibleLinks = entry.links.filter((link) => {
@@ -1919,7 +2023,7 @@ function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: Portfolio
           }}
         >
           <Box sx={{ order: { xs: 2, md: 1 }, minWidth: 0 }}>
-            <MarkdownArticle html={entry.bodyHtml} />
+            <MarkdownArticle html={detail.bodyHtml} />
           </Box>
 
           <Box
@@ -1933,7 +2037,7 @@ function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: Portfolio
             }}
           >
             <Stack spacing={2.25}>
-              {entry.toc.length > 0 && <ArticleTableOfContents toc={entry.toc} />}
+              {detail.toc.length > 0 && <ArticleTableOfContents toc={detail.toc} />}
 
               {(entry.canonicalUrl || visibleLinks.length > 0) && (
                 <Card variant="outlined">
@@ -1979,7 +2083,7 @@ function ArticleDetailPage({ locale, entry }: { locale: Locale; entry: Portfolio
   );
 }
 
-function ArticleTableOfContents({ toc }: { toc: PortfolioEntry["toc"] }) {
+function ArticleTableOfContents({ toc }: { toc: PortfolioEntryDetail["toc"] }) {
   const { t } = useTranslation();
 
   return (
@@ -2018,22 +2122,36 @@ function ArticleTableOfContents({ toc }: { toc: PortfolioEntry["toc"] }) {
   );
 }
 
-function DetailPage({ locale, collection, slug }: { locale: Locale; collection: Collection; slug: string }) {
+function DetailPage({
+  locale,
+  collection,
+  slug,
+  entryDetail
+}: {
+  locale: Locale;
+  collection: Collection;
+  slug: string;
+  entryDetail?: PortfolioEntryDetail;
+}) {
   const { t } = useTranslation();
   const entry = getEntry(locale, collection, slug);
 
   if (!entry) {
     return (
       <Section title="Not Found" lead="The requested content does not exist.">
-        <Button href={`/${collection}/`} variant="contained">
-          Back
+        <Button href={hrefFor(collection, locale)} variant="contained">
+          {locale === "ja" ? "一覧へ戻る" : "Back to list"}
         </Button>
       </Section>
     );
   }
 
+  if (!entryDetail) {
+    return <NotFoundPage locale={locale} />;
+  }
+
   if (collection === "research" || collection === "blog") {
-    return <ArticleDetailPage locale={locale} entry={entry} />;
+    return <ArticleDetailPage locale={locale} entry={entry} detail={entryDetail} />;
   }
 
   const demoHref = entry.collection === "projects" ? getDemoHref(entry) : "";
@@ -2073,7 +2191,7 @@ function DetailPage({ locale, collection, slug }: { locale: Locale; collection: 
             alignItems: "start"
           }}
         >
-          <MarkdownArticle html={entry.bodyHtml} />
+          <MarkdownArticle html={entryDetail.bodyHtml} />
           <Box
             component="aside"
             sx={{

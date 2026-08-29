@@ -1,4 +1,4 @@
-import { getEntries, getEntry, getUniqueEntryPaths } from "./content";
+import { getEntries, getEntry, getEntryPaths } from "./content";
 import { defaultLocale, resources } from "./i18n";
 import type { Collection, Locale, PrimaryPage, RouteState } from "./types";
 
@@ -21,23 +21,25 @@ function routeFromSegments(segments: string[]): RouteState {
   if (segments.length === 0) return { kind: "page", page: "home" };
 
   const [first, second] = segments;
-  if (collections.has(first as Collection) && second) {
+  if (collections.has(first as Collection) && second && segments.length === 2) {
     return { kind: "detail", collection: first as Collection, slug: second };
   }
 
-  if (primaryPages.has(first as PrimaryPage)) {
+  if (primaryPages.has(first as PrimaryPage) && segments.length === 1) {
     return { kind: "page", page: first as PrimaryPage };
   }
 
-  return { kind: "page", page: "home" };
+  return { kind: "notFound" };
 }
 
 export function parsePath(pathname: string): { locale: Locale; route: RouteState } {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments[0] === "en") {
-    return { locale: "en", route: routeFromSegments(segments.slice(1)) };
+  const locale = segments[0] === "en" ? "en" : defaultLocale;
+  const route = routeFromSegments(locale === "en" ? segments.slice(1) : segments);
+  if (route.kind === "detail" && !getEntry(locale, route.collection, route.slug)) {
+    return { locale, route: { kind: "notFound" } };
   }
-  return { locale: defaultLocale, route: routeFromSegments(segments) };
+  return { locale, route };
 }
 
 function localePrefix(locale: Locale): string {
@@ -57,8 +59,11 @@ export function hrefFor(
 
 export function hrefForRoute(route: RouteState, locale: Locale = defaultLocale): string {
   if (route.kind === "detail") {
-    return hrefFor({ collection: route.collection, slug: route.slug }, locale);
+    return getEntry(locale, route.collection, route.slug)
+      ? hrefFor({ collection: route.collection, slug: route.slug }, locale)
+      : hrefFor(route.collection, locale);
   }
+  if (route.kind === "notFound") return hrefFor("home", locale);
   return hrefFor(route.page, locale);
 }
 
@@ -74,17 +79,28 @@ export function getStaticPathsForPrerender(): PrerenderTarget[] {
     "/blog/",
     "/skills/",
     "/contact/",
-    "/privacy/",
-    ...getUniqueEntryPaths().map((entry) => `/${entry.collection}/${entry.slug}/`)
+    "/privacy/"
   ];
 
-  return locales.flatMap((locale) =>
-    basePaths.map((basePath) => ({
+  return locales.flatMap((locale) => [
+    ...basePaths.map((basePath) => ({
       basePath,
       locale,
       path: locale === defaultLocale ? basePath : `/${locale}${basePath}`
-    }))
-  );
+    })),
+    ...getEntryPaths(locale).map((entry) => {
+      const basePath = `/${entry.collection}/${entry.slug}/`;
+      return { basePath, locale, path: locale === defaultLocale ? basePath : `/${locale}${basePath}` };
+    })
+  ]);
+}
+
+export function getAlternateLocales(route: RouteState, locale: Locale): Locale[] {
+  if (route.kind === "notFound") return [];
+  if (route.kind === "page") return locales;
+  const entry = getEntry(locale, route.collection, route.slug);
+  if (route.collection === "blog" && entry?.canonicalUrl) return [];
+  return locales.filter((candidate) => Boolean(getEntry(candidate, route.collection, route.slug)));
 }
 
 export function getSeo(route: RouteState, locale: Locale) {
@@ -95,9 +111,22 @@ export function getSeo(route: RouteState, locale: Locale) {
       return {
         title: `${entry.title} | Takumi Tokunaga`,
         description: entry.abstract,
-        ogType: "article" as const
+        ogType: "article" as const,
+        canonicalUrl: route.collection === "blog" ? entry.canonicalUrl || undefined : undefined
       };
     }
+  }
+
+  if (route.kind === "notFound") {
+    return {
+      title: locale === "ja" ? "ページが見つかりません | Takumi Tokunaga" : "Page not found | Takumi Tokunaga",
+      description:
+        locale === "ja"
+          ? "お探しのページは存在しないか、移動しました。"
+          : "The page you requested does not exist or has moved.",
+      ogType: "website" as const,
+      noIndex: true
+    };
   }
 
   const pageTitles: Record<PrimaryPage, string> = {
@@ -171,13 +200,22 @@ function absoluteUrl(origin: string, route: PrimaryPage | { collection: Collecti
   return `${origin}${hrefFor(route, locale)}`;
 }
 
+function indexableEntryUrl(origin: string, entry: ReturnType<typeof getEntry>, locale: Locale) {
+  if (!entry) return "";
+  if (entry.collection === "blog" && entry.canonicalUrl) return entry.canonicalUrl;
+  return absoluteUrl(origin, { collection: entry.collection, slug: entry.slug }, locale);
+}
+
 function pageName(route: RouteState, locale: Locale) {
   const t = resources[locale].translation;
   if (route.kind === "detail") {
     const entry = getEntry(locale, route.collection, route.slug);
     return entry ? entry.title : route.slug;
   }
-  return route.page === "home" ? "徳永拓未 / Takumi Tokunaga Portfolio" : t.nav[route.page];
+  if (route.kind === "page") {
+    return route.page === "home" ? "徳永拓未 / Takumi Tokunaga Portfolio" : t.nav[route.page];
+  }
+  return "Takumi Tokunaga";
 }
 
 function collectionPageType(page: PrimaryPage) {
@@ -224,9 +262,11 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
     const entry = getEntry(locale, route.collection, route.slug);
     crumbs.push({
       name: entry ? entry.title : route.slug,
-      url: `${origin}${hrefFor({ collection: route.collection, slug: route.slug }, locale)}`
+      url:
+        indexableEntryUrl(origin, entry, locale) ||
+        `${origin}${hrefFor({ collection: route.collection, slug: route.slug }, locale)}`
     });
-  } else if (route.page !== "home") {
+  } else if (route.kind === "page" && route.page !== "home") {
     crumbs.push({ name: t.nav[route.page], url: `${origin}${hrefFor(route.page, locale)}` });
   }
 
@@ -242,7 +282,9 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
 
   if (route.kind === "detail") {
     const entry = getEntry(locale, route.collection, route.slug);
-    const routeUrl = absoluteUrl(origin, { collection: route.collection, slug: route.slug }, locale);
+    const routeUrl =
+      indexableEntryUrl(origin, entry, locale) ||
+      absoluteUrl(origin, { collection: route.collection, slug: route.slug }, locale);
 
     return {
       "@context": "https://schema.org",
@@ -309,7 +351,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
       "@type": "ListItem",
       position: index + 1,
       name: entry.title,
-      url: absoluteUrl(origin, { collection: entry.collection, slug: entry.slug }, locale)
+      url: indexableEntryUrl(origin, entry, locale)
     }));
     pageNode.mainEntity = {
       "@type": "ItemList",

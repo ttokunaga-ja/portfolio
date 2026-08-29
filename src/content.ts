@@ -1,10 +1,8 @@
-import { entries } from "./generated/content.generated";
-import type { Collection, Locale, PortfolioEntry } from "./types";
+import { detailLoaders, entries } from "./generated/content.generated";
+import type { Collection, Locale, PortfolioEntry, PortfolioEntryDetail } from "./types";
 
 export function getEntries(locale: Locale, collection?: Collection): PortfolioEntry[] {
-  const scoped = entries.filter((entry) => entry.locale === locale && (!collection || entry.collection === collection));
-  if (scoped.length > 0) return scoped;
-  return entries.filter((entry) => entry.locale === "ja" && (!collection || entry.collection === collection));
+  return entries.filter((entry) => entry.locale === locale && (!collection || entry.collection === collection));
 }
 
 export function getFeaturedEntries(locale: Locale, collection: Collection, limit = 3): PortfolioEntry[] {
@@ -39,18 +37,21 @@ export function getDemoHref(entry: PortfolioEntry): string {
 }
 
 export function getEntry(locale: Locale, collection: Collection, slug: string): PortfolioEntry | undefined {
-  return (
-    entries.find((entry) => entry.locale === locale && entry.collection === collection && entry.slug === slug) ??
-    entries.find((entry) => entry.locale === "ja" && entry.collection === collection && entry.slug === slug)
-  );
+  return entries.find((entry) => entry.locale === locale && entry.collection === collection && entry.slug === slug);
 }
 
-export function getUniqueEntryPaths(): Array<{ collection: Collection; slug: string }> {
-  const seen = new Set<string>();
-  return entries.flatMap((entry) => {
-    const key = `${entry.collection}/${entry.slug}`;
-    if (seen.has(key)) return [];
-    seen.add(key);
-    return [{ collection: entry.collection, slug: entry.slug }];
-  });
+export async function loadEntryDetail(
+  locale: Locale,
+  collection: Collection,
+  slug: string
+): Promise<PortfolioEntryDetail | undefined> {
+  const loader = detailLoaders[`${locale}/${collection}/${slug}`];
+  if (!loader) return undefined;
+  return (await loader()).default;
+}
+
+export function getEntryPaths(locale: Locale): Array<{ collection: Collection; slug: string }> {
+  return entries
+    .filter((entry) => entry.locale === locale)
+    .map((entry) => ({ collection: entry.collection, slug: entry.slug }));
 }

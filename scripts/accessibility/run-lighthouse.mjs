@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import lighthouse from "lighthouse";
@@ -13,6 +13,7 @@ const viteBin = join(root, "node_modules/.bin/vite");
 const port = Number(process.env.PORTFOLIO_A11Y_PORT ?? 4175);
 const baseUrl = process.env.PORTFOLIO_BASE_URL ?? `http://127.0.0.1:${port}`;
 const minScore = Number(process.env.PORTFOLIO_A11Y_LIGHTHOUSE_MIN ?? 90);
+const useExistingBuild = process.env.PORTFOLIO_USE_EXISTING_BUILD === "1";
 
 function run(command, args) {
   return new Promise((resolveRun, reject) => {
@@ -56,6 +57,16 @@ async function collectIndexFiles(dir) {
   return files.flat();
 }
 
+async function assertExistingBuild() {
+  for (const required of [join(dist, "index.html"), join(dist, "assets")]) {
+    try {
+      await stat(required);
+    } catch {
+      throw new Error(`PORTFOLIO_USE_EXISTING_BUILD=1 requires ${required} from pnpm build.`);
+    }
+  }
+}
+
 function routeForIndexFile(file) {
   const routeDir = relative(dist, file.replace(/index\.html$/, "")).replaceAll("\\", "/");
   return routeDir ? `/${routeDir}` : "/";
@@ -67,7 +78,11 @@ function slugForRoute(route) {
 
 await rm(reportDir, { recursive: true, force: true });
 await mkdir(reportDir, { recursive: true });
-await run("pnpm", ["run", "build"]);
+if (useExistingBuild) {
+  await assertExistingBuild();
+} else {
+  await run("pnpm", ["run", "build"]);
+}
 
 const routes = [...(await collectIndexFiles(dist)).map(routeForIndexFile), "/404.html"].sort((a, b) => {
   if (a === "/") return -1;

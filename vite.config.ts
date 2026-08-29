@@ -6,17 +6,18 @@ export default defineConfig({
   base: "/",
   plugins: [react()],
   build: {
+    manifest: true,
     rollupOptions: {
       input: {
-        home: resolve(__dirname, "index.html"),
-        about: resolve(__dirname, "about/index.html"),
-        research: resolve(__dirname, "research/index.html"),
-        projects: resolve(__dirname, "projects/index.html"),
-        experience: resolve(__dirname, "experience/index.html"),
-        blog: resolve(__dirname, "blog/index.html"),
-        skills: resolve(__dirname, "skills/index.html"),
-        contact: resolve(__dirname, "contact/index.html"),
-        privacy: resolve(__dirname, "privacy/index.html")
+        home: resolve(import.meta.dirname, "index.html"),
+        about: resolve(import.meta.dirname, "about/index.html"),
+        research: resolve(import.meta.dirname, "research/index.html"),
+        projects: resolve(import.meta.dirname, "projects/index.html"),
+        experience: resolve(import.meta.dirname, "experience/index.html"),
+        blog: resolve(import.meta.dirname, "blog/index.html"),
+        skills: resolve(import.meta.dirname, "skills/index.html"),
+        contact: resolve(import.meta.dirname, "contact/index.html"),
+        privacy: resolve(import.meta.dirname, "privacy/index.html")
       }
     }
   }

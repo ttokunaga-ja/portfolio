@@ -119,7 +119,7 @@ test.describe("portfolio accessibility", () => {
     }
   });
 
-  test("markdown images expose alt text and load successfully", async ({ page }) => {
+  test("markdown images expose intrinsic dimensions, alt text, and load successfully", async ({ page }) => {
     test.setTimeout(240_000);
 
     for (const path of collectPrerenderedPaths().filter((routePath) => markdownDetailPathPattern.test(routePath))) {
@@ -149,6 +149,8 @@ test.describe("portfolio accessibility", () => {
               return {
                 src: htmlImage.getAttribute("src") ?? "",
                 alt: htmlImage.getAttribute("alt") ?? "",
+                width: htmlImage.getAttribute("width") ?? "",
+                height: htmlImage.getAttribute("height") ?? "",
                 complete: htmlImage.complete,
                 naturalWidth: htmlImage.naturalWidth,
                 naturalHeight: htmlImage.naturalHeight
@@ -157,7 +159,14 @@ test.describe("portfolio accessibility", () => {
             .filter(
               (image) =>
                 image.src &&
-                (!image.alt.trim() || !image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0)
+                (!image.alt.trim() ||
+                  !/^\d+$/.test(image.width) ||
+                  Number(image.width) <= 0 ||
+                  !/^\d+$/.test(image.height) ||
+                  Number(image.height) <= 0 ||
+                  !image.complete ||
+                  image.naturalWidth <= 0 ||
+                  image.naturalHeight <= 0)
             )
         );
 
@@ -179,7 +188,7 @@ test.describe("portfolio accessibility", () => {
     });
     page.on("pageerror", (error) => hydrationMessages.push(error.message));
 
-    for (const path of ["/", "/experience/rione/", "/contact/"]) {
+    for (const path of ["/", "/experience/rione/", "/contact/", "/en/experience/rione/"]) {
       await test.step(path, async () => {
         await page.goto(path);
         await page.waitForLoadState("networkidle");
@@ -187,6 +196,17 @@ test.describe("portfolio accessibility", () => {
     }
 
     expect(hydrationMessages).toEqual([]);
+  });
+
+  test("detail pages retain prerendered content and navigation when their detail chunk fails", async ({ page }) => {
+    await page.route(/\/assets\/rione-[^/]+\.js(?:\?.*)?$/, (route) => route.abort("failed"));
+    await page.goto("/experience/rione/");
+
+    await expect(page.getByRole("heading", { level: 1, name: "Ri-one" })).toBeVisible();
+    await expect(page.locator(".markdown-article")).toContainText("RoboCupに向けたロボット開発");
+
+    await page.getByRole("button", { name: "メニューを開く" }).click();
+    await expect(page.getByRole("navigation", { name: "サイトナビゲーション" })).toBeVisible();
   });
 
   test("pre-rendered detail page exposes route-specific metadata before hydration", async ({ request }) => {
@@ -332,12 +352,66 @@ test.describe("portfolio accessibility", () => {
     await expect(page.locator("#main-content")).toBeFocused();
 
     const menuButton = page.getByRole("button", { name: "メニューを開く" });
+    await expect(menuButton).toHaveAttribute("aria-expanded", "false");
+    await expect(menuButton).not.toHaveAttribute("aria-controls");
     await menuButton.focus();
     await page.keyboard.press("Enter");
+    await expect(page.locator('button[aria-label="メニューを開く"]')).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator('button[aria-label="メニューを開く"]')).toHaveAttribute(
+      "aria-controls",
+      "site-navigation"
+    );
+    await expect(page.getByRole("navigation", { name: "サイトナビゲーション" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Home" })).toBeFocused();
 
     await page.keyboard.press("Escape");
     await expect(menuButton).toBeFocused();
+  });
+
+  test("active navigation links expose localized landmarks and current-page semantics", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/experience/");
+
+    const primaryNavigation = page.getByRole("navigation", { name: "主要ナビゲーション" }).first();
+    await expect(primaryNavigation.getByRole("link", { name: "Experience" })).toHaveAttribute("aria-current", "page");
+
+    await page.getByRole("button", { name: "メニューを開く" }).click();
+    const drawerNavigation = page.getByRole("navigation", { name: "サイトナビゲーション" });
+    await expect(drawerNavigation.getByRole("link", { name: "Experience" })).toHaveAttribute("aria-current", "page");
+
+    await page.goto("/en/experience/");
+    await expect(page.getByRole("navigation", { name: "Primary navigation" }).first()).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Primary navigation" }).first().getByRole("link", { name: "Experience" })
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  test("not-found pages keep Home out of the current-page state in both locales", async ({ page }) => {
+    for (const [path, menuName, navigationName] of [
+      ["/not-found/", "メニューを開く", "サイトナビゲーション"],
+      ["/en/not-found/", "Open Menu", "Site navigation"]
+    ]) {
+      await test.step(path, async () => {
+        await page.goto(path);
+        await page.getByRole("button", { name: menuName }).click();
+        const home = page.getByRole("navigation", { name: navigationName }).getByRole("link", { name: "Home" });
+        await expect(home).not.toHaveAttribute("aria-current");
+      });
+    }
+  });
+
+  test("mobile Contact keeps the document at its horizontal origin", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/contact/");
+
+    const viewport = await page.evaluate(() => ({
+      scrollX: window.scrollX,
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth
+    }));
+
+    expect(viewport.scrollX).toBe(0);
+    expect(viewport.scrollWidth).toBeLessThanOrEqual(viewport.innerWidth);
   });
 
   test("visible header targets meet 44px touch target", async ({ page }) => {

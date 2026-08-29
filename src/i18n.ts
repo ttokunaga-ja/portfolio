@@ -18,6 +18,11 @@ export const resources = {
         contact: "Contact",
         privacy: "Privacy"
       },
+      landmark: {
+        primaryNavigation: "主要ナビゲーション",
+        siteNavigation: "サイトナビゲーション",
+        siteInformationNavigation: "サイト情報ナビゲーション"
+      },
       action: {
         viewResearch: "研究を見る",
         viewProjects: "プロジェクトを見る",
@@ -50,6 +55,9 @@ export const resources = {
         apiKeyCached: "このページセッション中に発行したAPIキーを表示しています。",
         apiKeyUnavailable: "APIキーを表示できませんでした。もう一度お試しください。",
         apiKeyCopied: "APIキーをコピーしました。",
+        apiKeyCopyFailed: "APIキーをコピーできませんでした。表示されているキーを選択してコピーしてください。",
+        issuingApiKey: "APIキーを発行しています…",
+        preparingApiAccess: "Googleログインを準備しています…",
         recentSignInRequired: "APIキーの発行には、10分以内のGoogleログインが必要です。",
         creditSummary: "本日の残りクレジット: {{remaining}} / {{daily}}",
         operationFailed: "処理に失敗しました。時間をおいて再度お試しください。",
@@ -112,6 +120,11 @@ export const resources = {
         contact: "Contact",
         privacy: "Privacy"
       },
+      landmark: {
+        primaryNavigation: "Primary navigation",
+        siteNavigation: "Site navigation",
+        siteInformationNavigation: "Site information navigation"
+      },
       action: {
         viewResearch: "View Research",
         viewProjects: "View Projects",
@@ -144,6 +157,9 @@ export const resources = {
         apiKeyCached: "Showing the API key issued in this page session.",
         apiKeyUnavailable: "The API key could not be displayed. Try again.",
         apiKeyCopied: "API key copied.",
+        apiKeyCopyFailed: "The API key could not be copied. Select the visible key and copy it manually.",
+        issuingApiKey: "Issuing API key…",
+        preparingApiAccess: "Preparing Google sign-in…",
         recentSignInRequired: "Issuing an API key requires Google sign-in within the last 10 minutes.",
         creditSummary: "Remaining credits today: {{remaining}} / {{daily}}",
         operationFailed: "The request failed. Try again later.",

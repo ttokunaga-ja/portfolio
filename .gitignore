@@ -4,6 +4,7 @@ reports
 playwright-report
 test-results
 src/generated/content.generated.ts
+src/generated/content-details/
 .wrangler
 .playwright-mcp
 .accessibility-reports

@@ -5,6 +5,7 @@ abstract: "Study in the College of Information Science and Engineering at Ritsum
 role: "College of Information Science and Engineering"
 startDate: "2023-04-01"
 endDate: "2027-03-31"
+endDateExpected: true
 experienceType: "education"
 sortOrder: 50
 featured: true
