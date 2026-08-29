@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: pr-security-${{ github.ref }}
   cancel-in-progress: true
@@ -17,21 +20,15 @@ jobs:
       has_js: ${{ steps.detect.outputs.has_js }}
       has_go: ${{ steps.detect.outputs.has_go }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f package.json ]; then
-            echo "has_js=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_js=false" >> "$GITHUB_OUTPUT"
-          fi
-          if git ls-files | grep -Eq '(^|/)go\.mod$'; then
-            echo "has_go=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_go=false" >> "$GITHUB_OUTPUT"
-          fi
+          if [ -f package.json ]; then echo "has_js=true" >> "$GITHUB_OUTPUT"; else echo "has_js=false" >> "$GITHUB_OUTPUT"; fi
+          if git ls-files | grep -Eq '(^|/)go\.mod$'; then echo "has_go=true" >> "$GITHUB_OUTPUT"; else echo "has_go=false" >> "$GITHUB_OUTPUT"; fi
 
   codeql-javascript:
     name: CodeQL (JavaScript/TypeScript)
@@ -42,7 +39,9 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           languages: javascript-typescript
@@ -57,7 +56,9 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           languages: go
@@ -68,7 +69,9 @@ jobs:
     name: Semgrep
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.x"
@@ -81,10 +84,11 @@ jobs:
     name: Gitleaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@f6a2a647e42a41cd71b1d622a91c8e7f985c6ca2 # v2 - pinned to commit SHA for supply chain security
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@f6a2a647e42a41cd71b1d622a91c8e7f985c6ca2 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -94,18 +98,17 @@ jobs:
     if: ${{ needs.detect.outputs.has_js == 'true' || needs.detect.outputs.has_go == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         if: ${{ needs.detect.outputs.has_js == 'true' }}
         with:
-          node-version: 22
-
+          node-version: 24
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         if: ${{ needs.detect.outputs.has_go == 'true' }}
         with:
           go-version: "1.26.4"
-
       - name: Install JS dependencies
         if: ${{ needs.detect.outputs.has_js == 'true' }}
         shell: bash
@@ -116,61 +119,22 @@ jobs:
             corepack prepare pnpm@11.0.8 --activate
             pnpm install --frozen-lockfile
             echo "JS_PM=pnpm" >> "$GITHUB_ENV"
-          elif [ -f package-lock.json ]; then
-            npm ci
-            echo "JS_PM=npm" >> "$GITHUB_ENV"
-          else
-            npm install
-            echo "JS_PM=npm" >> "$GITHUB_ENV"
-          fi
-
+          elif [ -f package-lock.json ]; then npm ci; echo "JS_PM=npm" >> "$GITHUB_ENV"; else npm install; echo "JS_PM=npm" >> "$GITHUB_ENV"; fi
       - name: npm audit
         if: ${{ needs.detect.outputs.has_js == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ "$JS_PM" = pnpm ]; then
-            pnpm audit
-          else
-            npm audit
-          fi
-
+        run: if [ "$JS_PM" = pnpm ]; then pnpm audit; else npm audit; fi
       - name: ESLint
         if: ${{ needs.detect.outputs.has_js == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.lint ? 0 : 1)"; then
-            if [ "$JS_PM" = pnpm ]; then pnpm run lint; else npm run lint; fi
-          else
-            if [ "$JS_PM" = pnpm ]; then pnpm exec eslint . --max-warnings=0; else npx --no-install eslint . --max-warnings=0; fi
-          fi
-
-      - name: Prettier
-        if: ${{ needs.detect.outputs.has_js == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ "$JS_PM" = pnpm ]; then pnpm exec prettier --check .; else npx --no-install prettier --check .; fi
-
+        run: if [ "$JS_PM" = pnpm ]; then pnpm run lint; else npm run lint; fi
       - name: Type Check
         if: ${{ needs.detect.outputs.has_js == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.typecheck ? 0 : 1)"; then
-            if [ "$JS_PM" = pnpm ]; then pnpm run typecheck; else npm run typecheck; fi
-          fi
-
-      - name: Build
+        run: if [ "$JS_PM" = pnpm ]; then pnpm run typecheck; else npm run typecheck; fi
+      - name: Unit tests
         if: ${{ needs.detect.outputs.has_js == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts.build ? 0 : 1)"; then
-            if [ "$JS_PM" = pnpm ]; then pnpm run build; else npm run build; fi
-          fi
-
+        run: if [ "$JS_PM" = pnpm ]; then pnpm run test:unit; else npm run test:unit; fi
+      - name: Build and check performance budgets
+        if: ${{ needs.detect.outputs.has_js == 'true' }}
+        run: if [ "$JS_PM" = pnpm ]; then pnpm run build && pnpm run budget; else npm run build && npm run budget; fi
       - name: Go test, vet, vulncheck, build
         if: ${{ needs.detect.outputs.has_go == 'true' }}
         shell: bash
@@ -178,11 +142,13 @@ jobs:
           set -euo pipefail
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck_bin="$(go env GOPATH)/bin/govulncheck"
-          mapfile -t go_mods < <(git ls-files | grep -E '(^|/)go\.mod$' | grep -vE '(^|/)vendor/')
-          for mod in "${go_mods[@]}"; do
+          while IFS= read -r mod; do
             dir="$(dirname "$mod")"
-            if [ "$dir" != "." ]; then pushd "$dir" >/dev/null; fi
-            mapfile -t go_files < <(git ls-files '*.go')
+            if [ "$dir" = . ]; then
+              mapfile -t go_files < <(git ls-files -- '*.go')
+            else
+              mapfile -t go_files < <(git ls-files -- "$dir" | grep -E '\.go$' || true)
+            fi
             if [ "${#go_files[@]}" -gt 0 ]; then
               unformatted="$(gofmt -l "${go_files[@]}")"
               if [ -n "$unformatted" ]; then
@@ -190,33 +156,31 @@ jobs:
                 exit 1
               fi
             fi
-            go vet ./...
-            go test ./...
-            "$govulncheck_bin" ./...
-            go build ./...
-            if [ "$dir" != "." ]; then popd >/dev/null; fi
-          done
+            [ "$dir" = . ] || pushd "$dir" >/dev/null
+            go vet ./...; go test ./...; "$govulncheck_bin" ./...; go build ./...
+            [ "$dir" = . ] || popd >/dev/null
+          done < <(git ls-files | grep -E '(^|/)go\.mod$' | grep -vE '(^|/)vendor/')
 
   claude-security-review:
     name: Claude Security Reviewer
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    # Never use pull_request_target here. The API key is released only after
+    # GitHub Environment protection, and only for a PR authored by the owner.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
+    environment: claude-security-review
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 2
+          persist-credentials: false
       - name: Require Claude API key
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-        run: |
-          if [ -z "$CLAUDE_API_KEY" ]; then
-            echo "::error::CLAUDE_API_KEY secret is required for Claude Security Reviewer."
-            exit 1
-          fi
+        run: test -n "$CLAUDE_API_KEY"
       - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main 2026-06-08
         with:
           claude-api-key: ${{ secrets.CLAUDE_API_KEY }}

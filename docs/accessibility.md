@@ -10,6 +10,7 @@ This site targets WCAG 2.2 AA for the public portfolio pages.
 | `pnpm typecheck`       | Build content and run TypeScript                                      |
 | `pnpm test:a11y`       | Playwright + axe-core route checks                                    |
 | `pnpm a11y:lighthouse` | Lighthouse accessibility reports for all built routes and `/404.html` |
+| `pnpm budget`          | Built JavaScript and image payload regression guard                   |
 | `pnpm quality`         | Full local quality gate                                               |
 
 ## Regression Coverage
@@ -21,6 +22,7 @@ This site targets WCAG 2.2 AA for the public portfolio pages.
 - Markdown images are checked for non-empty `alt` text and successful loading.
 - Representative hydrated routes are checked for React hydration mismatch warnings.
 - Lighthouse accessibility reports are written to `.accessibility-reports/lighthouse`.
+- CI uploads Playwright and Lighthouse diagnostics for seven days, including on a failed browser check.
 
 ## Manual Checks
 

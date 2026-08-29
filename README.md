@@ -4,12 +4,12 @@ Personal portfolio built with Vite 8 MPA mode, React 19, TypeScript, MUI 6, Emot
 
 ## Stack
 
-- Build: Vite 8, six HTML entries, build-time prerender
+- Build: Vite 8, nine HTML shells, build-time prerender
 - UI: React 19 + TypeScript
 - Design system: MUI 6 + Emotion
 - i18n: i18next + react-i18next, Japanese and English
 - Markdown: `marked` at build time only
-- Quality: Playwright + axe-core, Lighthouse
+- Quality: Playwright + axe-core, Lighthouse, and file-size budgets
 - Deploy: Cloudflare Pages Direct Upload via Wrangler and GitHub Actions
 - Package manager: pnpm 11
 
@@ -23,7 +23,11 @@ pnpm preview
 pnpm quality
 ```
 
-`pnpm quality` runs formatting/a11y lint, typecheck, build, Playwright + axe-core, and Lighthouse accessibility checks.
+`pnpm quality` runs formatting/a11y lint, typecheck, unit security/middleware tests, build, Playwright + axe-core, and Lighthouse accessibility checks.
+
+`pnpm budget` checks every route's JavaScript graph from the Vite manifest: common static assets, its pre-hydration Markdown detail chunk, and Contact's mount-time Firebase preload when applicable. It writes the common/automatic breakdown to `reports/performance-budget.json`; change its limits only with a new measured baseline.
+
+Node 24 is the minimum supported runtime and CI baseline (`.node-version`); local development may use a newer compatible Node release.
 
 Set `PORTFOLIO_SITE_ORIGIN` during production builds to write absolute sitemap URLs. If it is not set, the build falls back to `https://takumi-tokunaga.com`.
 
@@ -81,7 +85,7 @@ Set `experienceType` to `education`, `work`, or `community` to control the timel
 
 ## Deploy
 
-Cloudflare Pages is used as a Direct Upload project. GitHub Actions builds `dist/` and uploads it with Wrangler; Cloudflare Git integration is not used.
+Cloudflare Pages is used as a Direct Upload project. GitHub Actions builds and verifies `dist/` once, uploads that tested artifact, then the deploy job downloads and uploads the same bytes with Wrangler; Cloudflare Git integration is not used.
 
 | Setting                  | Value                          |
 | ------------------------ | ------------------------------ |
@@ -95,7 +99,12 @@ Cloudflare Pages is used as a Direct Upload project. GitHub Actions builds `dist
 
 GitHub repository secrets:
 
-| Secret                  | Purpose                                         |
-| ----------------------- | ----------------------------------------------- |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID                           |
-| `CLOUDFLARE_API_TOKEN`  | API token with Cloudflare Pages edit permission |
+| Secret                  | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID                             |
+| `CLOUDFLARE_API_TOKEN`  | API token with Cloudflare Pages edit permission   |
+| `VITE_FIREBASE_API_KEY` | Firebase browser configuration used at build time |
+
+Repository variables consumed by the production build are `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, and `VITE_TRIAL_AUTH_API_ORIGIN`.
+
+See [the deployment and rollback runbook](docs/deployment-and-rollback.md) for the production-only smoke check, rollback procedure, and the protected `claude-security-review` environment.

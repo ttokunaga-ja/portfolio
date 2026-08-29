@@ -5,7 +5,7 @@ The portfolio is a Vite MPA with React hydration.
 ## Build Flow
 
 - `content/{ja,en}/{research,projects,experience}/*.md` is converted at build time.
-- `vite build` creates the six HTML shells.
+- `vite build` creates the nine HTML shells: home, about, research, projects, experience, blog, skills, contact, and privacy.
 - `vite build --config vite.ssr.config.ts` creates a server render bundle.
 - `scripts/prerender.mjs` injects route HTML and route-specific head metadata.
 - `scripts/build-sitemap.mjs` writes `dist/sitemap.xml` from the generated `dist/**/index.html` files.
@@ -33,3 +33,4 @@ The portfolio is a Vite MPA with React hydration.
 2. Browser-only behavior is limited to language switching, drawer focus management, and client-side metadata sync after language changes.
 3. Render output should not depend on runtime-only values such as the current date unless the value is intentionally client-only.
 4. New Markdown content should keep required frontmatter explicit so list pages and detail pages stay consistent.
+5. Release CI uploads the exact verified `dist/` directory as an artifact; deployment never runs the build a second time.
