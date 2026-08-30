@@ -1,5 +1,6 @@
 dist
 node_modules
+pnpm-lock.yaml
 src/generated
 content/ja/blog
 .accessibility-reports
