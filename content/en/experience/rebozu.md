@@ -20,6 +20,8 @@ links:
 
 Work in the business consulting division on delivery-service sales and consulting for restaurants.
 
+![Portrait in business attire during the sales internship](rebozu_sales-internship.webp)
+
 ## Highlights
 
 - Handle delivery-service sales for restaurants
