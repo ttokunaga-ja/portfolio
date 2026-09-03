@@ -23,8 +23,6 @@ links:
 
 ![弓道の稽古風景](marugame-kyudo-club_practice.jpg)
 
-![卒業時の弓道部集合写真](marugame-kyudo-club_farewell.webp)
-
 ## 主な内容
 
 - 高校在学中に弓道部で活動

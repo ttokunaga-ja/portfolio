@@ -67,11 +67,32 @@ test("onRequest permanently tombstones every safe spelling of the retired Ri-one
   }
 });
 
+test("onRequest permanently tombstones every safe spelling of the retired Kyudo group photo", async () => {
+  const spellings = [
+    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell.webp",
+    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell.webp?cache=bust",
+    "https://takumi-tokunaga.com//images//experience//marugame-kyudo-club//marugame-kyudo-club_farewell.webp",
+    "https://takumi-tokunaga.com/%69mages%2Fexperience%2Fmarugame-kyudo-club%2Fmarugame-kyudo-club_farewell%2Ewebp",
+    "https://takumi-tokunaga.com/IMAGES/EXPERIENCE/MARUGAME-KYUDO-CLUB/MARUGAME-KYUDO-CLUB_FAREWELL.WEBP",
+    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell.png"
+  ];
+
+  for (const url of spellings) {
+    const response = await onRequest(context(url));
+    assert.equal(response.status, 410, url);
+    assert.equal(response.headers.get("Cache-Control"), "no-store, max-age=0", url);
+    assert.equal(response.headers.get("X-Robots-Tag"), "noindex", url);
+    assert.equal(await response.text(), "", url);
+  }
+});
+
 test("onRequest leaves malformed and legitimate image paths untouched", async () => {
   for (const url of [
     "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass-2.JPG",
     "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass.WEBP",
-    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass%ZZ.JPG"
+    "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass%ZZ.JPG",
+    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.jpg",
+    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell-2.webp"
   ]) {
     const input = context(url);
     assert.equal(await onRequest(input), input.nextResponse, url);

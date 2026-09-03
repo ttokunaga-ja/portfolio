@@ -23,8 +23,6 @@ Practiced kyudo at Kagawa Prefectural Marugame High School, learning shooting fo
 
 ![Kyudo practice](marugame-kyudo-club_practice.jpg)
 
-![Kyudo club farewell photo](marugame-kyudo-club_farewell.webp)
-
 ## Highlights
 
 - Participated in the kyudo club during high school

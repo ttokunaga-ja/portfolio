@@ -60,10 +60,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if rg --hidden --ignore-case --fixed-strings 'rione_expo_pass' content public dist src/generated; then
-            echo "::error::The retired Ri-one pass remains in deployable content"
-            exit 1
-          fi
+          retired_asset_names=(
+            'rione_expo_pass'
+            'marugame-kyudo-club_farewell'
+          )
+          for retired_asset_name in "${retired_asset_names[@]}"; do
+            if rg --hidden --ignore-case --fixed-strings "$retired_asset_name" content public dist src/generated; then
+              echo "::error::Retired asset '${retired_asset_name}' remains in deployable content"
+              exit 1
+            fi
+          done
       - name: Check performance budgets
         run: pnpm budget
       - name: Accessibility tests
@@ -193,6 +199,20 @@ jobs:
                   grep -Fq 'Ri-one' "$body" &&
                   ! grep -Fq 'rione_expo_pass.JPG' "$body"
                 ;;
+              /experience/marugame-kyudo-club/)
+                grep -Eqi '^content-type:.*text/html' "$headers" &&
+                  grep -Fq '<title>香川県立丸亀高等学校 弓道部 | Takumi Tokunaga</title>' "$body" &&
+                  grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/experience/marugame-kyudo-club/"' "$body" &&
+                  grep -Fq 'marugame-kyudo-club_practice.jpg' "$body" &&
+                  ! grep -Fq 'marugame-kyudo-club_farewell' "$body"
+                ;;
+              /en/experience/marugame-kyudo-club/)
+                grep -Eqi '^content-type:.*text/html' "$headers" &&
+                  grep -Fq '<title>Marugame High School Kyudo Club | Takumi Tokunaga</title>' "$body" &&
+                  grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/en/experience/marugame-kyudo-club/"' "$body" &&
+                  grep -Fq 'marugame-kyudo-club_practice.jpg' "$body" &&
+                  ! grep -Fq 'marugame-kyudo-club_farewell' "$body"
+                ;;
               /robots.txt)
                 grep -Eqi '^content-type:.*(text/plain|text/)' "$headers" &&
                   grep -Fq 'User-agent: *' "$body" &&
@@ -206,7 +226,15 @@ jobs:
             esac
           }
 
-          routes=(/ /experience/rione/ /en/experience/rione/ /robots.txt /sitemap.xml)
+          routes=(
+            /
+            /experience/rione/
+            /en/experience/rione/
+            /experience/marugame-kyudo-club/
+            /en/experience/marugame-kyudo-club/
+            /robots.txt
+            /sitemap.xml
+          )
           for route in "${routes[@]}"; do
             url="${PORTFOLIO_SITE_ORIGIN}${route}"
             echo "Checking ${url}"
@@ -264,11 +292,17 @@ jobs:
           }
 
           retired_paths=(
-            'canonical|/images/experience/rione/rione_expo_pass.JPG'
-            "query|/images/experience/rione/rione_expo_pass.JPG?retired_check=${GITHUB_SHA}"
-            'repeated-slash|//images//experience/rione//rione_expo_pass.JPG'
-            'percent-encoded|/%69mages%2Fexperience%2Frione%2Frione_expo_pass%2EJPG'
-            'case-variant|/IMAGES/EXPERIENCE/RIONE/RIONE_EXPO_PASS.jpg'
+            'rione-canonical|/images/experience/rione/rione_expo_pass.JPG'
+            "rione-query|/images/experience/rione/rione_expo_pass.JPG?retired_check=${GITHUB_SHA}"
+            'rione-repeated-slash|//images//experience/rione//rione_expo_pass.JPG'
+            'rione-percent-encoded|/%69mages%2Fexperience%2Frione%2Frione_expo_pass%2EJPG'
+            'rione-case-variant|/IMAGES/EXPERIENCE/RIONE/RIONE_EXPO_PASS.jpg'
+            'kyudo-webp-canonical|/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell.webp'
+            "kyudo-webp-query|/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell.webp?retired_check=${GITHUB_SHA}"
+            'kyudo-webp-repeated-slash|//images//experience//marugame-kyudo-club//marugame-kyudo-club_farewell.webp'
+            'kyudo-webp-percent-encoded|/%69mages%2Fexperience%2Fmarugame-kyudo-club%2Fmarugame-kyudo-club_farewell%2Ewebp'
+            'kyudo-webp-case-variant|/IMAGES/EXPERIENCE/MARUGAME-KYUDO-CLUB/MARUGAME-KYUDO-CLUB_FAREWELL.WEBP'
+            'kyudo-png-legacy|/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell.png'
           )
           for retired_case in "${retired_paths[@]}"; do
             label="${retired_case%%|*}"
@@ -279,29 +313,37 @@ jobs:
             fi
           done
 
-          known_good_headers="${scratch_dir}/known-good-image-headers"
-          known_good_metrics="${scratch_dir}/known-good-image-metrics"
-          curl --fail --silent --show-error --path-as-is --globoff --max-time 20 --dump-header "$known_good_headers" \
-            --write-out '%{http_code}|%{content_type}|%{size_download}\n' --output /dev/null \
-            "${PORTFOLIO_SITE_ORIGIN}/images/experience/rione/rione_expo_discription.webp?control=${GITHUB_SHA}" \
-            > "$known_good_metrics"
-          IFS='|' read -r known_good_status known_good_type known_good_bytes < "$known_good_metrics"
-          if [ "$known_good_status" != "200" ] || [[ "$known_good_type" != image/* ]] || [ "$known_good_bytes" -le 0 ]; then
-            echo "::error::Known-good Ri-one image control failed"
-            exit 1
-          fi
-          if ! grep -Eqi '^cache-control:.*public' "$known_good_headers" ||
-            ! grep -Eqi '^cache-control:.*max-age=604800' "$known_good_headers" ||
-            ! grep -Eqi '^cache-control:.*stale-while-revalidate=86400' "$known_good_headers" ||
-            grep -Eqi '^cache-control:.*max-age=0([^0-9]|$)' "$known_good_headers" ||
-            [ "$(grep -Eic '^cache-control:' "$known_good_headers")" -ne 1 ]; then
-            echo "::error::Known-good Ri-one image cache contract changed"
-            exit 1
-          fi
-          printf 'status=%s content_type=%s bytes=%s header_sha256=%s\n' \
-            "$known_good_status" "$known_good_type" "$known_good_bytes" \
-            "$(shasum -a 256 "$known_good_headers" | awk '{ print $1 }')" \
-            > smoke-diagnostics/known-good-image.txt
+          verify_known_good_image() {
+            local label="$1" image_path="$2"
+            local headers="${scratch_dir}/known-good-${label}-headers"
+            local metrics="${scratch_dir}/known-good-${label}-metrics"
+            local known_good_status known_good_type known_good_bytes
+
+            curl --fail --silent --show-error --path-as-is --globoff --max-time 20 --dump-header "$headers" \
+              --write-out '%{http_code}|%{content_type}|%{size_download}\n' --output /dev/null \
+              "${PORTFOLIO_SITE_ORIGIN}${image_path}?control=${GITHUB_SHA}" > "$metrics"
+            IFS='|' read -r known_good_status known_good_type known_good_bytes < "$metrics"
+            if [ "$known_good_status" != "200" ] || [[ "$known_good_type" != image/* ]] || [ "$known_good_bytes" -le 0 ]; then
+              echo "::error::Known-good image control '${label}' failed"
+              return 1
+            fi
+            if ! grep -Eqi '^cache-control:.*public' "$headers" ||
+              ! grep -Eqi '^cache-control:.*max-age=604800' "$headers" ||
+              ! grep -Eqi '^cache-control:.*stale-while-revalidate=86400' "$headers" ||
+              grep -Eqi '^cache-control:.*max-age=0([^0-9]|$)' "$headers" ||
+              [ "$(grep -Eic '^cache-control:' "$headers")" -ne 1 ]; then
+              echo "::error::Known-good image cache contract '${label}' changed"
+              return 1
+            fi
+            printf 'status=%s content_type=%s bytes=%s header_sha256=%s\n' \
+              "$known_good_status" "$known_good_type" "$known_good_bytes" \
+              "$(shasum -a 256 "$headers" | awk '{ print $1 }')" \
+              > "smoke-diagnostics/known-good-image-${label}.txt"
+          }
+
+          verify_known_good_image 'rione' '/images/experience/rione/rione_expo_discription.webp'
+          verify_known_good_image 'kyudo-practice' \
+            '/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.jpg'
       - name: Upload production smoke diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
