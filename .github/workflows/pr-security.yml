@@ -109,7 +109,7 @@ jobs:
         if: ${{ needs.detect.outputs.has_js == 'true' }}
         with:
           node-version: 24
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         if: ${{ needs.detect.outputs.has_go == 'true' }}
         with:
           go-version: "1.26.4"
