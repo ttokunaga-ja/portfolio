@@ -51,7 +51,7 @@
     "marked": "^18.0.10",
     "prettier": "^3.9.6",
     "sharp": "0.35.4",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "wrangler": "^4.127.1"
   }
