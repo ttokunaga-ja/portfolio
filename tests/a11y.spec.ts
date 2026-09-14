@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { expect, test } from "@playwright/test";
 import axe from "axe-core";
@@ -47,6 +47,27 @@ function collectPrerenderedPaths() {
     if (right === "/") return 1;
     return left.localeCompare(right);
   });
+}
+
+const tableScrollRegionMarkup = '<div class="markdown-table-scroll"';
+const tableScrollRegionPattern = /<div class="markdown-table-scroll"[^>]*>/g;
+
+// Article tables come from synced Markdown, so both the pages that carry one
+// and the column names inside it change without notice. Discover the pages
+// from the build and derive every expectation from the table's own headers.
+function collectTableScrollPaths() {
+  const distDir = join(process.cwd(), "dist");
+
+  return collectPrerenderedPaths().filter((routePath) => {
+    if (!routePath.endsWith("/")) return false;
+
+    const htmlPath = join(distDir, ...routePath.split("/").filter(Boolean), "index.html");
+    return existsSync(htmlPath) && readFileSync(htmlPath, "utf8").includes(tableScrollRegionMarkup);
+  });
+}
+
+function tableScrollRegionLabelPrefix(routePath: string) {
+  return routePath.startsWith("/en/") ? "Horizontally scrollable table" : "横にスクロール可能な表";
 }
 
 const markdownDetailPathPattern = /^\/(research|projects|experience|blog)\/[^/]+\/$/;
@@ -273,29 +294,59 @@ test.describe("portfolio accessibility", () => {
   });
 
   test("wide article tables are focusable, labelled scroll regions", async ({ page, request }) => {
-    const path = "/blog/2026-08-01-ai-model-stack-cost-breakdown-2026-07/";
-    const response = await request.get(path);
-    expect(response.ok()).toBeTruthy();
-
-    const html = await response.text();
-    expect(html).toContain('class="markdown-table-scroll"');
-    expect(html).toContain(
-      'role="region" aria-label="横にスクロール可能な表: 利用形態, サービス, この記事での扱い, 支出（税抜）" tabindex="0"'
-    );
+    const tablePaths = collectTableScrollPaths().slice(0, 5);
+    expect(tablePaths.length, "no prerendered page ships a Markdown table scroll region").toBeGreaterThan(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(path);
-    const tableScrollRegion = page
-      .getByRole("region", { name: "横にスクロール可能な表: 利用形態, サービス, この記事での扱い, 支出（税抜）" })
-      .first();
-    await expect(tableScrollRegion).toBeVisible();
-    const { clientWidth, scrollWidth } = await tableScrollRegion.evaluate((element) => ({
-      clientWidth: element.clientWidth,
-      scrollWidth: element.scrollWidth
-    }));
-    expect(scrollWidth).toBeGreaterThan(clientWidth);
-    await tableScrollRegion.focus();
-    await expect(tableScrollRegion).toBeFocused();
+    let focusedWideTable = false;
+
+    for (const path of tablePaths) {
+      const labelPrefix = tableScrollRegionLabelPrefix(path);
+      const response = await request.get(path);
+      expect(response.ok(), path).toBeTruthy();
+
+      const prerenderedRegions = (await response.text()).match(tableScrollRegionPattern) ?? [];
+      expect(prerenderedRegions.length, path).toBeGreaterThan(0);
+      for (const region of prerenderedRegions) {
+        expect(region, path).toContain('role="region"');
+        expect(region, path).toContain('tabindex="0"');
+        expect(region.match(/aria-label="([^"]*)"/)?.[1] ?? "", path).toContain(labelPrefix);
+      }
+
+      await page.goto(path);
+      const regions = await page.locator(".markdown-table-scroll").evaluateAll((elements) =>
+        elements.map((element) => ({
+          role: element.getAttribute("role") ?? "",
+          tabIndex: element.getAttribute("tabindex") ?? "",
+          label: element.getAttribute("aria-label") ?? "",
+          headers: Array.from(element.querySelectorAll("th"), (cell) =>
+            (cell.textContent ?? "").replace(/\s+/g, " ").trim()
+          ).filter(Boolean),
+          overflows: element.scrollWidth > element.clientWidth
+        }))
+      );
+
+      expect(regions.length, path).toBe(prerenderedRegions.length);
+      for (const region of regions) {
+        expect(region.role, path).toBe("region");
+        expect(region.tabIndex, path).toBe("0");
+        // The label must name the table's own columns, so renamed headers stay described.
+        expect(region.label, path).toBe(
+          region.headers.length > 0 ? `${labelPrefix}: ${region.headers.join(", ")}` : labelPrefix
+        );
+      }
+
+      const overflowingIndex = regions.findIndex((region) => region.overflows);
+      if (overflowingIndex === -1) continue;
+
+      const wideRegion = page.locator(".markdown-table-scroll").nth(overflowingIndex);
+      await expect(wideRegion).toBeVisible();
+      await wideRegion.focus();
+      await expect(wideRegion).toBeFocused();
+      focusedWideTable = true;
+    }
+
+    expect(focusedWideTable, "no prerendered article table overflows its scroll region at 390px").toBe(true);
   });
 
   test("article table of contents remains in the side rail on laptop widths", async ({ page }) => {
