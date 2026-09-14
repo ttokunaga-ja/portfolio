@@ -203,14 +203,14 @@ jobs:
                 grep -Eqi '^content-type:.*text/html' "$headers" &&
                   grep -Fq '<title>香川県立丸亀高等学校 弓道部 | Takumi Tokunaga</title>' "$body" &&
                   grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/experience/marugame-kyudo-club/"' "$body" &&
-                  grep -Fq 'marugame-kyudo-club_practice.jpg' "$body" &&
+                  grep -Fq 'marugame-kyudo-club_practice.webp' "$body" &&
                   ! grep -Fq 'marugame-kyudo-club_farewell' "$body"
                 ;;
               /en/experience/marugame-kyudo-club/)
                 grep -Eqi '^content-type:.*text/html' "$headers" &&
                   grep -Fq '<title>Marugame High School Kyudo Club | Takumi Tokunaga</title>' "$body" &&
                   grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/en/experience/marugame-kyudo-club/"' "$body" &&
-                  grep -Fq 'marugame-kyudo-club_practice.jpg' "$body" &&
+                  grep -Fq 'marugame-kyudo-club_practice.webp' "$body" &&
                   ! grep -Fq 'marugame-kyudo-club_farewell' "$body"
                 ;;
               /robots.txt)
@@ -343,7 +343,7 @@ jobs:
 
           verify_known_good_image 'rione' '/images/experience/rione/rione_expo_discription.webp'
           verify_known_good_image 'kyudo-practice' \
-            '/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.jpg'
+            '/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.webp'
       - name: Upload production smoke diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
