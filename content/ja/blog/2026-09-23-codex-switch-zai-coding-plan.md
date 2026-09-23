@@ -43,7 +43,7 @@ wire_api = "responses"
 
 :::message
 カスタムプロバイダの足し方、プロファイルの作り方、Codexアプリで2つ目のインスタンスを立てる方法は、前記事で詳しく書きました。共通部分はそちらを参照してください。
-[CodexにOpenRouterを足して、ChatGPT枠を保ったまま別モデルを使う](https://zenn.dev/ttokunaga-ja/articles/2026-09-22-codex-switch-openrouter)
+[CodexにOpenRouterを足して、ChatGPT枠を保ったまま別モデルを使う](https://zenn.dev/t_tokunaga/articles/2026-09-22-codex-switch-openrouter)
 :::
 
 ## 検証環境
@@ -388,4 +388,4 @@ Claudeを使いたい場合は、Claude Code CLIをそのまま使うのが素�
 
 - [Z.AI Developer Document — Codex](https://docs.z.ai/devpack/tool/codex)
 - [Z.AI Developer Document — GLM Coding Plan](https://docs.z.ai/devpack/overview)
-- [CodexにOpenRouterを足して、ChatGPT枠を保ったまま別モデルを使う](https://zenn.dev/ttokunaga-ja/articles/2026-09-22-codex-switch-openrouter)
+- [CodexにOpenRouterを足して、ChatGPT枠を保ったまま別モデルを使う](https://zenn.dev/t_tokunaga/articles/2026-09-22-codex-switch-openrouter)

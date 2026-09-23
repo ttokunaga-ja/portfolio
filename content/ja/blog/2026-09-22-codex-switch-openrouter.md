@@ -224,7 +224,7 @@ command = "/bin/cat"
 args = ["/Users/yourname/.codex/openrouter.key"]
 ```
 
-実際のファイルには、[別記事](https://zenn.dev/ttokunaga-ja/articles/2026-09-23-codex-switch-zai-coding-plan)で使うZ.aiの定義も同じ形で入っています。先頭の2行のコメントで囲んだ部分（管理ブロック）は、codexSwitchが起動のたびに書き換えます。この2行は消さないでください。
+実際のファイルには、[別記事](https://zenn.dev/t_tokunaga/articles/2026-09-23-codex-switch-zai-coding-plan)で使うZ.aiの定義も同じ形で入っています。先頭の2行のコメントで囲んだ部分（管理ブロック）は、codexSwitchが起動のたびに書き換えます。この2行は消さないでください。
 
 `requires_openai_auth = false`がポイントです。この隔離ホームにはChatGPTの認証情報がないため、これを指定しないとアプリがサインインを要求します。指定すると、アプリが参照する内部サーバが次のように応答するようになります。
 
@@ -276,7 +276,7 @@ args = ["/Users/yourname/.codex/openrouter.key"]
 }
 ```
 
-この形は、Z.aiがCodex向けに配信しているカタログ（[別記事](https://zenn.dev/ttokunaga-ja/articles/2026-09-23-codex-switch-zai-coding-plan)で扱います）に合わせたものです。OpenAI以外のモデルを想定して作られているので、そのまま雛形に使えます。
+この形は、Z.aiがCodex向けに配信しているカタログ（[別記事](https://zenn.dev/t_tokunaga/articles/2026-09-23-codex-switch-zai-coding-plan)で扱います）に合わせたものです。OpenAI以外のモデルを想定して作られているので、そのまま雛形に使えます。
 
 :::message alert
 **`codex debug models`の出力を複製してカタログを作らないでください。** そこに並んでいるのはOpenAIのモデルの定義で、OpenAIのモデル専用の`"tool_mode": "code_mode_only"`が含まれています。新しい版のCodexはこの指定に従い、ツールを1つずつではなくJavaScript実行用の入れ物（`namespace`）にまとめて送るため、OpenAI以外のモデルはリクエストを受け付けません。
@@ -538,7 +538,7 @@ codex exec --strict-config --ephemeral -s read-only -p or-nex 'hi'
 
 同じ仕組みでZ.aiのCoding Planを繋ぐ方法は別記事に書きました。サブスクの定額枠をCodexから使う話です。
 
-- [Z.ai Coding PlanをCodexアプリで使う](https://zenn.dev/ttokunaga-ja/articles/2026-09-23-codex-switch-zai-coding-plan)
+- [Z.ai Coding PlanをCodexアプリで使う](https://zenn.dev/t_tokunaga/articles/2026-09-23-codex-switch-zai-coding-plan)
 
 ## 参考資料
 
