@@ -39,13 +39,19 @@ Codexアプリの**2つ目のインスタンス**を、OpenRouterのモデルで
 
 ### 1. codexSwitchを入れる
 
-macOSでは次のとおりです（Rustが必要です）。Windowsは[README](https://github.com/ttokunaga-ja/codexSwitch#1-インストールする)を見てください。
+ビルド済みのファイルが入ります。macOSはターミナルで、WindowsはPowerShellで実行します。
 
 ```bash
-git clone https://github.com/ttokunaga-ja/codexSwitch.git
-cd codexSwitch
-./install.sh
+# macOS
+curl -fsSL https://raw.githubusercontent.com/ttokunaga-ja/codexSwitch/main/install.sh | sh
 ```
+
+```powershell
+# Windows
+irm https://raw.githubusercontent.com/ttokunaga-ja/codexSwitch/main/install.ps1 | iex
+```
+
+あとから新しい版にするときは、`codexSwitch update`を実行します。
 
 ### 2. 準備する
 
