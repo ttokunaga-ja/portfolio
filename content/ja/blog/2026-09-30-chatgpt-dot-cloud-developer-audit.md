@@ -1,16 +1,17 @@
 ---
-title: "dotクラウドの開発性能と対応環境を実測してみた"
-abstract: "dotのクラウド環境で、どのくらい開発作業ができるのかを確認しました。小規模なビルド・テスト、ローカルHTTP、SQLite・PostgreSQL・Redisは動作しました。Dockerの実行や常駐には制約があります。 :::message 2026年9月30日に利用できた環境での実測です。環境や実行条件によって結果は変わります。 ::: 性能の目安 | 項"
+title: "ChatGPTのdotクラウド開発環境はどこまで使える？実測してみた"
+abstract: "ChatGPTのdotで利用できるクラウド開発環境が、実際の開発作業でどこまで使えるのかを確認しました。小規模なビルド・テスト、ローカルHTTP、SQLite・PostgreSQL・Redisは動作しました。Dockerの実行や常駐には制約があります。 :::message 2026年9月30日に利用できた環境での実測です。環境や実行条件によって結果は変わり"
 publishedAt: "2026-09-30"
-canonicalUrl: "https://zenn.dev/t_tokunaga/articles/2026-09-30-dot-cloud-developer-audit"
+canonicalUrl: "https://zenn.dev/t_tokunaga/articles/2026-09-30-chatgpt-dot-cloud-developer-audit"
 tags:
+  - "chatgpt"
+  - "openai"
   - "ai"
   - "開発環境"
-  - "linux"
-  - "ベンチマーク"
+  - "cloud"
 ---
 
-dotのクラウド環境で、どのくらい開発作業ができるのかを確認しました。小規模なビルド・テスト、ローカルHTTP、SQLite・PostgreSQL・Redisは動作しました。Dockerの実行や常駐には制約があります。
+ChatGPTのdotで利用できるクラウド開発環境が、実際の開発作業でどこまで使えるのかを確認しました。小規模なビルド・テスト、ローカルHTTP、SQLite・PostgreSQL・Redisは動作しました。Dockerの実行や常駐には制約があります。
 
 :::message
 2026年9月30日に利用できた環境での実測です。環境や実行条件によって結果は変わります。
@@ -114,12 +115,12 @@ CPUの機種比較は、同じ素数計算での参考値です。CPU全体の�
 
 dot側の専用GUIブラウザーで公開ページのリンクを操作し、移動先のIANA「Example Domains」を表示したときの画面です。
 
-![dot側のGUIブラウザーで表示したIANAのExample Domainsページ](/images/blog/2026-09-30-dot-cloud-developer-audit/2026-09-30-dot-cloud-developer-audit/gui-browser.jpg)
+![dot側のGUIブラウザーで表示したIANAのExample Domainsページ](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/gui-browser.jpg)
 *公開ページでのリンク操作後に取得したスクリーンショット。ローカルで開発したWebアプリのE2Eテスト結果ではありません。*
 
 ## Android Studioの起動確認
 
-![クラウド環境で起動したAndroid Studioの開始画面](/images/blog/2026-09-30-dot-cloud-developer-audit/2026-09-30-dot-cloud-developer-audit/android-studio-gui.png)
+![クラウド環境で起動したAndroid Studioの開始画面](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/android-studio-gui.png)
 
 Android StudioのGUI起動と、別途コマンドラインでの未署名APK生成に成功しました。IDE内でのビルドやエミュレーター実行まで確認した結果ではありません。
 
