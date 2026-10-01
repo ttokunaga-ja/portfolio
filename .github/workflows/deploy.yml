@@ -70,6 +70,8 @@ jobs:
               exit 1
             fi
           done
+      - name: Verify generated blog routes
+        run: pnpm check:blog
       - name: Check performance budgets
         run: pnpm budget
       - name: Accessibility tests
@@ -167,6 +169,28 @@ jobs:
     env:
       DEPLOYMENT_URL: ${{ needs.deploy.outputs.deployment-url }}
     steps:
+      - name: Checkout expected blog metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+      - name: Verify latest blog update in production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if node scripts/check-blog-updates.mjs --origin "$PORTFOLIO_SITE_ORIGIN"; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "::error::Production blog update check failed"
+              exit 1
+            fi
+            sleep $((attempt * 3))
+          done
       - name: Check public routes with bounded retries
         shell: bash
         run: |
