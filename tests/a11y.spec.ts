@@ -253,6 +253,9 @@ test.describe("portfolio accessibility", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Ri-one" })).toBeVisible();
     await expect(page.locator(".markdown-article")).toContainText("RoboCupに向けたロボット開発");
 
+    // SSR content is already visible while the failed detail import is still
+    // settling. Wait for client loading before testing the interactive menu.
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "メニューを開く" }).click();
     await expect(page.getByRole("navigation", { name: "サイトナビゲーション" })).toBeVisible();
   });

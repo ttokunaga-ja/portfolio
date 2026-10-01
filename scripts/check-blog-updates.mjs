@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { parseFrontmatter } from "./frontmatter.mjs";
 
 const root = process.cwd();
@@ -31,7 +33,8 @@ for (const file of selectedFiles) {
   const { data } = parseFrontmatter(await readFile(join(articlesDir, file), "utf8"));
   assert.ok(listing.includes(`href="${route}"`), `Blog listing is missing ${slug}`);
   const html = await htmlFor(route);
-  const canonical = String(data.canonicalUrl).replaceAll("&", "&amp;").replaceAll('"', "&quot;");
-  assert.ok(html.includes(`<link rel="canonical" href="${canonical}"`), `Wrong blog page for ${slug}`);
+  const canonical = renderToStaticMarkup(createElement("link", { rel: "canonical", href: String(data.canonicalUrl) }));
+  // The generated page may include whitespace before the tag's closing slash.
+  assert.ok(html.includes(canonical.slice(0, -2)), `Wrong blog page for ${slug}`);
 }
 console.log(`Blog update check: ${selectedFiles.length} articles verified (${origin ?? "local dist"}).`);
