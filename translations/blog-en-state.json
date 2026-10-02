@@ -5,19 +5,19 @@
       "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
       "attemptCount": 1,
       "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
-      "status": "reserved",
-      "reservationId": "37074073400-1",
-      "reason": "request_reserved",
-      "nextAttemptAt": "2026-10-02T23:44:42.476Z"
+      "status": "exhausted",
+      "reservationId": null,
+      "reason": "output_validation",
+      "nextAttemptAt": null
     },
     "2026-02-03-debezium-cdc-introduction": {
       "inputHash": "a84d62b13f6ca22d1c007e5b12bed7fd4e8cd05e1f45459909002835af5133fc",
       "attemptCount": 1,
       "pendingSourceHash": "3da7bbdbe6ec15c1374d5b67d8284a7108015bd276d2f85cf22183a768e1e6fd",
-      "status": "reserved",
-      "reservationId": "37074073400-1",
-      "reason": "request_reserved",
-      "nextAttemptAt": "2026-10-02T23:44:42.476Z"
+      "status": "exhausted",
+      "reservationId": null,
+      "reason": "output_validation",
+      "nextAttemptAt": null
     }
   }
 }
