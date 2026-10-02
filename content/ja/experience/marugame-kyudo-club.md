@@ -21,7 +21,7 @@ links:
 
 香川県立丸亀高等学校 弓道部で、稽古を通じて射形・所作・礼節を学びました。
 
-![弓道の稽古風景](marugame-kyudo-club_practice.jpg)
+![弓道の稽古風景](marugame-kyudo-club_practice.webp)
 
 ## 主な内容
 

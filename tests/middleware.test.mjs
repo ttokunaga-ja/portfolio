@@ -91,7 +91,7 @@ test("onRequest leaves malformed and legitimate image paths untouched", async ()
     "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass-2.JPG",
     "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass.WEBP",
     "https://takumi-tokunaga.com/images/experience/rione/rione_expo_pass%ZZ.JPG",
-    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.jpg",
+    "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.webp",
     "https://takumi-tokunaga.com/images/experience/marugame-kyudo-club/marugame-kyudo-club_farewell-2.webp"
   ]) {
     const input = context(url);

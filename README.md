@@ -44,6 +44,10 @@ Blog posts are generated from the sibling `zenn-content` repository. Do not edit
 `content/ja/blog` or `public/images/blog` directly; they are mirrored on the next
 `zenn-content` push.
 
+Run `pnpm check:blog` after building to verify every mirrored blog article and
+its listing link. Deployment smoke tests also check the latest blog article
+against the expected canonical URL.
+
 Example project frontmatter:
 
 ```yaml

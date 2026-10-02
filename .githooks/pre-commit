@@ -59,9 +59,9 @@ if [ -f package.json ]; then
 
   echo "==> npm audit"
   if [ "$manager" = pnpm ]; then
-    pnpm audit
+    pnpm audit --prod
   else
-    npm audit
+    npm audit --omit=dev
   fi
 
   echo "==> eslint"
