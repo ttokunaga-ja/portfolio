@@ -111,7 +111,7 @@ export function restoreAndValidate(input, translated) {
     assert.ok(translated[key].trim(), `Empty translated ${key}`);
     assert.ok(!translated[key].includes("\u0000"), "Unexpected NUL in translation");
     const numbers = (value) => (value.replace(markerPattern, "").match(/[+-]?\d+(?:[.,]\d+)*%?/g) ?? []).sort();
-    assert.deepEqual(numbers(translated[key]), numbers(input[key]), "Numeric literals changed in translation");
+    assert.deepEqual(numbers(translated[key]), numbers(input[key]), `Numeric literals changed in translation: ${key}`);
   }
   assert.ok(translated.title.length <= 400 && !/[\r\n<>]/.test(translated.title), "Invalid translated title");
   assert.ok(translated.abstract.length <= 1600 && !/[\r\n<>]/.test(translated.abstract), "Invalid translated abstract");
@@ -199,4 +199,33 @@ export function serializeTranslation({ source, translated, sourceHash, model, ge
   if (Array.isArray(source.tags) && source.tags.length)
     lines.push("tags:", ...source.tags.map((tag) => `  - ${JSON.stringify(String(tag))}`));
   return [...lines, "---", "", translated.body.trim(), ""].join("\n");
+}
+
+// Return only fixed diagnostics. Assertion actual/expected values and provider
+// output are never persisted or logged.
+export function translationValidationCode(error) {
+  const checks = [
+    ["Invalid translation object", "object"],
+    ["Unexpected translation fields", "fields"],
+    ...["title", "abstract", "body"].flatMap((key) => [
+      [`Missing translated ${key}`, `missing_${key}`],
+      [`Empty translated ${key}`, `empty_${key}`],
+      [`Numeric literals changed in translation: ${key}`, `numbers_${key}`]
+    ]),
+    ["Unexpected NUL in translation", "nul"],
+    ["Invalid translated title", "title_format"],
+    ["Invalid translated abstract", "abstract_format"],
+    ["A protected name changed in metadata", "metadata_name"],
+    ["Untranslated Japanese metadata remains", "metadata_language"],
+    ["Translation is too large", "size"],
+    ["Unexpected protected marker", "unknown_marker"],
+    ["Protected content changed or omitted", "marker_count"],
+    ["Unresolved protected marker", "unresolved_marker"],
+    ["Markdown structure, code, or links changed", "markdown_structure"],
+    ["Untranslated Japanese prose remains", "body_language"]
+  ];
+  return (
+    checks.find(([message]) => error?.message === message || error?.message?.startsWith(`${message}\n`))?.[1] ??
+    "markdown_or_unknown"
+  );
 }

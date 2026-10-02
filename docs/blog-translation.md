@@ -123,3 +123,9 @@ In draft-only mode, inspect the English text, attribution and source hashes, app
 - For incorrect published English, revert the relevant English/state changes through the normal reviewed deployment path. Do not edit the mirrored Japanese source here; fix it in `zenn-content`.
 - For a stale-source refusal, rerun on current `main`. The build's raw-source hash check also protects the short interval between the final freshness check and the branch push.
 - For quota/provider failures, inspect the sanitized summary and let due retries run within the five-attempt limit. For terminal schema, credentials or validation failures, review and fix the cause before an explicit state reset. Never delete state just to bypass the retry cap. Japanese publication remains independent.
+
+### Diagnosing a rejected model output
+
+An `output_validation` result now includes a fixed `validationCode` such as `numbers_body`, `marker_count`, or `markdown_structure`. No assertion actual/expected values, response text or provider error body is recorded. All validators remain enforced.
+
+Only a deliberate manual dispatch with `retryValidation: true` may reserve one more attempt for an output-validation rejection. It preserves the existing attempt count and never permits a sixth request for the same input. Scheduled runs ignore this option; credential/request errors, human edits, and other terminal failures cannot be reopened by it. Use this option only after reviewing the failure or to obtain the first safe diagnostic from an older result that lacked a code.
