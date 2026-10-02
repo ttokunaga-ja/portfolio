@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { publicationTitle, validatePublishableData } from "./blog-translation-publication.mjs";
 
 export function prepare_translation() {
   // BEGIN prepare-translation
@@ -33,6 +34,7 @@ export function prepare_translation() {
   if (remote("main") !== process.env.GITHUB_SHA)
     throw new Error("main advanced; rerun on its newest commit before translating.");
   const branchSha = remote(branch);
+  let pendingEnglish = false;
   const prs = JSON.parse(
     execFileSync(
       "gh",
@@ -91,6 +93,7 @@ export function prepare_translation() {
     const changed = git("diff", "--name-only", "--no-renames", `${process.env.GITHUB_SHA}...${branchSha}`)
       .split("\n")
       .filter(Boolean);
+    pendingEnglish = changed.some((file) => file.startsWith("content/en/blog/"));
     if (changed.some((file) => !allowedPaths.has(file)))
       throw new Error("The draft contains paths outside the generated pilot allowlist.");
     const base = git("merge-base", process.env.GITHUB_SHA, branchSha);
@@ -118,12 +121,22 @@ export function prepare_translation() {
   fs.writeFileSync(
     "reports/blog-translation-context.json",
     JSON.stringify(
-      { sourceSha: process.env.GITHUB_SHA, branchSha, needsPr: branchSha !== null && !openPrs.length, slugs, max },
+      {
+        sourceSha: process.env.GITHUB_SHA,
+        branchSha,
+        needsPr: branchSha !== null && !openPrs.length,
+        forcePublish: pendingEnglish && process.env.BLOG_TRANSLATION_AUTO_PUBLISH === "true",
+        slugs,
+        max
+      },
       null,
       2
     )
   );
-  fs.appendFileSync(process.env.GITHUB_OUTPUT, `slugs=${slugs.join(",")}\nmax=${max}\n`);
+  fs.appendFileSync(
+    process.env.GITHUB_OUTPUT,
+    `slugs=${slugs.join(",")}\nmax=${max}\npending_english=${pendingEnglish}\n`
+  );
   // END prepare-translation
 }
 
@@ -155,7 +168,7 @@ export function bundle_translation() {
       const prior = execFileSync("git", ["ls-tree", context.branchSha, "--", file], { encoding: "utf8" }).trim();
       if (prior && prior.startsWith("100644 blob ")) {
         const before = execFileSync("git", ["show", `${context.branchSha}:${file}`], { maxBuffer: 2 * 1024 * 1024 });
-        if (bytes.equals(before) && !context.needsPr) continue;
+        if (bytes.equals(before) && !context.needsPr && !context.forcePublish) continue;
       }
     }
     const destination = path.join("translation-bundle/files", file);
@@ -176,7 +189,14 @@ export function bundle_translation() {
     }
   }
   fs.mkdirSync("translation-bundle", { recursive: true });
-  fs.writeFileSync("translation-bundle/manifest.json", JSON.stringify({ ...context, files }, null, 2));
+  fs.writeFileSync(
+    "translation-bundle/manifest.json",
+    JSON.stringify(
+      { ...context, files, qualityVerified: process.env.BLOG_TRANSLATION_QUALITY_VERIFIED === "true" },
+      null,
+      2
+    )
+  );
   // Persist state-only reservations and quota results so retries survive runs.
   const hasChanges = files.length > 0;
   fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_changes=${hasChanges}\n`);
@@ -325,7 +345,7 @@ export function publish_translation() {
   if (!prs.length) {
     const body =
       "## English blog pilot\n\nGenerated English text, retry reservations and hash state only. A state-only draft is expected while a free-tier request is waiting. Review accuracy, preserved code/URLs/images, and current Japanese source hashes.\n\n" +
-      "Approve the GitHub Actions workflow runs on this PR, then require the normal quality checks before a human merge. This automation never merges or deploys.\n\n" +
+      "Only generated data is included. When automatic publication is enabled, the trusted translation workflow validates the entire candidate before a normal fast-forward publication; protected branches and human edits are never bypassed. Otherwise this remains a review draft.\n\n" +
       `Source snapshot: ${manifest.sourceSha}\n\nSee docs/blog-translation.md for review, quota, and rollback instructions.`;
     execFileSync(
       "gh",
@@ -348,6 +368,67 @@ export function publish_translation() {
     );
   } else {
     console.log(`Updated draft PR #${prs[0].number}; its human-edited title and body were preserved.`);
+  }
+  if (
+    process.env.BLOG_TRANSLATION_AUTO_PUBLISH === "true" &&
+    finalPaths.some((file) => file.startsWith("content/en/blog/"))
+  ) {
+    if (manifest.qualityVerified !== true)
+      throw new Error("Automatic publication requires the full quality-checked bundle.");
+    validatePublishableData({ files: finalPaths });
+    const api = (...args) =>
+      JSON.parse(execFileSync("gh", ["api", ...args], { encoding: "utf8", maxBuffer: 2 * 1024 * 1024 }));
+    const repository = process.env.GITHUB_REPOSITORY;
+    const protection = api(`repos/${repository}/branches/main`);
+    const rules = api(`repos/${repository}/rules/branches/main`);
+    // Stop rather than using an actor bypass or changing repository protection.
+    if (protection.protected !== false || !Array.isArray(rules) || rules.length) {
+      throw new Error("Branch protection/rules require a normal review/check flow; automatic publication is paused.");
+    }
+    const runId = process.env.GITHUB_RUN_ID;
+    if (!/^[1-9][0-9]*$/.test(runId ?? "")) throw new Error("A trusted workflow run ID is required.");
+    if (remote("main") !== manifest.sourceSha) throw new Error("main advanced; keep the candidate pending.");
+    const candidate = git("rev-parse", "HEAD");
+    const currentPrs = assertDraft();
+    if (currentPrs.length !== 1) throw new Error("A unique bot-owned draft audit PR is required.");
+    const pr = currentPrs[0];
+    git(
+      "commit",
+      "--allow-empty",
+      "-m",
+      `${publicationTitle}\n\nWorkflow run: ${runId}\nSource snapshot: ${manifest.sourceSha}\nValidated content: ${candidate}`
+    );
+    const published = git("rev-parse", "HEAD");
+    // This empty provenance commit changes no tested content.
+    if (git("rev-parse", `${candidate}^{tree}`) !== git("rev-parse", `${published}^{tree}`))
+      throw new Error("Unchecked content changed.");
+    git("push", "origin", `HEAD:refs/heads/${branch}`);
+    const latest = assertDraft();
+    if (
+      latest.length !== 1 ||
+      latest[0].number !== pr.number ||
+      remote(branch) !== published ||
+      remote("main") !== manifest.sourceSha
+    ) {
+      throw new Error("The candidate or main changed before publication; preserve it for review.");
+    }
+    if (remote("main") !== manifest.sourceSha || remote(branch) !== published)
+      throw new Error("Concurrent edit before fast-forward publication.");
+    // Atomic normal fast-forward: any divergent main advancement is rejected by
+    // Git. No force/lease/admin push, PR approval, or policy change is used.
+    git("push", "origin", "HEAD:refs/heads/main");
+    if (remote("main") !== published)
+      throw new Error("main moved after publication; inspect the new head before deploying.");
+    const audit = JSON.parse(
+      execFileSync("gh", ["pr", "view", String(pr.number), "--repo", repository, "--json", "state,mergedAt"], {
+        encoding: "utf8"
+      })
+    );
+    console.log(
+      audit.state === "MERGED" && audit.mergedAt
+        ? `Published ${published}; audit PR #${pr.number} is merged.`
+        : `Published ${published}; audit PR #${pr.number} merge status is still updating.`
+    );
   }
   // END publish-translation
 }

@@ -16,7 +16,12 @@ const block = (name) => {
   const start = helper.indexOf(`  // BEGIN ${name}\n`);
   const end = helper.indexOf(`  // END ${name}`, start);
   assert.ok(start >= 0 && end > start, `${name} trusted workflow script exists`);
-  const imports = helper.slice(0, helper.indexOf("export function"));
+  const imports = helper
+    .slice(0, helper.indexOf("export function"))
+    .replace(
+      '"./blog-translation-publication.mjs"',
+      JSON.stringify(new URL("../scripts/blog-translation-publication.mjs", import.meta.url).href)
+    );
   return (
     imports +
     helper
@@ -58,6 +63,16 @@ const fs = require("node:fs");
 fs.appendFileSync(process.env.GH_TEST_LOG, JSON.stringify(process.argv.slice(2)) + "\\n");
 if (process.argv[2] === "pr" && process.argv[3] === "list") console.log(process.env.GH_TEST_PRS || "[]");
 else if (process.argv[2] === "pr" && process.argv[3] === "create") console.log("https://example.invalid/pull/1");
+else if (process.argv[2] === "api") {
+  if (process.argv[3].endsWith("/branches/main") && !process.argv[3].includes("/rules/")) console.log(JSON.stringify({ protected: process.env.GH_TEST_PROTECTED === "true" }));
+  else if (process.argv[3].includes("/rules/branches/main")) {
+    if (process.env.GH_TEST_RACE_SHA) require("node:child_process").execFileSync("git", ["--git-dir", process.env.GH_TEST_REMOTE_PATH, "update-ref", "refs/heads/main", process.env.GH_TEST_RACE_SHA]);
+    console.log(process.env.GH_TEST_RULES || "[]");
+  }
+  else process.exit(1);
+} else if (process.argv[2] === "pr" && process.argv[3] === "ready") {
+  if (process.env.GH_TEST_RACE_SHA) require("node:child_process").execFileSync("git", ["--git-dir", process.env.GH_TEST_REMOTE_PATH, "update-ref", "refs/heads/main", process.env.GH_TEST_RACE_SHA]);
+} else if (process.argv[2] === "pr" && process.argv[3] === "view") console.log(JSON.stringify({ state: "MERGED", mergedAt: "2026-10-02T12:00:00Z" }));
 else process.exit(1);
 `,
     { mode: 0o755 }
@@ -129,7 +144,7 @@ else process.exit(1);
     delete env.GIT_COMMITTER_EMAIL;
     return { bundle, manifest };
   };
-  return { root, repo, env, git, write, commitBot, run, makeBundle };
+  return { root, repo, remote, env, git, write, commitBot, run, makeBundle };
 }
 
 const succeeds = (result) => assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
@@ -479,4 +494,102 @@ test("state-only reservation survives publication and is available to the next f
   f.git("branch", "-D", branch);
   succeeds(f.run("prepare-translation"));
   assert.equal(fs.readFileSync(path.join(f.repo, file), "utf8"), state);
+});
+
+function publicationBundle(f) {
+  const output = "Validated English\n";
+  const statePath = "translations/blog-en-state.json";
+  const digest = (value) => crypto.createHash("sha256").update(value).digest("hex");
+  const state = JSON.stringify({
+    schemaVersion: 1,
+    entries: {
+      [slug]: {
+        status: "ready",
+        sourceHash: digest(fs.readFileSync(path.join(f.repo, `content/ja/blog/${slug}.md`))),
+        outputHash: digest(output),
+        model: "gemini-3.5-flash-lite",
+        promptVersion: "blog-en-v1"
+      }
+    }
+  });
+  const { bundle, manifest } = f.makeBundle({ text: output });
+  fs.mkdirSync(path.join(bundle, "files", "translations"), { recursive: true });
+  fs.writeFileSync(path.join(bundle, "files", statePath), state);
+  manifest.files.push({ path: statePath, sha256: digest(state) });
+  manifest.qualityVerified = true;
+  fs.writeFileSync(path.join(bundle, "manifest.json"), JSON.stringify(manifest));
+  f.env.BLOG_TRANSLATION_AUTO_PUBLISH = "true";
+  f.env.GITHUB_RUN_ID = "123";
+  f.env.GH_TEST_PRS = JSON.stringify([
+    { number: 1, author: { login: "app/github-actions" }, isDraft: true, state: "OPEN", autoMergeRequest: null }
+  ]);
+  return { bundle, manifest };
+}
+
+test("automatic publication fast-forwards only quality-checked generated data and reads back the audit PR", (t) => {
+  const f = fixture(t);
+  publicationBundle(f);
+  succeeds(f.run("publish-translation"));
+  const published = f.git("ls-remote", "--heads", "origin", "refs/heads/main").split(/\s+/)[0];
+  assert.notEqual(published, f.env.GITHUB_SHA);
+  assert.equal(published, f.git("rev-parse", "HEAD"));
+  f.git("merge-base", "--is-ancestor", f.env.GITHUB_SHA, published);
+  assert.match(f.git("show", "-s", "--format=%B", published), /\[blog-translation-publish\][\s\S]*Workflow run: 123/);
+  assert.equal(f.git("rev-parse", `${published}^{tree}`), f.git("rev-parse", `${published}^^{tree}`));
+  const calls = fs.readFileSync(f.env.GH_TEST_LOG, "utf8").trim().split("\n").map(JSON.parse);
+  assert.ok(calls.every((args) => args[1] !== "ready"));
+  assert.ok(calls.some((args) => args[1] === "view"));
+  assert.ok(calls.every((args) => !args.includes("--admin") && !args.includes("review")));
+});
+
+for (const blocked of ["protected", "rules", "unverified", "hash"]) {
+  test(`automatic publication leaves main untouched for ${blocked} candidates`, (t) => {
+    const f = fixture(t);
+    const { bundle, manifest } = publicationBundle(f);
+    if (blocked === "protected") f.env.GH_TEST_PROTECTED = "true";
+    if (blocked === "rules") f.env.GH_TEST_RULES = JSON.stringify([{ type: "pull_request" }]);
+    if (blocked === "unverified") manifest.qualityVerified = false;
+    if (blocked === "hash") {
+      const entry = manifest.files.find((item) => item.path === "translations/blog-en-state.json");
+      const file = path.join(bundle, "files", entry.path);
+      const state = JSON.parse(fs.readFileSync(file));
+      state.entries[slug].outputHash = "0".repeat(64);
+      fs.writeFileSync(file, JSON.stringify(state));
+      entry.sha256 = crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+    }
+    fs.writeFileSync(path.join(bundle, "manifest.json"), JSON.stringify(manifest));
+    fails(f.run("publish-translation"), /paused|quality-checked|changed since validation/);
+    assert.equal(f.git("ls-remote", "--heads", "origin", "refs/heads/main").split(/\s+/)[0], f.env.GITHUB_SHA);
+  });
+}
+
+test("a concurrent main advancement before publication stays pending without a force push", (t) => {
+  const f = fixture(t);
+  f.write("new-main.txt", "Concurrent owner change\n");
+  f.git("add", ".");
+  f.git("commit", "-qm", "Owner update");
+  const newer = f.git("rev-parse", "HEAD");
+  f.git("push", "-q", "origin", "HEAD:refs/heads/race-target");
+  f.git("checkout", "-q", f.env.GITHUB_SHA);
+  publicationBundle(f);
+  f.env.GH_TEST_RACE_SHA = newer;
+  f.env.GH_TEST_REMOTE_PATH = f.remote;
+  fails(f.run("publish-translation"), /main advanced|Concurrent edit/);
+  assert.equal(f.git("ls-remote", "--heads", "origin", "refs/heads/main").split(/\s+/)[0], newer);
+});
+
+test("pending generated English is revalidated after a main race without repeating API work", (t) => {
+  const f = fixture(t);
+  f.makeBundle();
+  succeeds(f.run("publish-translation"));
+  f.git("checkout", "-q", "main");
+  f.git("branch", "-D", branch);
+  f.env.GH_TEST_PRS = JSON.stringify([
+    { number: 1, author: { login: "app/github-actions" }, isDraft: true, state: "OPEN", autoMergeRequest: null }
+  ]);
+  f.env.BLOG_TRANSLATION_AUTO_PUBLISH = "true";
+  succeeds(f.run("prepare-translation"));
+  assert.match(fs.readFileSync(f.env.GITHUB_OUTPUT, "utf8"), /pending_english=true/);
+  succeeds(f.run("bundle-translation"));
+  assert.match(fs.readFileSync(f.env.GITHUB_OUTPUT, "utf8"), /has_changes=true/);
 });

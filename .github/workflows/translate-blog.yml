@@ -39,6 +39,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       has_work: ${{ steps.reserve.outputs.has_work }}
+      pending_english: ${{ steps.prepare.outputs.pending_english }}
     permissions:
       contents: write
       pull-requests: write
@@ -89,9 +90,9 @@ jobs:
   translate:
     name: Translate only durably reserved articles
     needs: reserve
-    if: ${{ needs.reserve.outputs.has_work == 'true' && github.ref == 'refs/heads/main' && vars.BLOG_TRANSLATION_ENABLED == 'true' }}
+    if: ${{ (needs.reserve.outputs.has_work == 'true' || needs.reserve.outputs.pending_english == 'true') && github.ref == 'refs/heads/main' && vars.BLOG_TRANSLATION_ENABLED == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     permissions:
       contents: read
       pull-requests: read
@@ -114,6 +115,7 @@ jobs:
       - name: Validate pilot and load persisted reservations
         id: prepare
         env:
+          BLOG_TRANSLATION_AUTO_PUBLISH: ${{ vars.BLOG_TRANSLATION_AUTO_PUBLISH }}
           INPUT_SLUGS: ${{ inputs.pilotSlugs }}
           INPUT_MAX: ${{ inputs.maxArticles }}
           GH_TOKEN: ${{ github.token }}
@@ -128,17 +130,24 @@ jobs:
           PILOT_SLUGS: ${{ steps.prepare.outputs.slugs }}
           MAX_ARTICLES: ${{ steps.prepare.outputs.max }}
         run: node scripts/translate-blog.mjs run --slugs "$PILOT_SLUGS" --max-articles "$MAX_ARTICLES"
+      - name: Install the browser for content verification
+        run: pnpm exec playwright install --with-deps chromium
       - name: Verify generated content without the Gemini secret
         env:
           PORTFOLIO_SITE_ORIGIN: https://takumi-tokunaga.com
         run: |
+          pnpm lint
           pnpm typecheck
           pnpm test:unit
           pnpm build
           pnpm check:blog
           pnpm budget
+          PORTFOLIO_USE_EXISTING_BUILD=1 pnpm test:a11y
+          PORTFOLIO_USE_EXISTING_BUILD=1 pnpm a11y:lighthouse
       - name: Package only allowlisted generated data
         id: bundle
+        env:
+          BLOG_TRANSLATION_QUALITY_VERIFIED: "true"
         run: node scripts/blog-translation-workflow.mjs bundle
       - name: Upload generated data for the separate publisher
         if: ${{ steps.bundle.outputs.has_changes == 'true' }}
@@ -158,7 +167,7 @@ jobs:
           retention-days: 7
 
   propose:
-    name: Create or update the draft translation PR
+    name: Publish validated translations or retain the review draft
     needs: translate
     if: ${{ needs.translate.outputs.has_changes == 'true' && github.ref == 'refs/heads/main' && vars.BLOG_TRANSLATION_ENABLED == 'true' && vars.BLOG_TRANSLATION_ALLOW_API == '1' && vars.BLOG_TRANSLATION_FREE_TIER_CONFIRMED == '1' }}
     runs-on: ubuntu-latest
@@ -184,4 +193,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUNDLE_ROOT: ${{ runner.temp }}/blog-translation-data
+          BLOG_TRANSLATION_AUTO_PUBLISH: ${{ vars.BLOG_TRANSLATION_AUTO_PUBLISH }}
         run: node scripts/blog-translation-workflow.mjs publish
