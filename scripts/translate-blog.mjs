@@ -13,7 +13,8 @@ import {
   restoreAndValidate,
   serializeTranslation,
   TRANSLATION_MODEL,
-  translationRequest
+  translationRequest,
+  translationValidationCode
 } from "./blog-translation-core.mjs";
 
 import { errorHints, MAX_ATTEMPTS, retryDecision } from "./blog-translation-retry.mjs";
@@ -251,7 +252,19 @@ export async function runTranslations({
       sameInput &&
       previous.status === "reserved" &&
       previous.reservationId === reservationId;
-    if (sameInput && (previous.status === "exhausted" || attemptCount >= MAX_ATTEMPTS) && !reserved) {
+    const manualValidationRetry =
+      mode === "reserve" &&
+      env.GITHUB_EVENT_NAME === "workflow_dispatch" &&
+      env.BLOG_TRANSLATION_RETRY_VALIDATION === "true" &&
+      previous.reason === "output_validation" &&
+      previous.status === "exhausted" &&
+      attemptCount < MAX_ATTEMPTS;
+    if (
+      sameInput &&
+      (previous.status === "exhausted" || attemptCount >= MAX_ATTEMPTS) &&
+      !reserved &&
+      !manualValidationRetry
+    ) {
       summary.failed.push({ slug, reason: previous.reason ?? "attempts_exhausted", attemptCount });
       continue;
     }
@@ -323,12 +336,14 @@ export async function runTranslations({
     let translated;
     try {
       translated = restoreAndValidate(input, candidate);
-    } catch {
-      summary.failed.push({ slug, reason: "output_validation" });
+    } catch (error) {
+      const validationCode = translationValidationCode(error);
+      summary.failed.push({ slug, reason: "output_validation", validationCode, attemptCount: counted });
       state.entries[slug] = {
         ...state.entries[slug],
         status: "exhausted",
         reason: "output_validation",
+        validationCode,
         nextAttemptAt: null,
         reservationId: null
       };
@@ -389,7 +404,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
           [...summary.waiting, ...summary.failed]
             .map(
               (item) =>
-                `- ${item.slug}: ${item.reason}${item.attemptCount ? ` (${item.attemptCount}/${MAX_ATTEMPTS} attempts)` : ""}${item.nextAttemptAt ? `; next eligible ${item.nextAttemptAt}` : ""}`
+                `- ${item.slug}: ${item.reason}${item.validationCode ? ` [${item.validationCode}]` : ""}${item.attemptCount ? ` (${item.attemptCount}/${MAX_ATTEMPTS} attempts)` : ""}${item.nextAttemptAt ? `; next eligible ${item.nextAttemptAt}` : ""}`
             )
             .join("\n") +
           "\n",
@@ -398,7 +413,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     }
     for (const item of summary.failed)
       console.log(
-        `::warning::Translation stopped for ${item.slug}: ${item.reason}. Review the saved state before retrying.`
+        `::warning::Translation stopped for ${item.slug}: ${item.reason}${item.validationCode ? ` [${item.validationCode}]` : ""}. Review the saved state before retrying.`
       );
     console.log(
       `Blog translation ${summary.mode}: ${summary.generated.length} generated, ${summary.unchanged.length} unchanged, ${summary.manual.length} manual, ${summary.waiting.length} waiting, ${summary.failed.length} rejected.`
