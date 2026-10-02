@@ -1,6 +1,6 @@
 ---
 title: "Introduction to CDC (Change Data Capture) with Debezium: The Ultimate Solution for Real-Time Data Integration"
-abstract: "In modern system development, \"how to convey database changes to other systems with low latency\" is a crucial challenge. Traditional data synchronization using \"nightly batches\" can no longer keep up with the speed of business. This is where CDC (Change Data Capture) is attracting attention. In this article, we explain the mechanisms and benefits of CDC, focusing on ZXQLOCK00016QXZ (Debezium), the de facto standard for CDC."
+abstract: "In modern system development, \"how to convey database changes to other systems with low latency\" is a crucial challenge. Traditional data synchronization using \"nightly batches\" can no longer keep up with the speed of business. This is where CDC (Change Data Capture) is attracting attention. In this article, we explain the mechanisms and benefits of CDC, focusing on Debezium, the de facto standard for CDC."
 publishedAt: "2026-02-03"
 sourceUrl: "https://zenn.dev/t_tokunaga/articles/2026-02-03-debezium-cdc-introduction"
 translationSourceHash: "3da7bbdbe6ec15c1374d5b67d8284a7108015bd276d2f85cf22183a768e1e6fd"

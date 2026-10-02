@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { marked } from "marked";
+import { hasTranslationMarkers } from "./blog-translation-markers.mjs";
 import { assertSafeMarkdownTokens } from "./markdown-security.mjs";
 
 export const TRANSLATION_MODEL = "gemini-3.5-flash-lite";
@@ -116,6 +117,7 @@ export function restoreAndValidate(input, translated) {
   assert.ok(translated.title.length <= 400 && !/[\r\n<>]/.test(translated.title), "Invalid translated title");
   assert.ok(translated.abstract.length <= 1600 && !/[\r\n<>]/.test(translated.abstract), "Invalid translated abstract");
   for (const key of ["title", "abstract"]) {
+    assert.ok(!hasTranslationMarkers(translated[key]), "Unresolved marker in translation metadata");
     for (const name of glossary) {
       if (input[key].includes(name)) {
         assert.equal(
@@ -215,6 +217,7 @@ export function translationValidationCode(error) {
     ["Unexpected NUL in translation", "nul"],
     ["Invalid translated title", "title_format"],
     ["Invalid translated abstract", "abstract_format"],
+    ["Unresolved marker in translation metadata", "metadata_marker"],
     ["A protected name changed in metadata", "metadata_name"],
     ["Untranslated Japanese metadata remains", "metadata_language"],
     ["Translation is too large", "size"],

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { dirname, join, posix } from "node:path";
 import { marked } from "marked";
+import { hasTranslationMarkers } from "./blog-translation-markers.mjs";
 import { parseFrontmatter } from "./frontmatter.mjs";
 
 // Only this marker opts a file into automated translation lifecycle management.
@@ -37,6 +38,7 @@ export async function getBlogTranslationEligibility({ contentDir, locale, collec
   }
 
   const excluded = (reason) => ({ managed: true, eligible: false, reason });
+  if (hasTranslationMarkers(data) || hasTranslationMarkers(body)) return excluded("unresolved-translation-marker");
   let source;
   try {
     source = await readFile(join(contentDir, "ja", "blog", `${slug}.md`));

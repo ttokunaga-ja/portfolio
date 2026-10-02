@@ -523,3 +523,13 @@ test("manual rejected-output recovery never reopens terminal credential errors",
   });
   assert.equal(result.reserved.length, 0);
 });
+
+test("generated title and abstract reject leaked protected markers", () => {
+  const input = createTranslationInput({ title: "Title", abstract: "Summary", body: "Article with `code`." });
+  for (const key of ["title", "abstract"]) {
+    assert.throws(
+      () => restoreAndValidate(input, { ...fakeTranslation(input), [key]: "Leaked ZXQLOCK00016QXZ text" }),
+      /Unresolved marker in translation metadata/
+    );
+  }
+});

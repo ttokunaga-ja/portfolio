@@ -147,3 +147,14 @@ test("workflow-run deployment rebuilds current main without consuming upstream a
   assert.match(translation, /PORTFOLIO_USE_EXISTING_BUILD=1 pnpm test:a11y/);
   assert.match(translation, /PORTFOLIO_USE_EXISTING_BUILD=1 pnpm a11y:lighthouse/);
 });
+
+test("publication rejects leaked markers even when its recorded output hash matches", (t) => {
+  const f = fixture(t);
+  const output = "abstract: Leaked ZXQLOCK00016QXZ text\n";
+  f.write(article, output);
+  const statePath = path.join(f.root, "translations/blog-en-state.json");
+  const state = JSON.parse(fs.readFileSync(statePath, "utf8"));
+  state.entries[slug].outputHash = digest(output);
+  fs.writeFileSync(statePath, JSON.stringify(state));
+  assert.throws(() => validatePublishableData({ root: f.root, files: [article] }), /Unresolved translation marker/);
+});

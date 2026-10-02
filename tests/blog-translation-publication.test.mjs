@@ -268,3 +268,35 @@ test("HTML and AI-search share source-aware eligibility, provenance, and canonic
   await assert.rejects(readFile(join(root, "src/generated/content-details/en/blog/valid.ts")), { code: "ENOENT" });
   assert.ok(!(await readFile(join(root, "dist/llms.txt"), "utf8")).includes("/en/blog/valid.md"));
 });
+
+test("managed publication excludes unresolved markers in every metadata field and body", async (t) => {
+  const { contentDir } = await fixture(t);
+  const source = article({ canonicalUrl: "https://zenn.dev/t_tokunaga/articles/valid" });
+  await writeFile(join(contentDir, "ja/blog/valid.md"), source);
+  const context = { contentDir, locale: "en", collection: "blog", slug: "valid" };
+  const valid = { translationSourceHash: hashTranslationSource(source) };
+  for (const key of [
+    "title",
+    "abstract",
+    "tags",
+    "sourceUrl",
+    "translationModel",
+    "translationPromptVersion",
+    "translationGeneratedAt",
+    "custom"
+  ]) {
+    const data = {
+      ...valid,
+      [key]: key === "tags" ? ["ZXQLOCK00016QXZ"] : key === "custom" ? { nested: "ZXQLOCK00016QXZ" } : "ZXQLOCK00016QXZ"
+    };
+    assert.equal((await getBlogTranslationEligibility({ ...context, data })).reason, "unresolved-translation-marker");
+  }
+  assert.equal(
+    (await getBlogTranslationEligibility({ ...context, data: valid, body: "ZXQLOCK00016QXZ" })).reason,
+    "unresolved-translation-marker"
+  );
+  assert.equal(
+    (await getBlogTranslationEligibility({ ...context, data: valid, body: "Clean English" })).eligible,
+    true
+  );
+});
