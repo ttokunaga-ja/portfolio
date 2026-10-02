@@ -109,7 +109,10 @@ export function createGeminiTranslator({ apiKey, fetchImpl = fetch }) {
         /* bounded, sanitized failure */
       }
       const error = new Error("Gemini request failed");
-      Object.assign(error, { status: response.status }, errorHints(response, payload));
+      const hints = errorHints(response, payload);
+      error.status = response.status;
+      error.retryAfterMs = hints.retryAfterMs;
+      error.dailyQuota = hints.dailyQuota;
       throw error;
     }
     const payload = JSON.parse(await responseText(response));

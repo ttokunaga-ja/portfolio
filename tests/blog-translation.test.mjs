@@ -42,8 +42,10 @@ test("translation protects code, URLs, names, and Markdown structure", () => {
   assert.throws(() =>
     restoreAndValidate(input, { ...fakeTranslation(input), body: input.body.replace(/ZXQLOCK\d{5}QXZ/, "gone") })
   );
-  assert.throws(() =>
-    restoreAndValidate(input, { ...fakeTranslation(input), body: `${input.body}\n<script>alert(1)</script>` })
+  const htmlInput = createTranslationInput({ title: "Title", abstract: "Summary", body: "Plain paragraph." });
+  assert.throws(
+    () => restoreAndValidate(htmlInput, { ...fakeTranslation(htmlInput), body: "<b>Raw markup</b>" }),
+    /contains raw HTML/
   );
   assert.throws(() =>
     restoreAndValidate(input, { ...fakeTranslation(input), body: input.body.replace("## Overview", "### Overview") })
