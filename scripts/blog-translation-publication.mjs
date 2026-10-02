@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { hasTranslationMarkers } from "./blog-translation-markers.mjs";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,6 +31,10 @@ export function validatePublishableData({ root = process.cwd(), files }) {
       continue;
     }
     assert.ok(fs.existsSync(sourcePath), "An English output has no current Japanese source");
+    assert.ok(
+      !hasTranslationMarkers(fs.readFileSync(outputPath, "utf8")),
+      "Unresolved translation marker prevents publication"
+    );
     const entry = state.entries[slug];
     assert.equal(entry?.status, "ready", "Only a completed translation can be published");
     assert.equal(entry.outputHash, hash(fs.readFileSync(outputPath)), "English output has changed since validation");
