@@ -457,3 +457,69 @@ test("timeout and cancellation errors count once and get a bounded cooldown", as
     nextAttemptAt: "2026-10-02T13:00:00.000Z"
   });
 });
+
+test("invalid-output diagnostics contain fixed codes without response data", async (t) => {
+  const { translationValidationCode } = await import("../scripts/blog-translation-core.mjs");
+  assert.equal(translationValidationCode(new Error("private provider content")), "markdown_or_unknown");
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const result = await runTranslations({
+    root,
+    mode: "run",
+    slugs: [PILOT_SLUGS[0]],
+    env: consent,
+    translate: async (input) => ({ ...fakeTranslation(input), title: "English title 999" })
+  });
+  assert.equal(result.failed[0].validationCode, "numbers_title");
+  assert.equal(result.failed[0].attemptCount, 1);
+  const state = await readFile(join(root, "translations/blog-en-state.json"), "utf8");
+  assert.ok(!state.includes("999"));
+  assert.equal(JSON.parse(state).entries[PILOT_SLUGS[0]].validationCode, "numbers_title");
+});
+
+test("manual rejected-output recovery keeps counts and cannot permit a sixth request", async (t) => {
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const options = { root, slugs: [PILOT_SLUGS[0]], env: consent };
+  let calls = 0;
+  const invalid = async (input) => {
+    calls++;
+    return { ...fakeTranslation(input), title: "Wrong 999" };
+  };
+  await runTranslations({ ...options, mode: "run", translate: invalid });
+  const recoveryEnv = { ...consent, BLOG_TRANSLATION_RETRY_VALIDATION: "true", GITHUB_EVENT_NAME: "workflow_dispatch" };
+  const scheduled = await runTranslations({
+    ...options,
+    mode: "reserve",
+    reservationId: "123-1",
+    env: { ...recoveryEnv, GITHUB_EVENT_NAME: "schedule" }
+  });
+  assert.equal(scheduled.reserved.length, 0);
+  for (let attempt = 2; attempt <= 5; attempt++) {
+    const reservationId = `123-${attempt}`;
+    const reservation = await runTranslations({ ...options, mode: "reserve", reservationId, env: recoveryEnv });
+    assert.equal(reservation.reserved.length, 1);
+    const result = await runTranslations({ ...options, mode: "run", reservationId, translate: invalid });
+    assert.equal(result.failed[0].attemptCount, attempt);
+  }
+  const stopped = await runTranslations({ ...options, mode: "reserve", reservationId: "123-6", env: recoveryEnv });
+  assert.equal(stopped.reserved.length, 0);
+  assert.equal(calls, 5);
+});
+
+test("manual rejected-output recovery never reopens terminal credential errors", async (t) => {
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const options = { root, slugs: [PILOT_SLUGS[0]], env: consent };
+  await runTranslations({
+    ...options,
+    mode: "run",
+    translate: async () => {
+      throw Object.assign(new Error("private"), { status: 401 });
+    }
+  });
+  const result = await runTranslations({
+    ...options,
+    mode: "reserve",
+    reservationId: "123-2",
+    env: { ...consent, BLOG_TRANSLATION_RETRY_VALIDATION: "true", GITHUB_EVENT_NAME: "workflow_dispatch" }
+  });
+  assert.equal(result.reserved.length, 0);
+});
