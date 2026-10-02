@@ -40,10 +40,12 @@ function ArticleDetailPage({
   const visibleLinks = entry.links.filter((link) => {
     return !["demo", "experience", "trial", "preview", "play"].includes(link.kind);
   });
-  const canonicalIsZenn = /(^|\.)zenn\.dev$/i.test(
+  const sourceUrl = entry.sourceUrl || entry.canonicalUrl;
+  const isAiTranslation = entry.collection === "blog" && locale === "en" && Boolean(entry.translationSourceHash);
+  const sourceIsZenn = /(^|\.)zenn\.dev$/i.test(
     (() => {
       try {
-        return new URL(entry.canonicalUrl).hostname;
+        return new URL(sourceUrl).hostname;
       } catch {
         return "";
       }
@@ -90,6 +92,18 @@ function ArticleDetailPage({
                 </Typography>
               )}
             </Stack>
+            {isAiTranslation && (
+              <Box>
+                <Typography variant="body2" color="text.secondary">
+                  {t("label.aiTranslationNotice")}
+                </Typography>
+                {sourceUrl && (
+                  <Link href={sourceUrl} target="_blank" rel="noreferrer">
+                    {t("action.readJapaneseOriginal")} ({t("label.opensInNewTab")})
+                  </Link>
+                )}
+              </Box>
+            )}
             {entry.tags.length > 0 && (
               <Box>
                 <Typography variant="body2" color="text.secondary" fontWeight={800} sx={{ mb: 1 }}>
@@ -137,23 +151,27 @@ function ArticleDetailPage({
             <Stack spacing={2.25}>
               {detail.toc.length > 0 && <ArticleTableOfContents toc={detail.toc} />}
 
-              {(entry.canonicalUrl || visibleLinks.length > 0) && (
+              {(sourceUrl || visibleLinks.length > 0) && (
                 <Card variant="outlined">
                   <Stack spacing={1.25} sx={{ p: 2.25 }}>
                     <Typography variant="h4" component="h2">
                       {t("label.links")}
                     </Typography>
-                    {entry.canonicalUrl && (
+                    {sourceUrl && (
                       <Button
-                        href={entry.canonicalUrl}
+                        href={sourceUrl}
                         target="_blank"
                         rel="noreferrer"
                         variant="outlined"
                         fullWidth
                         endIcon={<OpenInNewRoundedIcon />}
-                        aria-label={`${canonicalIsZenn ? "Zenn" : t("label.source")} (${t("label.opensInNewTab")})`}
+                        aria-label={`${isAiTranslation ? t("action.readJapaneseOriginal") : sourceIsZenn ? "Zenn" : t("label.source")} (${t("label.opensInNewTab")})`}
                       >
-                        {canonicalIsZenn ? t("action.readOnZenn") : t("label.source")}
+                        {isAiTranslation
+                          ? t("action.readJapaneseOriginal")
+                          : sourceIsZenn
+                            ? t("action.readOnZenn")
+                            : t("label.source")}
                       </Button>
                     )}
                     {visibleLinks.map((link) => (

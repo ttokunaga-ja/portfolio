@@ -1,0 +1,187 @@
+name: Translate blog to English
+
+on:
+  push:
+    branches: [main]
+    paths: ["content/ja/blog/**"]
+  schedule:
+    # Off the busy top of the hour; eligible requests only, never a retry loop.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      pilotSlugs:
+        description: "Comma-separated slugs from the reviewed pilot allowlist"
+        required: true
+        type: string
+        default: "2025-12-25-git-branch-splitting,2026-02-03-debezium-cdc-introduction"
+      maxArticles:
+        description: "Maximum API requests in this run (1–3; at most 5 total per input)"
+        required: true
+        type: number
+        default: 2
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# This group spans reservation, API and publication. Never cancel an in-flight call.
+concurrency:
+  group: blog-en-translation
+  cancel-in-progress: false
+
+jobs:
+  reserve:
+    name: Persist bounded attempts before accessing the API
+    if: ${{ github.ref == 'refs/heads/main' && vars.BLOG_TRANSLATION_ENABLED == 'true' && vars.BLOG_TRANSLATION_ALLOW_API == '1' && vars.BLOG_TRANSLATION_FREE_TIER_CONFIRMED == '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      has_work: ${{ steps.reserve.outputs.has_work }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout trusted main snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.0.8
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate pilot and load untouched bot data
+        id: prepare
+        env:
+          INPUT_SLUGS: ${{ inputs.pilotSlugs }}
+          INPUT_MAX: ${{ inputs.maxArticles }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/blog-translation-workflow.mjs prepare
+      - name: Reserve due attempts without a Gemini key
+        id: reserve
+        env:
+          PILOT_SLUGS: ${{ steps.prepare.outputs.slugs }}
+          MAX_ARTICLES: ${{ steps.prepare.outputs.max }}
+          BLOG_TRANSLATION_RESERVATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          node scripts/translate-blog.mjs reserve --slugs "$PILOT_SLUGS" --max-articles "$MAX_ARTICLES"
+          node --input-type=module -e 'import fs from "node:fs"; const report = JSON.parse(fs.readFileSync("reports/blog-translation-summary.json", "utf8")); fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_work=${report.reserved.length > 0}\n`);'
+      - name: Bundle retry state and unchanged bot data
+        id: bundle
+        run: node scripts/blog-translation-workflow.mjs bundle
+      - name: Persist attempt reservations on the draft branch
+        if: ${{ steps.bundle.outputs.has_changes == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_ROOT: translation-bundle
+        # Fresh checkout removes imported data; only the validated bundle is copied.
+        run: |
+          git restore --worktree -- .
+          git clean -fd -- content/en/blog translations
+          node scripts/blog-translation-workflow.mjs publish
+
+  translate:
+    name: Translate only durably reserved articles
+    needs: reserve
+    if: ${{ needs.reserve.outputs.has_work == 'true' && github.ref == 'refs/heads/main' && vars.BLOG_TRANSLATION_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      has_changes: ${{ steps.bundle.outputs.has_changes }}
+    steps:
+      - name: Checkout trusted main snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.0.8
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate pilot and load persisted reservations
+        id: prepare
+        env:
+          INPUT_SLUGS: ${{ inputs.pilotSlugs }}
+          INPUT_MAX: ${{ inputs.maxArticles }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/blog-translation-workflow.mjs prepare
+      - name: Translate only after the operator has approved data use and free tier
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_TRANSLATION_MODEL: ${{ secrets.GEMINI_TRANSLATION_MODEL || vars.GEMINI_TRANSLATION_MODEL || 'gemini-3.5-flash-lite' }}
+          BLOG_TRANSLATION_ALLOW_API: "1"
+          BLOG_TRANSLATION_FREE_TIER_CONFIRMED: "1"
+          BLOG_TRANSLATION_RESERVATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          PILOT_SLUGS: ${{ steps.prepare.outputs.slugs }}
+          MAX_ARTICLES: ${{ steps.prepare.outputs.max }}
+        run: node scripts/translate-blog.mjs run --slugs "$PILOT_SLUGS" --max-articles "$MAX_ARTICLES"
+      - name: Verify generated content without the Gemini secret
+        env:
+          PORTFOLIO_SITE_ORIGIN: https://takumi-tokunaga.com
+        run: |
+          pnpm typecheck
+          pnpm test:unit
+          pnpm build
+          pnpm check:blog
+          pnpm budget
+      - name: Package only allowlisted generated data
+        id: bundle
+        run: node scripts/blog-translation-workflow.mjs bundle
+      - name: Upload generated data for the separate publisher
+        if: ${{ steps.bundle.outputs.has_changes == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: blog-translation-data
+          path: translation-bundle
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload sanitized translation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: blog-translation-report
+          path: reports/blog-translation-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  propose:
+    name: Create or update the draft translation PR
+    needs: translate
+    if: ${{ needs.translate.outputs.has_changes == 'true' && github.ref == 'refs/heads/main' && vars.BLOG_TRANSLATION_ENABLED == 'true' && vars.BLOG_TRANSLATION_ALLOW_API == '1' && vars.BLOG_TRANSLATION_FREE_TIER_CONFIRMED == '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout the same trusted main snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: blog-translation-data
+          path: ${{ runner.temp }}/blog-translation-data
+      - name: Verify data and publish a fast-forward draft update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_ROOT: ${{ runner.temp }}/blog-translation-data
+        run: node scripts/blog-translation-workflow.mjs publish

@@ -42,6 +42,11 @@ export type PortfolioEntry = {
   publishedAt: string;
   updatedAt: string;
   canonicalUrl: string;
+  sourceUrl?: string;
+  translationSourceHash?: string;
+  translationModel?: string;
+  translationPromptVersion?: string;
+  translationGeneratedAt?: string;
 };
 
 export type PortfolioEntryDetail = {

@@ -65,7 +65,12 @@ const baseRoutes = [...allRoutes]
   });
 
 function urlEntry(route, baseRoute) {
-  const locales = ["ja", "en"].filter((locale) => allRoutes.has(routeForLocale(baseRoute, locale)));
+  // Blog translations are self-canonical, while their Japanese originals are
+  // canonical on Zenn. Match the HTML policy until reciprocal canonicals exist.
+  const locales =
+    baseRoute.startsWith("/blog/") && baseRoute !== "/blog/"
+      ? []
+      : ["ja", "en"].filter((locale) => allRoutes.has(routeForLocale(baseRoute, locale)));
   const alternates = locales.map((locale) => {
     const href = `${siteOrigin}${routeForLocale(baseRoute, locale)}`;
     return `    <xhtml:link rel="alternate" hreflang="${locale}" href="${escapeXml(href)}" />`;

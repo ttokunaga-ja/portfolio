@@ -66,6 +66,12 @@ function ArticleListingPage({
             <Typography color="text.secondary" sx={{ fontSize: { xs: "1rem", md: "1.12rem" }, lineHeight: 1.75 }}>
               {lead}
             </Typography>
+            {collection === "blog" && locale === "en" && (
+              <Typography variant="body2" color="text.secondary">
+                {t("label.blogTranslationNotice")}{" "}
+                <Link href={hrefFor("blog", "ja")}>{t("action.viewJapaneseBlog")}</Link>
+              </Typography>
+            )}
           </Stack>
         </Container>
       </Box>
@@ -97,6 +103,8 @@ function ArticleListItem({ entry }: { entry: PortfolioEntry }) {
   const { t } = useTranslation();
   const locale = usePageLocale();
   const collectionLabel = entry.collection === "research" ? t("nav.research") : t("nav.blog");
+  const sourceUrl = entry.sourceUrl || entry.canonicalUrl;
+  const isAiTranslation = entry.collection === "blog" && locale === "en" && Boolean(entry.translationSourceHash);
   const metadata = entry.publishedAt
     ? `${t("label.published")} · ${formatArticleDate(entry.publishedAt, locale)}`
     : entry.period
@@ -126,6 +134,7 @@ function ArticleListItem({ entry }: { entry: PortfolioEntry }) {
                 {metadata}
               </Typography>
             )}
+            {isAiTranslation && <Chip label={t("label.aiTranslation")} size="small" variant="outlined" />}
           </Stack>
 
           <Link
@@ -185,16 +194,16 @@ function ArticleListItem({ entry }: { entry: PortfolioEntry }) {
           >
             {t("action.readMore")}
           </Button>
-          {entry.canonicalUrl && (
+          {sourceUrl && (
             <Button
-              href={entry.canonicalUrl}
+              href={sourceUrl}
               target="_blank"
               rel="noreferrer"
               variant="text"
               endIcon={<OpenInNewRoundedIcon />}
-              aria-label={`Zenn (${t("label.opensInNewTab")})`}
+              aria-label={`${isAiTranslation ? t("action.readJapaneseOriginal") : "Zenn"} (${t("label.opensInNewTab")})`}
             >
-              Zenn
+              {isAiTranslation ? t("action.readJapaneseOriginal") : "Zenn"}
             </Button>
           )}
         </Stack>

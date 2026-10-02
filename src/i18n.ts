@@ -36,6 +36,8 @@ export const resources = {
         switchLanguage: "Switch to English",
         github: "GitHubを開く",
         readOnZenn: "Zennで読む",
+        readJapaneseOriginal: "日本語の原文を読む",
+        viewJapaneseBlog: "日本語の記事一覧を見る",
         copy: "コピー",
         continueWithGoogle: "Googleで続行",
         getApiKey: "APIキーを取得"
@@ -99,6 +101,11 @@ export const resources = {
         contents: "目次",
         topics: "トピック",
         source: "公開元",
+        aiTranslation: "AI翻訳",
+        aiTranslationNotice:
+          "この記事は日本語の原文をAIで英訳したものです。誤訳の可能性があるため、原文もご確認ください。",
+        blogTranslationNotice:
+          "英訳にはAIを使用しています。原文の更新中は、一部の英訳を一時的に非公開にする場合があります。",
         opensInNewTab: "新しいタブで開きます",
         latest: "最近の取り組み",
         published: "公開日",
@@ -138,6 +145,8 @@ export const resources = {
         switchLanguage: "日本語に切り替え",
         github: "Open GitHub",
         readOnZenn: "Read on Zenn",
+        readJapaneseOriginal: "Read the Japanese original",
+        viewJapaneseBlog: "View the Japanese blog",
         copy: "Copy",
         continueWithGoogle: "Continue with Google",
         getApiKey: "Get API Key"
@@ -202,6 +211,11 @@ export const resources = {
         contents: "Contents",
         topics: "Topics",
         source: "Published on",
+        aiTranslation: "AI translation",
+        aiTranslationNotice:
+          "This English translation was generated with AI and may contain errors. Refer to the Japanese original for the authoritative wording.",
+        blogTranslationNotice:
+          "AI-generated translations may contain errors. Some translations may be temporarily unavailable while they are updated.",
         opensInNewTab: "Opens in a new tab",
         latest: "Recent",
         published: "Published",

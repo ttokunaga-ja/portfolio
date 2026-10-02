@@ -1,6 +1,7 @@
-import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { parseFrontmatter } from "./frontmatter.mjs";
+import { getBlogTranslationEligibility } from "./blog-translation-eligibility.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
@@ -64,7 +65,7 @@ function validateSiteOrigin(value) {
   return url.origin;
 }
 
-function validateExternalCanonicalUrl(value, source) {
+function validateExternalCanonicalUrl(value, source, field = "canonicalUrl") {
   const raw = compact(value);
   if (!raw) return "";
 
@@ -72,11 +73,11 @@ function validateExternalCanonicalUrl(value, source) {
   try {
     url = new URL(raw);
   } catch {
-    throw new Error(`${source} canonicalUrl must be an absolute http(s) URL.`);
+    throw new Error(`${source} ${field} must be an absolute http(s) URL.`);
   }
 
   if (!/^https?:$/.test(url.protocol) || !url.hostname || url.username || url.password) {
-    throw new Error(`${source} canonicalUrl must be a credential-free absolute http(s) URL.`);
+    throw new Error(`${source} ${field} must be a credential-free absolute http(s) URL.`);
   }
 
   return url.href;
@@ -181,6 +182,12 @@ function createEntryMarkdown(entry) {
     `- Canonical: ${canonical}`,
     `- Language: ${language}`,
     `- Type: ${label}`,
+    entry.sourceUrl ? `- Original source: ${entry.sourceUrl}` : "",
+    entry.translationSourceHash ? "- Translation: AI-generated English translation; may contain errors." : "",
+    entry.translationSourceHash ? `- Translation source SHA-256: ${entry.translationSourceHash}` : "",
+    entry.translationModel ? `- Translation model: ${entry.translationModel}` : "",
+    entry.translationPromptVersion ? `- Translation prompt version: ${entry.translationPromptVersion}` : "",
+    entry.translationGeneratedAt ? `- Translation generated: ${entry.translationGeneratedAt}` : "",
     entry.role ? `- Role: ${entry.role}` : "",
     entry.period ? `- Period: ${entry.period}` : "",
     entry.tags.length ? `- Tags: ${entry.tags.join(", ")}` : ""
@@ -235,7 +242,7 @@ function createLlmsTxt(entries) {
     "",
     "## Blog Markdown Pages",
     "",
-    "Blog entries are included regardless of their featured status. Their metadata identifies the original canonical URL when an entry is mirrored from Zenn.",
+    "Blog entries are included regardless of their featured status. Japanese mirrors retain their original Zenn canonical URL. AI-generated English translations have their own canonical URL and identify the Japanese source. Translations are omitted while their source has changed or is unavailable.",
     "",
     ...blogEntries.map((entry) => `- [${entry.title}](${absoluteUrl(markdownPathFor(entry))})`),
     "",
@@ -279,6 +286,21 @@ async function readContentEntries() {
     const parsed = parseFrontmatter(raw);
     const data = parsed.data;
     const slug = toSlug(file, collection);
+    const translation = await getBlogTranslationEligibility({
+      contentDir,
+      locale,
+      collection,
+      slug,
+      data,
+      body: parsed.content
+    });
+    if (!translation.eligible) {
+      console.warn(`[ai-search] Skipping ${normalized}: ${translation.reason}`);
+      // Also remove the previous text surface when this script is rerun without
+      // the client build's clean dist step.
+      await rm(join(dist, markdownPathFor({ locale, collection, slug }).slice(1)), { force: true });
+      continue;
+    }
 
     entries.push({
       locale,
@@ -291,7 +313,19 @@ async function readContentEntries() {
       role: compact(data.role),
       period: [compact(data.startDate), compact(data.endDate)].filter(Boolean).join(" - "),
       featured: Boolean(data.featured),
-      canonicalUrl: collection === "blog" ? validateExternalCanonicalUrl(data.canonicalUrl, normalized) : "",
+      canonicalUrl:
+        collection === "blog" && !translation.managed
+          ? validateExternalCanonicalUrl(data.canonicalUrl, normalized)
+          : "",
+      sourceUrl: validateExternalCanonicalUrl(data.sourceUrl, normalized, "sourceUrl"),
+      ...(translation.managed
+        ? {
+            translationSourceHash: data.translationSourceHash,
+            translationModel: compact(data.translationModel),
+            translationPromptVersion: compact(data.translationPromptVersion),
+            translationGeneratedAt: compact(data.translationGeneratedAt)
+          }
+        : {}),
       tags: normalizeArray(data.tags),
       links: normalizeLinks(data.links),
       body: parsed.content

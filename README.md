@@ -44,6 +44,11 @@ Blog posts are generated from the sibling `zenn-content` repository. Do not edit
 `content/ja/blog` or `public/images/blog` directly; they are mirrored on the next
 `zenn-content` push.
 
+English blog translation is an optional, disabled-by-default draft-PR workflow.
+See [the translation pilot and operator setup](docs/blog-translation.md) before
+configuring a Gemini key or enabling transmission. `node scripts/translate-blog.mjs plan`
+is offline and inventories only the reviewed pilot articles.
+
 Run `pnpm check:blog` after building to verify every mirrored blog article and
 its listing link. Deployment smoke tests also check the latest blog article
 against the expected canonical URL.
