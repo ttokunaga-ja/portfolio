@@ -38,7 +38,7 @@ jobs:
         with:
           version: 11.0.8
       - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -70,6 +70,8 @@ jobs:
               exit 1
             fi
           done
+      - name: Verify generated blog routes
+        run: pnpm check:blog
       - name: Check performance budgets
         run: pnpm budget
       - name: Accessibility tests
@@ -126,7 +128,7 @@ jobs:
         with:
           version: 11.0.8
       - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -167,6 +169,34 @@ jobs:
     env:
       DEPLOYMENT_URL: ${{ needs.deploy.outputs.deployment-url }}
     steps:
+      - name: Checkout expected blog metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11.0.8
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Install blog checker dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify latest blog update in production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if node scripts/check-blog-updates.mjs --origin "$PORTFOLIO_SITE_ORIGIN"; then
+              break
+            fi
+            if [ "$attempt" = 5 ]; then
+              echo "::error::Production blog update check failed"
+              exit 1
+            fi
+            sleep $((attempt * 3))
+          done
       - name: Check public routes with bounded retries
         shell: bash
         run: |
@@ -203,14 +233,14 @@ jobs:
                 grep -Eqi '^content-type:.*text/html' "$headers" &&
                   grep -Fq '<title>香川県立丸亀高等学校 弓道部 | Takumi Tokunaga</title>' "$body" &&
                   grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/experience/marugame-kyudo-club/"' "$body" &&
-                  grep -Fq 'marugame-kyudo-club_practice.jpg' "$body" &&
+                  grep -Fq 'marugame-kyudo-club_practice.webp' "$body" &&
                   ! grep -Fq 'marugame-kyudo-club_farewell' "$body"
                 ;;
               /en/experience/marugame-kyudo-club/)
                 grep -Eqi '^content-type:.*text/html' "$headers" &&
                   grep -Fq '<title>Marugame High School Kyudo Club | Takumi Tokunaga</title>' "$body" &&
                   grep -Fq '<link rel="canonical" href="https://takumi-tokunaga.com/en/experience/marugame-kyudo-club/"' "$body" &&
-                  grep -Fq 'marugame-kyudo-club_practice.jpg' "$body" &&
+                  grep -Fq 'marugame-kyudo-club_practice.webp' "$body" &&
                   ! grep -Fq 'marugame-kyudo-club_farewell' "$body"
                 ;;
               /robots.txt)
@@ -343,7 +373,7 @@ jobs:
 
           verify_known_good_image 'rione' '/images/experience/rione/rione_expo_discription.webp'
           verify_known_good_image 'kyudo-practice' \
-            '/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.jpg'
+            '/images/experience/marugame-kyudo-club/marugame-kyudo-club_practice.webp'
       - name: Upload production smoke diagnostics
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
