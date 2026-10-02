@@ -35,7 +35,10 @@ async function fixture(t, slugs = PILOT_SLUGS) {
 test("translation protects code, URLs, names, and Markdown structure", () => {
   const input = createTranslationInput({ title: "タイトル", abstract: "概要", body: sampleBody });
   assert.ok(!input.body.includes("console.log"));
-  assert.ok(!input.body.includes("https://example.com"));
+  assert.ok(
+    input.replacements.some((item) => item.value === "https://example.com/docs" && input.body.includes(item.marker)),
+    "the source link is represented by its exact protected marker"
+  );
   assert.ok(!input.body.includes("GitHub"));
   const valid = restoreAndValidate(input, fakeTranslation(input));
   assert.equal(valid.body, sampleBody);
