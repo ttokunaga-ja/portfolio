@@ -5,19 +5,21 @@
       "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
       "attemptCount": 2,
       "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
-      "status": "reserved",
-      "reservationId": "37076198313-1",
-      "reason": "request_reserved",
-      "nextAttemptAt": "2026-10-03T01:09:53.100Z"
+      "status": "exhausted",
+      "reservationId": null,
+      "reason": "output_validation",
+      "nextAttemptAt": null,
+      "validationCode": "marker_count"
     },
     "2026-02-03-debezium-cdc-introduction": {
+      "status": "ready",
       "inputHash": "a84d62b13f6ca22d1c007e5b12bed7fd4e8cd05e1f45459909002835af5133fc",
       "attemptCount": 2,
-      "pendingSourceHash": "3da7bbdbe6ec15c1374d5b67d8284a7108015bd276d2f85cf22183a768e1e6fd",
-      "status": "reserved",
-      "reservationId": "37076198313-1",
-      "reason": "request_reserved",
-      "nextAttemptAt": "2026-10-03T01:09:53.100Z"
+      "sourceHash": "3da7bbdbe6ec15c1374d5b67d8284a7108015bd276d2f85cf22183a768e1e6fd",
+      "outputHash": "468168f4faa95d12dc195b966d3bb3a9d395f9bd2251bcea099ecf315f62a0cd",
+      "model": "gemini-3.5-flash-lite",
+      "promptVersion": "blog-en-v1",
+      "generatedAt": "2026-10-02T23:10:57.234Z"
     }
   }
 }
