@@ -5,6 +5,7 @@ import { marked } from "marked";
 import sharp from "sharp";
 import { parseFrontmatter } from "./frontmatter.mjs";
 import { assertSafeMarkdownTokens } from "./markdown-security.mjs";
+import { getBlogTranslationEligibility } from "./blog-translation-eligibility.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
@@ -545,6 +546,7 @@ const entries = [];
 const detailModules = [];
 
 await rm(detailsDir, { recursive: true, force: true });
+await mkdir(detailsDir, { recursive: true });
 
 for (const file of files) {
   const normalized = relative(contentDir, file).replaceAll("\\", "/");
@@ -558,6 +560,11 @@ for (const file of files) {
   const data = parsed.data;
   const slug = toSlug(file, collection);
   const context = { collection, locale, slug, normalized };
+  const translation = await getBlogTranslationEligibility({ contentDir, ...context, data, body: parsed.content });
+  if (!translation.eligible) {
+    console.warn(`[content] Skipping ${normalized}: ${translation.reason}`);
+    continue;
+  }
   assertSafeMarkdownTokens(marked.lexer(parsed.content), context);
   await cacheMarkdownImageDimensions(parsed.content, context);
   const toc = [];
@@ -574,7 +581,8 @@ for (const file of files) {
   const publishedAt = firstString(data.publishedAt);
   const updatedAt = firstString(data.updatedAt);
   const demoUrl = firstString(data.demoUrl);
-  const canonicalUrl = firstString(data.canonicalUrl);
+  const canonicalUrl = translation.managed ? "" : firstString(data.canonicalUrl);
+  const sourceUrl = firstString(data.sourceUrl);
   for (const [field, value] of [
     ["startDate", startDate],
     ["endDate", endDate],
@@ -585,6 +593,7 @@ for (const file of files) {
   }
   validateExternalUrl(demoUrl, "demoUrl", context);
   validateExternalUrl(canonicalUrl, "canonicalUrl", context);
+  validateExternalUrl(sourceUrl, "sourceUrl", context);
   const startLabel =
     collection === "experience" ? formatMonth(startDate, locale) : firstString(data.startLabel, startDate);
   const baseEndLabel = collection === "experience" ? formatMonth(endDate, locale) : firstString(data.endLabel, endDate);
@@ -620,7 +629,16 @@ for (const file of files) {
     links: normalizeLinks(data.links),
     publishedAt,
     updatedAt,
-    canonicalUrl
+    canonicalUrl,
+    ...(sourceUrl ? { sourceUrl } : {}),
+    ...(translation.managed
+      ? {
+          translationSourceHash: data.translationSourceHash,
+          translationModel: firstString(data.translationModel),
+          translationPromptVersion: firstString(data.translationPromptVersion),
+          translationGeneratedAt: firstString(data.translationGeneratedAt)
+        }
+      : {})
   });
   detailModules.push({ context, bodyHtml, toc });
 }

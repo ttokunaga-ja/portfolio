@@ -98,8 +98,9 @@ export function getStaticPathsForPrerender(): PrerenderTarget[] {
 export function getAlternateLocales(route: RouteState, locale: Locale): Locale[] {
   if (route.kind === "notFound") return [];
   if (route.kind === "page") return locales;
-  const entry = getEntry(locale, route.collection, route.slug);
-  if (route.collection === "blog" && entry?.canonicalUrl) return [];
+  // Japanese mirrors are canonical on Zenn, where we cannot guarantee a
+  // reciprocal link to the local English translation. Do not invent a cluster.
+  if (route.collection === "blog") return [];
   return locales.filter((candidate) => Boolean(getEntry(candidate, route.collection, route.slug)));
 }
 
@@ -302,6 +303,15 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
           inLanguage,
           keywords: entry?.tags ?? [],
           dateModified: entry?.updatedAt || entry?.publishedAt || undefined,
+          ...(entry?.translationSourceHash && entry.sourceUrl
+            ? {
+                translationOfWork: {
+                  "@type": "CreativeWork",
+                  url: entry.sourceUrl,
+                  inLanguage: "ja-JP"
+                }
+              }
+            : {}),
           creator: { "@id": `${origin}/#person` },
           author: { "@id": `${origin}/#person` },
           isPartOf: { "@id": `${origin}/#website` },

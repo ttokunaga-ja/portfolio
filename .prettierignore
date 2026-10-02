@@ -3,6 +3,8 @@ node_modules
 pnpm-lock.yaml
 src/generated
 content/ja/blog
+# Preserve source code blocks in generated English, just as in the Japanese mirror.
+content/en/blog
 .accessibility-reports
 test-results
 playwright-report

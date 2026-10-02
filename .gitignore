@@ -9,3 +9,5 @@ src/generated/content-details/
 .playwright-mcp
 .accessibility-reports
 .DS_Store
+
+translation-bundle

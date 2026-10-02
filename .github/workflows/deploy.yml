@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Translate blog to English"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -25,8 +29,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  provenance:
+    name: Verify deployment source
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'schedule' || github.event.workflow_run.event == 'workflow_dispatch')) }}
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.normal.outputs.proceed || steps.translation.outputs.proceed }}
+    steps:
+      - name: Checkout the current trusted event snapshot
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Allow existing push, PR and manual checks
+        id: normal
+        if: ${{ github.event_name != 'workflow_run' }}
+        run: echo "proceed=true" >> "$GITHUB_OUTPUT"
+      - name: Set up Node for trusted publication verification
+        if: ${{ github.event_name == 'workflow_run' }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Verify translation publication belongs to this successful run
+        id: translation
+        if: ${{ github.event_name == 'workflow_run' }}
+        run: node scripts/blog-translation-publication.mjs
+
   build:
     name: Build and verify
+    needs: provenance
+    if: ${{ needs.provenance.outputs.proceed == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -139,6 +172,12 @@ jobs:
         with:
           name: portfolio-dist
           path: dist
+      - name: Refuse a stale main deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_main="$(git ls-remote --heads origin refs/heads/main | cut -f1)"
+          test "$current_main" = "$GITHUB_SHA" || { echo "::error::main advanced after validation; its newer run owns deployment"; exit 1; }
       - name: Deploy to Cloudflare Pages
         id: cloudflare-deploy
         shell: bash
