@@ -5,5 +5,7 @@ allowBuilds:
   sharp: true
   workerd: true
 overrides:
+  "@firebase/firestore>@grpc/grpc-js": 1.13.6
   "@opentelemetry/core": 2.8.0
-  js-yaml: 5.2.3
+  "miniflare>undici": 7.29.1
+  js-yaml: 5.4.1
