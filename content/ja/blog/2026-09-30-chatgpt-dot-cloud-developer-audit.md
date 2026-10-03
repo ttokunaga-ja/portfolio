@@ -69,6 +69,10 @@ CPUの機種比較は、同じ素数計算での参考値です。CPU全体の�
 | 項目 | 結果 | 使える範囲・注意点 |
 | --- | --- | --- |
 | OS | Linux | Debian 13.6、x86_64 |
+| Blender 4.3.2 | 成功 | GUI編集、.blend保存・再読込、CPUレンダリング、GLB書出し・再読込 |
+| Unity Hub 3.22.0 | GUI起動成功 | 規約同意後、サインイン画面まで確認 |
+| Unity CLI 1.0.0-beta.11 | 起動成功 | Editor一覧・インストール計画の取得 |
+| Unity Editor 6000.3.25f1 | 導入成功・認証待ち | バージョン表示は成功。GUI起動はライセンス確認で停止し、制作・ビルドは未確認 |
 | Android Studio | 導入・GUI起動成功 | Quail 4 / 2026.1.4 Patch 1の開始画面を確認 |
 | Android SDK・APKビルド | 成功 | API 35でJava画面コードをDEX変換し、未署名APKを生成 |
 | AndroidのGradle・AGPビルド | 未確認 | 今回はSDKツールを直接使用したビルド |
@@ -115,14 +119,28 @@ CPUの機種比較は、同じ素数計算での参考値です。CPU全体の�
 
 dot側の専用GUIブラウザーで公開ページのリンクを操作し、移動先のIANA「Example Domains」を表示したときの画面です。
 
-![dot側のGUIブラウザーで表示したIANAのExample Domainsページ](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/gui-browser.jpg)
+![dot側のGUIブラウザーで表示したIANAのExample Domainsページ](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/browser-iana-example-domains.jpg)
 *公開ページでのリンク操作後に取得したスクリーンショット。ローカルで開発したWebアプリのE2Eテスト結果ではありません。*
 
 ## Android Studioの起動確認
 
-![クラウド環境で起動したAndroid Studioの開始画面](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/android-studio-gui.png)
+![クラウド環境で起動したAndroid Studioの開始画面](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/android-studio-welcome.png)
 
 Android StudioのGUI起動と、別途コマンドラインでの未署名APK生成に成功しました。IDE内でのビルドやエミュレーター実行まで確認した結果ではありません。
+
+## Blenderの動作確認
+
+![クラウドのBlenderで立方体を編集した画面](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/blender-cube-edit.png)
+
+![CyclesのCPUレンダリング結果](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/blender-cycles-cpu-render.png)
+
+GUIでの編集に加え、別途CPUで画像を生成し、.blendとGLBの保存・再読込を確認しました。GPUレンダリングは未確認です。
+
+## Unity Hubの起動確認
+
+![クラウドで起動したUnity Hubのサインイン画面](/images/blog/2026-09-30-chatgpt-dot-cloud-developer-audit/2026-09-30-chatgpt-dot-cloud-developer-audit/unity-hub-sign-in.png)
+
+Hubの起動成功は、Unity Editorでの制作やゲーム実行ができたことを意味しません。Editor本体の導入とバージョン表示には成功しましたが、GUI起動はアカウントのライセンス確認で停止しました。制作・ビルドには認証後の追加検証が必要です。
 
 ## まとめ
 

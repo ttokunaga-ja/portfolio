@@ -33,6 +33,7 @@ export function prepare_translation() {
   const remote = (name) => git("ls-remote", "--heads", "origin", `refs/heads/${name}`).split(/\s+/)[0] || null;
   if (remote("main") !== process.env.GITHUB_SHA)
     throw new Error("main advanced; rerun on its newest commit before translating.");
+  const budgetWindow = sourceBudgetWindow(git, process.env.GITHUB_SHA);
   const branchSha = remote(branch);
   let pendingEnglish = false;
   const prs = JSON.parse(
@@ -123,6 +124,7 @@ export function prepare_translation() {
     JSON.stringify(
       {
         sourceSha: process.env.GITHUB_SHA,
+        budgetWindow,
         branchSha,
         needsPr: branchSha !== null && !openPrs.length,
         forcePublish: pendingEnglish && process.env.BLOG_TRANSLATION_AUTO_PUBLISH === "true",
@@ -135,9 +137,33 @@ export function prepare_translation() {
   );
   fs.appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `slugs=${slugs.join(",")}\nmax=${max}\npending_english=${pendingEnglish}\n`
+    `slugs=${slugs.join(",")}\nmax=${max}\npending_english=${pendingEnglish}\nbudget_window=${budgetWindow ?? ""}\n`
   );
   // END prepare-translation
+}
+
+// Reuse the latest Japanese content synchronization commit on every event.
+// Dispatches, schedules, reruns and English/config commits cannot mint a window.
+export function sourceBudgetWindow(git, sourceSha) {
+  const commit = git("log", "-1", "--format=%H", sourceSha, "--", "content/ja/blog");
+  if (!commit) return null;
+  if (!/^[a-f0-9]{40}$/.test(commit)) throw new Error("Invalid Japanese source commit");
+  const [author, authorEmail, committer, committerEmail, subject] = git(
+    "show",
+    "-s",
+    "--format=%an%n%ae%n%cn%n%ce%n%s",
+    commit
+  ).split("\n");
+  const email = "41898282+github-actions[bot]@users.noreply.github.com";
+  if (
+    author !== "github-actions[bot]" ||
+    committer !== "github-actions[bot]" ||
+    authorEmail !== email ||
+    committerEmail !== email ||
+    !/^sync: import published Zenn articles from [a-f0-9]{7,40}$/.test(subject)
+  )
+    return null;
+  return commit;
 }
 
 export function bundle_translation() {

@@ -24,6 +24,7 @@ const block = (name) => {
     );
   return (
     imports +
+    `import { sourceBudgetWindow } from ${JSON.stringify(new URL("../scripts/blog-translation-workflow.mjs", import.meta.url).href)};\n` +
     helper
       .slice(start, end)
       .split("\n")
@@ -152,6 +153,42 @@ const fails = (result, message) => {
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, message);
 };
+
+test("only canonical JA synchronization commits establish persistent push budgets", (t) => {
+  const f = fixture(t);
+  succeeds(f.run("prepare-translation"));
+  assert.match(fs.readFileSync(f.env.GITHUB_OUTPUT, "utf8"), /budget_window=\n/);
+  f.write(`content/ja/blog/${slug}.md`, "Updated Japanese fixture\n");
+  f.commitBot(`sync: import published Zenn articles from ${"a".repeat(12)}`);
+  const sourceCommit = f.git("rev-parse", "HEAD");
+  f.git("push", "-q", "origin", "main");
+  f.env.GITHUB_SHA = sourceCommit;
+  for (const event of ["push", "schedule", "workflow_dispatch"]) {
+    f.env.GITHUB_EVENT_NAME = event;
+    succeeds(f.run("prepare-translation"));
+    assert.match(fs.readFileSync(f.env.GITHUB_OUTPUT, "utf8"), new RegExp(`budget_window=${sourceCommit}\\n`));
+  }
+  for (const file of ["config.txt", article]) {
+    f.write(file, "unrelated commit\n");
+    f.git("add", ".");
+    f.git("commit", "-qm", "Update unrelated file");
+    f.git("push", "-q", "origin", "main");
+    f.env.GITHUB_SHA = f.git("rev-parse", "HEAD");
+    succeeds(f.run("prepare-translation"));
+    const context = JSON.parse(fs.readFileSync(path.join(f.repo, "reports/blog-translation-context.json")));
+    assert.equal(context.budgetWindow, sourceCommit);
+  }
+  f.write(`content/ja/blog/${slug}.md`, "Human source update\n");
+  f.git("add", ".");
+  f.git("commit", "-qm", `sync: import published Zenn articles from ${"b".repeat(12)}`);
+  f.git("push", "-q", "origin", "main");
+  f.env.GITHUB_SHA = f.git("rev-parse", "HEAD");
+  succeeds(f.run("prepare-translation"));
+  assert.equal(
+    JSON.parse(fs.readFileSync(path.join(f.repo, "reports/blog-translation-context.json"))).budgetWindow,
+    null
+  );
+});
 
 test("workflow keeps the API read-only, its secret step-scoped, and publication separate", () => {
   assert.match(workflow, /branches: \[main\]/);

@@ -148,6 +148,30 @@ test("workflow-run deployment rebuilds current main without consuming upstream a
   assert.match(translation, /PORTFOLIO_USE_EXISTING_BUILD=1 pnpm a11y:lighthouse/);
 });
 
+test("no-op translation completions cannot cancel provenance-approved build or deployment jobs", () => {
+  const workflow = fs.readFileSync(new URL("../.github/workflows/deploy.yml", import.meta.url), "utf8");
+  const jobs = Object.fromEntries(
+    [...workflow.matchAll(/^  (\w+):\n([\s\S]*?)(?=^  \w+:\n|(?![\s\S]))/gm)].map(([, name, body]) => [name, body])
+  );
+
+  // Workflow concurrency runs before provenance can reject a successful no-op.
+  assert.doesNotMatch(workflow, /^concurrency:/m);
+  assert.doesNotMatch(jobs.provenance, /^    concurrency:/m);
+  assert.match(jobs.build, /^    needs: provenance$/m);
+  assert.match(jobs.build, /^    if: \$\{\{ needs\.provenance\.outputs\.proceed == 'true' \}\}$/m);
+  assert.match(
+    jobs.build,
+    /^    concurrency:\n      group: cloudflare-pages-build-\$\{\{ github\.ref \}\}\n      cancel-in-progress: true$/m
+  );
+  // A deployment only enters its separate group after its approved build succeeds.
+  assert.match(jobs.deploy, /^    needs: build$/m);
+  assert.match(jobs.deploy, /^    if: \$\{\{ github\.ref == 'refs\/heads\/main' \}\}$/m);
+  assert.match(
+    jobs.deploy,
+    /^    concurrency:\n      group: cloudflare-pages-deploy-\$\{\{ github\.ref \}\}\n      cancel-in-progress: true$/m
+  );
+});
+
 test("publication rejects leaked markers even when its recorded output hash matches", (t) => {
   const f = fixture(t);
   const output = "abstract: Leaked ZXQLOCK00016QXZ text\n";

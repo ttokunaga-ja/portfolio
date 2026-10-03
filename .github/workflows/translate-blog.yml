@@ -20,7 +20,7 @@ on:
         type: boolean
         default: false
       maxArticles:
-        description: "Maximum API requests in this run (1–3; at most 5 total per input)"
+        description: "Maximum requests this run (1–3; at most 5 per article per JA sync push)"
         required: true
         type: number
         default: 2
@@ -76,6 +76,7 @@ jobs:
           PILOT_SLUGS: ${{ steps.prepare.outputs.slugs }}
           MAX_ARTICLES: ${{ steps.prepare.outputs.max }}
           BLOG_TRANSLATION_RESERVATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          BLOG_TRANSLATION_BUDGET_WINDOW: ${{ steps.prepare.outputs.budget_window }}
         run: |
           node scripts/translate-blog.mjs reserve --slugs "$PILOT_SLUGS" --max-articles "$MAX_ARTICLES"
           node --input-type=module -e 'import fs from "node:fs"; const report = JSON.parse(fs.readFileSync("reports/blog-translation-summary.json", "utf8")); fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_work=${report.reserved.length > 0}\n`);'
@@ -133,6 +134,7 @@ jobs:
           BLOG_TRANSLATION_ALLOW_API: "1"
           BLOG_TRANSLATION_FREE_TIER_CONFIRMED: "1"
           BLOG_TRANSLATION_RESERVATION_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+          BLOG_TRANSLATION_BUDGET_WINDOW: ${{ steps.prepare.outputs.budget_window }}
           PILOT_SLUGS: ${{ steps.prepare.outputs.slugs }}
           MAX_ARTICLES: ${{ steps.prepare.outputs.max }}
         run: node scripts/translate-blog.mjs run --slugs "$PILOT_SLUGS" --max-articles "$MAX_ARTICLES"

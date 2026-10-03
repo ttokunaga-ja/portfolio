@@ -10,6 +10,7 @@ import {
   PROMPT_VERSION,
   restoreAndValidate,
   TRANSLATION_MODEL,
+  translationAbstractDiagnostics,
   translationRequest
 } from "../scripts/blog-translation-core.mjs";
 import { splitTranslationBody } from "../scripts/blog-translation-segments.mjs";
@@ -414,6 +415,119 @@ test("a reserved final attempt can succeed, and repeated runs are idempotent", a
   assert.equal(calls, 1);
 });
 
+test("source-push windows renew exhausted budgets once and retain the old five attempts", async (t) => {
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  let ms = Date.parse("2026-10-02T12:00:00Z");
+  const opts = { root, env: consent, slugs: [PILOT_SLUGS[0]], now: () => new Date(ms).toISOString() };
+  const statePath = join(root, "translations/blog-en-state.json");
+  for (let i = 1; i <= 5; i++) {
+    await runTranslations({ ...opts, mode: "reserve", reservationId: `100-${i}` });
+    ms += 24 * 60 * 60 * 1000;
+  }
+  const legacyState = JSON.parse(await readFile(statePath, "utf8"));
+  legacyState.entries[PILOT_SLUGS[0]].status = "exhausted";
+  legacyState.entries[PILOT_SLUGS[0]].reason = "output_validation";
+  legacyState.entries[PILOT_SLUGS[0]].validationCode = "abstract_format";
+  await writeFile(statePath, JSON.stringify(legacyState));
+  const { budgetHistory: _history, ...oldEntry } = legacyState.entries[PILOT_SLUGS[0]];
+  const budgetWindow = "a".repeat(40);
+  assert.equal(
+    (await runTranslations({ ...opts, mode: "reserve", reservationId: "200-1", budgetWindow })).reserved.length,
+    1
+  );
+  let entry = JSON.parse(await readFile(statePath, "utf8")).entries[PILOT_SLUGS[0]];
+  assert.equal(entry.attemptCount, 1);
+  assert.deepEqual(entry.budgetHistory, [oldEntry]);
+  assert.equal(
+    (await runTranslations({ ...opts, mode: "reserve", reservationId: "200-1", budgetWindow })).reserved.length,
+    0
+  );
+  await assert.rejects(
+    runTranslations({
+      ...opts,
+      mode: "run",
+      reservationId: "200-1",
+      budgetWindow: "b".repeat(40),
+      translate: () => assert.fail("stale reservation")
+    }),
+    /Budget window/
+  );
+  for (let i = 2; i <= 5; i++) {
+    ms += 24 * 60 * 60 * 1000;
+    await runTranslations({ ...opts, mode: "reserve", reservationId: `200-${i}`, budgetWindow });
+  }
+  ms += 24 * 60 * 60 * 1000;
+  assert.equal(
+    (await runTranslations({ ...opts, mode: "reserve", reservationId: "200-6", budgetWindow })).reserved.length,
+    0
+  );
+  const result = await runTranslations({
+    ...opts,
+    mode: "run",
+    reservationId: "200-5",
+    budgetWindow,
+    translate: async (input) => fakeTranslation(input)
+  });
+  assert.equal(result.generated.length, 1);
+  entry = JSON.parse(await readFile(statePath, "utf8")).entries[PILOT_SLUGS[0]];
+  assert.equal(entry.budgetWindow, budgetWindow);
+  assert.deepEqual(entry.budgetHistory, [oldEntry]);
+  const next = await runTranslations({
+    ...opts,
+    mode: "reserve",
+    reservationId: "300-1",
+    budgetWindow: "c".repeat(40)
+  });
+  assert.equal(next.unchanged.length, 1);
+  assert.equal(next.reserved.length, 0);
+});
+
+test("new push budgets preserve project quota cooldown and manual output ownership", async (t) => {
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const opts = { root, env: consent, slugs: [PILOT_SLUGS[0]], now: () => "2026-10-02T12:00:00Z" };
+  await runTranslations({
+    ...opts,
+    mode: "run",
+    translate: async () => {
+      throw Object.assign(new Error("quota"), { status: 429 });
+    }
+  });
+  const result = await runTranslations({
+    ...opts,
+    mode: "reserve",
+    reservationId: "200-1",
+    budgetWindow: "a".repeat(40)
+  });
+  assert.equal(result.reserved.length, 0);
+  assert.equal(result.waiting[0].reason, "quota_cooldown");
+  await mkdir(join(root, "content/en/blog"), { recursive: true });
+  await writeFile(join(root, `content/en/blog/${PILOT_SLUGS[0]}.md`), "Human English\n");
+  assert.equal(
+    (await runTranslations({ ...opts, mode: "reserve", reservationId: "200-2", budgetWindow: "b".repeat(40) })).manual
+      .length,
+    1
+  );
+});
+
+test("invalid budget keys and archived counts fail before reserving or accessing the API", async (t) => {
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const opts = { root, env: consent, slugs: [PILOT_SLUGS[0]], mode: "reserve", reservationId: "123-1" };
+  await assert.rejects(runTranslations({ ...opts, budgetWindow: "not-a-commit" }), /Invalid budget window/);
+  await mkdir(join(root, "translations"), { recursive: true });
+  for (const archived of [
+    { attemptCount: 6 },
+    { attemptCount: -1 },
+    { budgetWindow: "invalid" },
+    { budgetHistory: [] }
+  ]) {
+    await writeFile(
+      join(root, "translations/blog-en-state.json"),
+      JSON.stringify({ schemaVersion: 1, entries: { [PILOT_SLUGS[0]]: { budgetHistory: [archived] } } })
+    );
+    await assert.rejects(runTranslations(opts), /Invalid|Nested/);
+  }
+});
+
 test("placeholder credentials are rejected before a network request", () => {
   for (const apiKey of ["REPLACE_WITH_YOUR_FREE_TIER_KEY", "YOUR_GEMINI_KEY", "PLACEHOLDER", ""]) {
     assert.throws(() => createGeminiTranslator({ apiKey, fetchImpl: () => assert.fail("no network") }));
@@ -494,6 +608,61 @@ test("invalid-output diagnostics contain fixed codes without response data", asy
   const state = await readFile(join(root, "translations/blog-en-state.json"), "utf8");
   assert.ok(!state.includes("999"));
   assert.equal(JSON.parse(state).entries[PILOT_SLUGS[0]].validationCode, "numbers_title");
+});
+
+test("abstract format diagnostics distinguish length, line breaks and angle brackets without changing rejection", async () => {
+  const { translationValidationCode } = await import("../scripts/blog-translation-core.mjs");
+  const input = createTranslationInput({ title: "題名", abstract: "概要", body: "Plain paragraph." });
+  const base = { title: "English title", abstract: "English summary.", body: input.body };
+  for (const [abstract, expected] of [
+    ["x".repeat(1601), { characterCount: 1601, exceedsLength: true, hasLineBreak: false, hasAngleBracket: false }],
+    ["English\nsummary", { characterCount: 15, exceedsLength: false, hasLineBreak: true, hasAngleBracket: false }],
+    ["English <summary>", { characterCount: 17, exceedsLength: false, hasLineBreak: false, hasAngleBracket: true }]
+  ]) {
+    let error;
+    try {
+      restoreAndValidate(input, { ...base, abstract });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.equal(translationValidationCode(error), "abstract_format");
+    assert.deepEqual(translationAbstractDiagnostics(input, { ...base, abstract }), expected);
+  }
+  assert.equal(translationAbstractDiagnostics(input, { ...base, abstract: 123 }), null);
+  assert.equal(translationAbstractDiagnostics(input, null), null);
+});
+
+test("abstract diagnostics inspect trusted segment reassembly and persist only fixed facts", async (t) => {
+  const input = createTranslationInput({ title: "Title", abstract: "6 ステップ", body: "Plain paragraph." });
+  const payload = JSON.parse(translationRequest(input).input);
+  const candidate = {
+    titleSegments: payload.titleSegments.map(({ text }) => text),
+    abstractSegments: payload.abstractSegments.map(({ text }) => text.replace("ステップ", "Steps\nhere")),
+    bodySegments: payload.segments.map(({ text }) => text)
+  };
+  const diagnostics = translationAbstractDiagnostics(input, candidate);
+  assert.equal(diagnostics.hasLineBreak, true);
+  assert.equal(diagnostics.hasAngleBracket, false);
+  assert.throws(() => restoreAndValidate(input, candidate), /Invalid translated abstract/);
+
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const result = await runTranslations({
+    root,
+    mode: "run",
+    slugs: [PILOT_SLUGS[0]],
+    env: consent,
+    translate: async (source) => ({ ...fakeTranslation(source), abstract: "English\nprivate summary" })
+  });
+  assert.equal(result.failed[0].validationCode, "abstract_format");
+  assert.deepEqual(result.failed[0].abstractDiagnostics, {
+    characterCount: 23,
+    exceedsLength: false,
+    hasLineBreak: true,
+    hasAngleBracket: false
+  });
+  const state = await readFile(join(root, "translations/blog-en-state.json"), "utf8");
+  assert.deepEqual(JSON.parse(state).entries[PILOT_SLUGS[0]].abstractDiagnostics, result.failed[0].abstractDiagnostics);
+  assert.ok(!state.includes("private summary"));
 });
 
 test("manual rejected-output recovery keeps counts and cannot permit a sixth request", async (t) => {

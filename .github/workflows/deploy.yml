@@ -24,10 +24,6 @@ env:
   VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
   VITE_TRIAL_AUTH_API_ORIGIN: ${{ vars.VITE_TRIAL_AUTH_API_ORIGIN }}
 
-concurrency:
-  group: cloudflare-pages-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   provenance:
     name: Verify deployment source
@@ -60,6 +56,10 @@ jobs:
     name: Build and verify
     needs: provenance
     if: ${{ needs.provenance.outputs.proceed == 'true' }}
+    # Only provenance-approved runs can cancel a build for the same ref.
+    concurrency:
+      group: cloudflare-pages-build-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -144,6 +144,9 @@ jobs:
     # Direct Upload production is restricted to main, including a manually
     # dispatched run that explicitly selects the main ref.
     if: ${{ github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: cloudflare-pages-deploy-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: read
       deployments: write
