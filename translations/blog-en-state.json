@@ -9,7 +9,52 @@
       "reservationId": null,
       "reason": "output_validation",
       "nextAttemptAt": null,
-      "validationCode": "marker_count"
+      "validationCode": "slot_markdown",
+      "numericDiagnostics": {
+        "title": {
+          "expectedTokenCount": 0,
+          "returnedSegmentDigitCount": 0
+        },
+        "abstract": {
+          "expectedTokenCount": 1,
+          "returnedSegmentDigitCount": 0
+        },
+        "body": {
+          "expectedTokenCount": 7,
+          "returnedSegmentDigitCount": 0
+        }
+      },
+      "model": "gemini-3.5-flash-lite",
+      "promptVersion": "blog-en-v1",
+      "protocolVersion": "title-body-slots-v4",
+      "budgetWindow": "323bce71f0466f3f8079c51413fa5001681629e2",
+      "budgetHistory": [
+        {
+          "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
+          "attemptCount": 5,
+          "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
+          "status": "exhausted",
+          "reservationId": null,
+          "reason": "output_validation",
+          "nextAttemptAt": null,
+          "validationCode": "abstract_format",
+          "numericDiagnostics": {
+            "title": {
+              "expectedTokenCount": 0,
+              "returnedSegmentDigitCount": 0
+            },
+            "abstract": {
+              "expectedTokenCount": 1,
+              "returnedSegmentDigitCount": 0
+            },
+            "body": {
+              "expectedTokenCount": 7,
+              "returnedSegmentDigitCount": 0
+            }
+          }
+        }
+      ],
+      "requestAllowance": 2
     },
     "2026-02-03-debezium-cdc-introduction": {
       "status": "ready",
