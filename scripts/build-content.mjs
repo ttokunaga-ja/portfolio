@@ -6,6 +6,7 @@ import sharp from "sharp";
 import { parseFrontmatter } from "./frontmatter.mjs";
 import { assertSafeMarkdownTokens } from "./markdown-security.mjs";
 import { getBlogTranslationEligibility } from "./blog-translation-eligibility.mjs";
+import { excerptFromMarkdown } from "./blog-excerpt.mjs";
 
 const root = process.cwd();
 const contentDir = join(root, "content");
@@ -571,7 +572,7 @@ for (const file of files) {
   const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(normalizeZennDirectives(parsed.content)), {
     renderer: createMarkdownRenderer(context, toc)
   });
-  const tags = normalizeArray(data.tags);
+  const tags = collection === "blog" ? [] : normalizeArray(data.tags);
   const startDate = firstString(data.startDate);
   const endDate = firstString(data.endDate);
   if (data.endDateExpected !== undefined && typeof data.endDateExpected !== "boolean") {
@@ -601,7 +602,7 @@ for (const file of files) {
   const period =
     collection === "experience" ? formatExperiencePeriod(startLabel, endLabel, locale) : firstString(data.period);
 
-  for (const required of ["title", "abstract"]) {
+  for (const required of collection === "blog" ? ["title"] : ["title", "abstract"]) {
     if (!data[required]) {
       throw new Error(`${normalized} is missing frontmatter field: ${required}`);
     }
@@ -613,7 +614,10 @@ for (const file of files) {
     slug,
     title: firstString(data.title),
     subtitle: firstString(data.subtitle),
-    abstract: firstString(data.abstract),
+    abstract:
+      collection === "blog"
+        ? excerptFromMarkdown(parsed.content) || firstString(data.title)
+        : firstString(data.abstract),
     role: firstString(data.role),
     period,
     startDate,
