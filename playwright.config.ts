@@ -11,6 +11,9 @@ if (useExistingBuild && requiredBuildOutputs.some((path) => !existsSync(path))) 
 
 export default defineConfig({
   testDir: "./tests",
+  // Node unit tests run separately; importing them here executes them during
+  // browser-test discovery and competes with the interactive accessibility tests.
+  testMatch: "**/*.spec.ts",
   timeout: 30_000,
   expect: {
     timeout: 5_000

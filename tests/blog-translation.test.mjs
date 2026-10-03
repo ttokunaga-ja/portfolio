@@ -248,7 +248,7 @@ test("concurrent source or output changes are not overwritten", async (t) => {
   assert.equal(await readFile(join(root, `content/en/blog/${PILOT_SLUGS[0]}.md`), "utf8"), "Human content");
 });
 
-test("official REST adapter makes one fixed-endpoint request with stateless structured output", async () => {
+test("official REST adapter makes two staged fixed-endpoint requests with stateless structured output", async () => {
   const input = createTranslationInput({ title: "Title", abstract: "Summary", body: sampleBody });
   let calls = 0;
   const translate = createGeminiTranslator({
@@ -263,10 +263,12 @@ test("official REST adapter makes one fixed-endpoint request with stateless stru
       assert.equal(request.response_format.mime_type, "application/json");
       assert.ok(!request.input.includes("console.log"));
       const payload = JSON.parse(request.input);
-      assert.equal(payload.bodyContext, input.body);
-      assert.ok(payload.segments.every(({ text }) => !/ZXQLOCK\d+QXZ/.test(text)));
-      assert.equal(request.response_format.schema.properties.bodySegments.minItems, payload.segments.length);
-      assert.equal(request.response_format.schema.properties.bodySegments.maxItems, payload.segments.length);
+      assert.ok(!Object.keys(payload).some((key) => /abstract|tags/i.test(key)));
+      const field = calls === 1 ? "titleSegments" : "bodySegments";
+      assert.deepEqual(Object.keys(payload), [calls === 1 ? "titleContext" : "bodyContext", field]);
+      assert.ok(payload[field].every(({ text }) => !/ZXQLOCK\d+QXZ/.test(text)));
+      assert.equal(request.response_format.schema.properties[field].minItems, payload[field].length);
+      assert.equal(request.response_format.schema.properties[field].maxItems, payload[field].length);
       return new Response(
         JSON.stringify({
           status: "completed",
@@ -276,11 +278,7 @@ test("official REST adapter makes one fixed-endpoint request with stateless stru
               content: [
                 {
                   type: "text",
-                  text: JSON.stringify({
-                    titleSegments: ["English title"],
-                    abstractSegments: ["English summary."],
-                    bodySegments: splitTranslationBody(input.body).segments
-                  })
+                  text: JSON.stringify({ [field]: payload[field].map(({ text }) => text) })
                 }
               ]
             }
@@ -289,8 +287,8 @@ test("official REST adapter makes one fixed-endpoint request with stateless stru
       );
     }
   });
-  assert.equal(restoreAndValidate(input, await translate(input, TRANSLATION_MODEL)).title, "English title");
-  assert.equal(calls, 1);
+  assert.equal((await translate(input, TRANSLATION_MODEL)).title, "Title");
+  assert.equal(calls, 2);
   const quota = createGeminiTranslator({
     apiKey: "unit-test-not-a-real-key",
     fetchImpl: async () => new Response("provider-secret", { status: 429 })
@@ -786,5 +784,5 @@ test("protocol repair keeps the existing attempt allowance and cached successful
   assert.equal(after.entries[PILOT_SLUGS[0]].attemptCount, 3);
   assert.equal(after.entries[PILOT_SLUGS[0]].inputHash, before.entries[PILOT_SLUGS[0]].inputHash);
   assert.deepEqual(after.entries[PILOT_SLUGS[1]], before.entries[PILOT_SLUGS[1]]);
-  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "locked-segments-v3");
+  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "title-body-slots-v4");
 });

@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseFrontmatter } from "./frontmatter.mjs";
 import { isPublicBlogTranslationSource } from "./blog-translation-eligibility.mjs";
+import { excerptFromMarkdown } from "./blog-excerpt.mjs";
 import {
   assertSlug,
   contentHash,
@@ -15,7 +16,9 @@ import {
   TRANSLATION_MODEL,
   TRANSLATION_PROTOCOL_VERSION,
   translationAbstractDiagnostics,
-  translationRequest,
+  translationStageRequest,
+  validateTitleStage,
+  assembleBodyStage,
   translationValidationCode,
   translationNumericDiagnostics
 } from "./blog-translation-core.mjs";
@@ -66,6 +69,7 @@ async function readState(root) {
         Number.isInteger(entry.attemptCount) && entry.attemptCount >= 0 && entry.attemptCount <= MAX_ATTEMPTS,
         "Invalid attempt count"
       );
+    if (entry.requestAllowance !== undefined) assert.equal(entry.requestAllowance, 2, "Invalid request allowance");
     if (entry.nextAttemptAt != null)
       assert.ok(Number.isFinite(Date.parse(entry.nextAttemptAt)), "Invalid retry timestamp");
     if (entry.budgetWindow != null) assert.match(entry.budgetWindow, /^[a-f0-9]{40}$/, "Invalid budget window");
@@ -108,13 +112,13 @@ export function createGeminiTranslator({ apiKey, fetchImpl = fetch }) {
     typeof apiKey === "string" && apiKey.trim() && !/REPLACE_WITH|YOUR_.*KEY|PLACEHOLDER/i.test(apiKey),
     "GEMINI_API_KEY is required"
   );
-  return async (input, model) => {
+  const requestStage = async (input, model, stage) => {
     const response = await fetchImpl(apiEndpoint, {
       method: "POST",
       redirect: "error",
       signal: AbortSignal.timeout(90_000),
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(translationRequest(input, model))
+      body: JSON.stringify(translationStageRequest(input, stage, model))
     });
     if (!response.ok) {
       let payload;
@@ -141,6 +145,26 @@ export function createGeminiTranslator({ apiKey, fetchImpl = fetch }) {
     const text = lastOutput.content.map((part) => part.text).join("");
     return JSON.parse(text);
   };
+  const translator = async (input, model) => {
+    const titleCandidate = await requestStage(input, model, "title");
+    let title;
+    try {
+      title = validateTitleStage(input, titleCandidate);
+    } catch (error) {
+      error.outputValidation = true;
+      throw error;
+    }
+    const bodyCandidate = await requestStage(input, model, "body");
+    try {
+      const body = assembleBodyStage(input, bodyCandidate);
+      return restoreAndValidate(input, { title, abstract: "Derived from body", body }, { deriveAbstract: true });
+    } catch (error) {
+      error.outputValidation = true;
+      throw error;
+    }
+  };
+  translator.protocolVersion = TRANSLATION_PROTOCOL_VERSION;
+  return translator;
 }
 
 export async function runTranslations({
@@ -240,7 +264,7 @@ export async function runTranslations({
       summary.waiting.push({ slug, reason: "source_not_public" });
       continue;
     }
-    assert.ok(typeof source.title === "string" && typeof source.abstract === "string", "Source metadata missing");
+    assert.ok(typeof source.title === "string" && source.title.trim(), "Source metadata missing");
     const previous = Object.hasOwn(state.entries, slug) ? state.entries[slug] : {};
     const outputPath = join(root, "content/en/blog", `${slug}.md`);
     const output = await optionalRead(outputPath);
@@ -279,6 +303,8 @@ export async function runTranslations({
       reservationId &&
       sameInput &&
       previous.status === "reserved" &&
+      previous.requestAllowance === 2 &&
+      previous.protocolVersion === TRANSLATION_PROTOCOL_VERSION &&
       previous.reservationId === reservationId;
     if (mode === "reserve" && !newWindow && sameInput && previous.reservationId === reservationId) {
       summary.waiting.push({ slug, reason: "already_reserved", attemptCount });
@@ -315,7 +341,11 @@ export async function runTranslations({
     }
     let input;
     try {
-      input = createTranslationInput({ title: source.title, abstract: source.abstract, body });
+      const abstract =
+        translate?.protocolVersion === TRANSLATION_PROTOCOL_VERSION
+          ? excerptFromMarkdown(body) || source.title
+          : (source.abstract ?? (excerptFromMarkdown(body) || source.title));
+      input = createTranslationInput({ title: source.title, abstract, body });
     } catch {
       summary.failed.push({ slug, reason: "source_validation" });
       state.entries[slug] = {
@@ -335,6 +365,7 @@ export async function runTranslations({
       ...previous,
       inputHash,
       attemptCount: counted,
+      requestAllowance: 2,
       model,
       promptVersion: PROMPT_VERSION,
       protocolVersion: TRANSLATION_PROTOCOL_VERSION,
@@ -358,6 +389,28 @@ export async function runTranslations({
     try {
       candidate = await translate(input, model);
     } catch (error) {
+      if (error.outputValidation) {
+        const validationCode = translationValidationCode(error);
+        const structureDiagnostics = error.structureDiagnostics;
+        state.entries[slug] = {
+          ...state.entries[slug],
+          status: "exhausted",
+          reason: "output_validation",
+          validationCode,
+          ...(structureDiagnostics ? { structureDiagnostics } : {}),
+          reservationId: null,
+          nextAttemptAt: null
+        };
+        summary.failed.push({
+          slug,
+          reason: "output_validation",
+          validationCode,
+          ...(structureDiagnostics ? { structureDiagnostics } : {}),
+          attemptCount: counted
+        });
+        await checkpoint();
+        continue;
+      }
       const decision = retryDecision(error, counted, nowMs, random);
       state.entries[slug] = { ...state.entries[slug], ...decision, reservationId: null };
       const report = { slug, reason: decision.reason, attemptCount: counted, nextAttemptAt: decision.nextAttemptAt };
@@ -374,10 +427,14 @@ export async function runTranslations({
     }
     let translated;
     try {
-      translated = restoreAndValidate(input, candidate);
+      // Production adapter has already restored and validated its structural
+      // slots; injected legacy translators retain their original test contract.
+      translated =
+        translate.protocolVersion === TRANSLATION_PROTOCOL_VERSION ? candidate : restoreAndValidate(input, candidate);
     } catch (error) {
       const validationCode = translationValidationCode(error);
       const numericDiagnostics = translationNumericDiagnostics(input, candidate);
+      const structureDiagnostics = error.structureDiagnostics;
       const abstractDiagnostics =
         validationCode === "abstract_format" ? translationAbstractDiagnostics(input, candidate) : null;
       summary.failed.push({
@@ -385,6 +442,7 @@ export async function runTranslations({
         reason: "output_validation",
         validationCode,
         numericDiagnostics,
+        ...(structureDiagnostics ? { structureDiagnostics } : {}),
         ...(abstractDiagnostics ? { abstractDiagnostics } : {}),
         attemptCount: counted
       });
@@ -394,6 +452,7 @@ export async function runTranslations({
         reason: "output_validation",
         validationCode,
         numericDiagnostics,
+        ...(structureDiagnostics ? { structureDiagnostics } : {}),
         ...(abstractDiagnostics ? { abstractDiagnostics } : {}),
         nextAttemptAt: null,
         reservationId: null
