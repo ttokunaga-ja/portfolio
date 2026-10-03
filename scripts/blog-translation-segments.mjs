@@ -1,17 +1,22 @@
 import assert from "node:assert/strict";
 
-const markerPattern = /(ZXQLOCK\d{5}QXZ)/g;
+const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // The model translates text segments; only this trusted code assembles markers.
 // This protocol repair deliberately retains the existing prompt/input attempt
 // allowance. It neither resets counters nor retranslates cached successes.
-export function splitTranslationBody(body) {
-  const parts = body.split(markerPattern);
+export function splitTranslationBody(body, names = []) {
+  const alternatives = [
+    "ZXQLOCK\\d{5}QXZ",
+    ...[...names].sort((a, b) => b.length - a.length).map(escape),
+    "[+-]?\\d+(?:[.,]\\d+)*%?"
+  ];
+  const parts = body.split(new RegExp(`(${alternatives.join("|")})`, "g"));
   return { parts, segments: parts.filter((_, index) => index % 2 === 0).map((part) => part.trim()) };
 }
 
-export function assembleTranslationBody(body, segments) {
-  const { parts, segments: original } = splitTranslationBody(body);
+export function assembleTranslationBody(body, segments, names = []) {
+  const { parts, segments: original } = splitTranslationBody(body, names);
   assert.ok(Array.isArray(segments) && segments.length === original.length, "Invalid body segment count");
   for (let index = 0; index < segments.length; index++) {
     assert.equal(typeof segments[index], "string", "Invalid body segment type");
