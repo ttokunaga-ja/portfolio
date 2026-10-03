@@ -5,11 +5,11 @@
       "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
       "attemptCount": 3,
       "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
-      "status": "reserved",
-      "reservationId": "37082072013-1",
-      "reason": "request_reserved",
-      "nextAttemptAt": "2026-10-03T04:26:53.493Z",
-      "validationCode": "marker_count"
+      "status": "exhausted",
+      "reservationId": null,
+      "reason": "output_validation",
+      "nextAttemptAt": null,
+      "validationCode": "numbers_abstract"
     },
     "2026-02-03-debezium-cdc-introduction": {
       "status": "ready",
