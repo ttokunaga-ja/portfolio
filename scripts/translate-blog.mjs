@@ -13,6 +13,7 @@ import {
   restoreAndValidate,
   serializeTranslation,
   TRANSLATION_MODEL,
+  TRANSLATION_PROTOCOL_VERSION,
   translationRequest,
   translationValidationCode
 } from "./blog-translation-core.mjs";
@@ -366,6 +367,7 @@ export async function runTranslations({
       outputHash: contentHash(serialized),
       model,
       promptVersion: PROMPT_VERSION,
+      protocolVersion: TRANSLATION_PROTOCOL_VERSION,
       generatedAt
     };
     // Checkpoint after each successful article. An interruption may leave an
