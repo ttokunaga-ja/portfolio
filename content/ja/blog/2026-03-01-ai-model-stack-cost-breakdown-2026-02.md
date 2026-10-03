@@ -22,16 +22,14 @@ AIモデルを開発や日常の作業に組み込む際、すべてをAPI（従
 
 ## 📊 利用総額・コスト推移と合計トークン数
 
-:::message
-以下の金額には、ChatGPT PlusやClaude Proなどのサブスクリプション月額料金は含まれていません。あくまで**API単体の従量課金分**です。Claude Proの月払いは税抜\$20、日本の消費税10%を含めて\$22です。日本円は 1 USD = 150円 のざっくり換算です。
-:::
+API課金額はサブスク月額を除いた従量課金分です。日本円は1 USD = 150円で換算しています。
 
 * **今月のAPI使用総額**: **\$87.64**（約13,100円）
 * **先月のAPI使用総額**: **\$231.68**（前月比: **-\$144.04**）
 * **API累計使用金額**: **\$851.50**（2025年10月から）
 * **今月の合計トークン数**: **約5,402万トークン**
-* **入力トークン数**: **52,955,374トークン**
-* **出力トークン数**: **1,061,828トークン**
+* **入力トークン数**: **約5,296万トークン**
+* **出力トークン数**: **約106万トークン**
 
 2月は1月より大きく利用量が減りました。Claude Codeを使いながら、Clineなどのエディタ拡張と比べた操作感の違いも少しずつ見えてきた月です。
 
@@ -42,7 +40,7 @@ Anthropic APIを使いつつも、重い処理の回数が減ったことでコ�
 ## 🥇 Anthropic API
 
 * **主な用途**: Claude Codeでの開発、Clineとの使い比べ、コードレビュー、設計相談
-* **今月の消費トークン数**: **54,017,202トークン**
+* **今月の消費トークン数**: **約5,402万トークン**
 * **今月のAPIコスト**: **\$87.64**
 
 **💡 使用感・感想**
@@ -50,11 +48,9 @@ Claude系モデルは、相談の質が高いぶん「ここぞ」という場�
 
 Claude Codeは、まとまった作業を対話しながら進めやすい一方、Clineはエディタの中で変更確認までつながる体験が分かりやすいです。2月はその使い分けを探っていた月でもあります。
 
-![Anthropic ConsoleのUsageダッシュボードスクリーンショット](/images/blog/2026-03-01-ai-model-stack-cost-breakdown-2026-02/2026-03-01-ai-model-stack-cost-breakdown-2026-02/anthropic-usage.png)
-*2026年2月のAnthropic API利用量です*
+![Anthropic APIの使用状況](/images/blog/2026-03-01-ai-model-stack-cost-breakdown-2026-02/2026-03-01-ai-model-stack-cost-breakdown-2026-02/anthropic-usage.png)
 
-![Anthropic ConsoleのCostダッシュボードスクリーンショット](/images/blog/2026-03-01-ai-model-stack-cost-breakdown-2026-02/2026-03-01-ai-model-stack-cost-breakdown-2026-02/anthropic-cost.png)
-*2026年2月のAnthropic APIコストは\$87.64でした*
+![Anthropic APIのコスト](/images/blog/2026-03-01-ai-model-stack-cost-breakdown-2026-02/2026-03-01-ai-model-stack-cost-breakdown-2026-02/anthropic-cost.png)
 
 ---
 
