@@ -56,8 +56,7 @@ async function readState(root) {
   );
   if (state.cooldownUntil != null)
     assert.ok(Number.isFinite(Date.parse(state.cooldownUntil)), "Invalid quota cooldown");
-  for (const [slug, entry] of Object.entries(state.entries)) {
-    assertSlug(slug);
+  const validateEntry = (entry, historical = false) => {
     assert.ok(entry && typeof entry === "object" && !Array.isArray(entry), "Invalid translation state entry");
     for (const key of ["sourceHash", "outputHash", "pendingSourceHash", "inputHash"]) {
       if (entry[key] !== undefined) assert.match(entry[key], /^[a-f0-9]{64}$/, "Invalid recorded hash");
@@ -69,6 +68,18 @@ async function readState(root) {
       );
     if (entry.nextAttemptAt != null)
       assert.ok(Number.isFinite(Date.parse(entry.nextAttemptAt)), "Invalid retry timestamp");
+    if (entry.budgetWindow != null) assert.match(entry.budgetWindow, /^[a-f0-9]{40}$/, "Invalid budget window");
+    for (const key of ["model", "promptVersion", "protocolVersion", "status", "reason"])
+      if (entry[key] !== undefined) assert.equal(typeof entry[key], "string", `Invalid ${key}`);
+    if (historical) assert.equal(entry.budgetHistory, undefined, "Nested budget history is invalid");
+    else if (entry.budgetHistory !== undefined) {
+      assert.ok(Array.isArray(entry.budgetHistory), "Invalid budget history");
+      for (const archived of entry.budgetHistory) validateEntry(archived, true);
+    }
+  };
+  for (const [slug, entry] of Object.entries(state.entries)) {
+    assertSlug(slug);
+    validateEntry(entry);
   }
   return state;
 }
@@ -142,7 +153,8 @@ export async function runTranslations({
   env = process.env,
   now = () => new Date().toISOString(),
   random = Math.random,
-  reservationId = env.BLOG_TRANSLATION_RESERVATION_ID
+  reservationId = env.BLOG_TRANSLATION_RESERVATION_ID,
+  budgetWindow = env.BLOG_TRANSLATION_BUDGET_WINDOW || null
 } = {}) {
   assert.ok(["plan", "reserve", "run"].includes(mode), "Mode must be plan, reserve or run");
   assert.equal(model, TRANSLATION_MODEL, "Only the reviewed translation model is enabled");
@@ -166,6 +178,10 @@ export async function runTranslations({
   }
   if (mode === "reserve")
     assert.match(reservationId ?? "", /^[0-9]+-[0-9]+$/, "A workflow run-attempt reservation ID is required");
+  if (budgetWindow !== null) {
+    assert.match(budgetWindow, /^[a-f0-9]{40}$/, "Invalid budget window");
+    if (mode === "run") assert.ok(reservationId, "A budget window requires a durable reservation");
+  }
   const state = await readState(root);
   const checkpoint = () => atomicWrite(join(root, stateRelativePath), `${JSON.stringify(state, null, 2)}\n`);
   const writing = mode !== "plan";
@@ -248,13 +264,26 @@ export async function runTranslations({
     summary.pending.push(slug);
     const inputHash = contentHash(JSON.stringify({ sourceHash, model, promptVersion: PROMPT_VERSION }));
     const sameInput = previous.inputHash === inputHash;
-    const attemptCount = sameInput ? (previous.attemptCount ?? 0) : 0;
+    // Only reservation can open a trusted source-push window. Preserve the full
+    // sanitized prior entry, including failed attempts and protocol diagnostics.
+    const newWindow = budgetWindow !== null && previous.budgetWindow !== budgetWindow;
+    if (mode === "run" && (newWindow || (previous.budgetWindow ?? null) !== budgetWindow)) {
+      throw new Error("Budget window does not match the persisted reservation");
+    }
+    const sameBudget = !newWindow && (sameInput || previous.budgetWindow != null);
+    const attemptCount = sameBudget ? (previous.attemptCount ?? 0) : 0;
+    const { budgetHistory: priorHistory = [], ...snapshot } = previous;
+    const budgetHistory = !sameBudget && previous.inputHash ? [...priorHistory, snapshot] : priorHistory;
     const reserved =
       mode === "run" &&
       reservationId &&
       sameInput &&
       previous.status === "reserved" &&
       previous.reservationId === reservationId;
+    if (mode === "reserve" && !newWindow && sameInput && previous.reservationId === reservationId) {
+      summary.waiting.push({ slug, reason: "already_reserved", attemptCount });
+      continue;
+    }
     const manualValidationRetry =
       mode === "reserve" &&
       env.GITHUB_EVENT_NAME === "workflow_dispatch" &&
@@ -263,7 +292,7 @@ export async function runTranslations({
       previous.status === "exhausted" &&
       attemptCount < MAX_ATTEMPTS;
     if (
-      sameInput &&
+      sameBudget &&
       (previous.status === "exhausted" || attemptCount >= MAX_ATTEMPTS) &&
       !reserved &&
       !manualValidationRetry
@@ -275,7 +304,7 @@ export async function runTranslations({
       summary.waiting.push({ slug, reason: "not_reserved" });
       continue;
     }
-    if (!reserved && sameInput && previous.nextAttemptAt && Date.parse(previous.nextAttemptAt) > nowMs) {
+    if (!reserved && sameBudget && previous.nextAttemptAt && Date.parse(previous.nextAttemptAt) > nowMs) {
       summary.waiting.push({ slug, reason: "cooldown", nextAttemptAt: previous.nextAttemptAt, attemptCount });
       continue;
     }
@@ -295,7 +324,9 @@ export async function runTranslations({
         pendingSourceHash: sourceHash,
         reason: "source_validation",
         inputHash,
-        attemptCount
+        attemptCount,
+        budgetWindow: budgetWindow ?? previous.budgetWindow ?? null,
+        budgetHistory
       };
       continue;
     }
@@ -304,6 +335,11 @@ export async function runTranslations({
       ...previous,
       inputHash,
       attemptCount: counted,
+      model,
+      promptVersion: PROMPT_VERSION,
+      protocolVersion: TRANSLATION_PROTOCOL_VERSION,
+      budgetWindow: budgetWindow ?? previous.budgetWindow ?? null,
+      budgetHistory,
       pendingSourceHash: sourceHash,
       status: "reserved",
       reservationId: reservationId ?? null,
@@ -377,6 +413,8 @@ export async function runTranslations({
       status: "ready",
       inputHash,
       attemptCount: counted,
+      budgetWindow: state.entries[slug].budgetWindow,
+      budgetHistory: state.entries[slug].budgetHistory,
       sourceHash,
       outputHash: contentHash(serialized),
       model,
