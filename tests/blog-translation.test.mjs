@@ -10,6 +10,7 @@ import {
   PROMPT_VERSION,
   restoreAndValidate,
   TRANSLATION_MODEL,
+  translationAbstractDiagnostics,
   translationRequest
 } from "../scripts/blog-translation-core.mjs";
 import { splitTranslationBody } from "../scripts/blog-translation-segments.mjs";
@@ -494,6 +495,61 @@ test("invalid-output diagnostics contain fixed codes without response data", asy
   const state = await readFile(join(root, "translations/blog-en-state.json"), "utf8");
   assert.ok(!state.includes("999"));
   assert.equal(JSON.parse(state).entries[PILOT_SLUGS[0]].validationCode, "numbers_title");
+});
+
+test("abstract format diagnostics distinguish length, line breaks and angle brackets without changing rejection", async () => {
+  const { translationValidationCode } = await import("../scripts/blog-translation-core.mjs");
+  const input = createTranslationInput({ title: "題名", abstract: "概要", body: "Plain paragraph." });
+  const base = { title: "English title", abstract: "English summary.", body: input.body };
+  for (const [abstract, expected] of [
+    ["x".repeat(1601), { characterCount: 1601, exceedsLength: true, hasLineBreak: false, hasAngleBracket: false }],
+    ["English\nsummary", { characterCount: 15, exceedsLength: false, hasLineBreak: true, hasAngleBracket: false }],
+    ["English <summary>", { characterCount: 17, exceedsLength: false, hasLineBreak: false, hasAngleBracket: true }]
+  ]) {
+    let error;
+    try {
+      restoreAndValidate(input, { ...base, abstract });
+    } catch (caught) {
+      error = caught;
+    }
+    assert.equal(translationValidationCode(error), "abstract_format");
+    assert.deepEqual(translationAbstractDiagnostics(input, { ...base, abstract }), expected);
+  }
+  assert.equal(translationAbstractDiagnostics(input, { ...base, abstract: 123 }), null);
+  assert.equal(translationAbstractDiagnostics(input, null), null);
+});
+
+test("abstract diagnostics inspect trusted segment reassembly and persist only fixed facts", async (t) => {
+  const input = createTranslationInput({ title: "Title", abstract: "6 ステップ", body: "Plain paragraph." });
+  const payload = JSON.parse(translationRequest(input).input);
+  const candidate = {
+    titleSegments: payload.titleSegments.map(({ text }) => text),
+    abstractSegments: payload.abstractSegments.map(({ text }) => text.replace("ステップ", "Steps\nhere")),
+    bodySegments: payload.segments.map(({ text }) => text)
+  };
+  const diagnostics = translationAbstractDiagnostics(input, candidate);
+  assert.equal(diagnostics.hasLineBreak, true);
+  assert.equal(diagnostics.hasAngleBracket, false);
+  assert.throws(() => restoreAndValidate(input, candidate), /Invalid translated abstract/);
+
+  const root = await fixture(t, [PILOT_SLUGS[0]]);
+  const result = await runTranslations({
+    root,
+    mode: "run",
+    slugs: [PILOT_SLUGS[0]],
+    env: consent,
+    translate: async (source) => ({ ...fakeTranslation(source), abstract: "English\nprivate summary" })
+  });
+  assert.equal(result.failed[0].validationCode, "abstract_format");
+  assert.deepEqual(result.failed[0].abstractDiagnostics, {
+    characterCount: 23,
+    exceedsLength: false,
+    hasLineBreak: true,
+    hasAngleBracket: false
+  });
+  const state = await readFile(join(root, "translations/blog-en-state.json"), "utf8");
+  assert.deepEqual(JSON.parse(state).entries[PILOT_SLUGS[0]].abstractDiagnostics, result.failed[0].abstractDiagnostics);
+  assert.ok(!state.includes("private summary"));
 });
 
 test("manual rejected-output recovery keeps counts and cannot permit a sixth request", async (t) => {

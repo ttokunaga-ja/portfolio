@@ -14,6 +14,7 @@ import {
   serializeTranslation,
   TRANSLATION_MODEL,
   TRANSLATION_PROTOCOL_VERSION,
+  translationAbstractDiagnostics,
   translationRequest,
   translationValidationCode,
   translationNumericDiagnostics
@@ -341,11 +342,14 @@ export async function runTranslations({
     } catch (error) {
       const validationCode = translationValidationCode(error);
       const numericDiagnostics = translationNumericDiagnostics(input, candidate);
+      const abstractDiagnostics =
+        validationCode === "abstract_format" ? translationAbstractDiagnostics(input, candidate) : null;
       summary.failed.push({
         slug,
         reason: "output_validation",
         validationCode,
         numericDiagnostics,
+        ...(abstractDiagnostics ? { abstractDiagnostics } : {}),
         attemptCount: counted
       });
       state.entries[slug] = {
@@ -354,6 +358,7 @@ export async function runTranslations({
         reason: "output_validation",
         validationCode,
         numericDiagnostics,
+        ...(abstractDiagnostics ? { abstractDiagnostics } : {}),
         nextAttemptAt: null,
         reservationId: null
       };

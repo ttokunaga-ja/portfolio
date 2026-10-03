@@ -311,3 +311,24 @@ export function translationNumericDiagnostics(input, candidate) {
   }
   return result;
 }
+
+// The archived `abstract_format` code covers three independent checks. Return
+// only fixed-shape facts about a future rejected candidate, never its text.
+export function translationAbstractDiagnostics(input, candidate) {
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+  let abstract;
+  try {
+    abstract = Object.hasOwn(candidate, "abstractSegments")
+      ? assembleTranslationBody(input.abstract, candidate.abstractSegments, glossary)
+      : candidate.abstract;
+  } catch {
+    return null;
+  }
+  if (typeof abstract !== "string") return null;
+  return {
+    characterCount: abstract.length,
+    exceedsLength: abstract.length > 1600,
+    hasLineBreak: /[\r\n]/.test(abstract),
+    hasAngleBracket: /[<>]/.test(abstract)
+  };
+}

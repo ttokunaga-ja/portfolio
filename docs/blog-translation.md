@@ -128,6 +128,8 @@ In draft-only mode, inspect the English text, attribution and source hashes, app
 
 An `output_validation` result now includes a fixed `validationCode` such as `numbers_body`, `marker_count`, or `markdown_structure`. No assertion actual/expected values, response text or provider error body is recorded. All validators remain enforced.
 
+For a future `abstract_format` rejection, `abstractDiagnostics` records only the assembled abstract's character count and fixed booleans for the 1,600-character limit, line breaks, and angle brackets. The original `validationCode` remains `abstract_format` for existing state and reporting. Older failures cannot be classified retrospectively without the rejected output, which is intentionally not retained. These diagnostics do not relax the validator or permit another request after five attempts.
+
 Only a deliberate manual dispatch with `retryValidation: true` may reserve one more attempt for an output-validation rejection. It preserves the existing attempt count and never permits a sixth request for the same input. Scheduled runs ignore this option; credential/request errors, human edits, and other terminal failures cannot be reopened by it. Use this option only after reviewing the failure or to obtain the first safe diagnostic from an older result that lacked a code.
 
 ### Locked-segment response protocol
