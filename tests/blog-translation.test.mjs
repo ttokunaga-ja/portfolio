@@ -276,8 +276,8 @@ test("official REST adapter makes one fixed-endpoint request with stateless stru
                 {
                   type: "text",
                   text: JSON.stringify({
-                    title: "English title",
-                    abstract: "English summary.",
+                    titleSegments: ["English title"],
+                    abstractSegments: ["English summary."],
                     bodySegments: splitTranslationBody(input.body).segments
                   })
                 }
@@ -288,7 +288,7 @@ test("official REST adapter makes one fixed-endpoint request with stateless stru
       );
     }
   });
-  assert.equal((await translate(input, TRANSLATION_MODEL)).title, "English title");
+  assert.equal(restoreAndValidate(input, await translate(input, TRANSLATION_MODEL)).title, "English title");
   assert.equal(calls, 1);
   const quota = createGeminiTranslator({
     apiKey: "unit-test-not-a-real-key",
@@ -571,7 +571,7 @@ test("segment reconstruction retains all downstream validation checks", () => {
     () =>
       restoreAndValidate(input, {
         ...candidate,
-        bodySegments: segments.map((x) => x.replace("Item | 2", "Item | 999"))
+        bodySegments: segments.map((x) => x.replace("Item", "Item 999"))
       }),
     /Numeric literals/
   );
@@ -617,5 +617,5 @@ test("protocol repair keeps the existing attempt allowance and cached successful
   assert.equal(after.entries[PILOT_SLUGS[0]].attemptCount, 3);
   assert.equal(after.entries[PILOT_SLUGS[0]].inputHash, before.entries[PILOT_SLUGS[0]].inputHash);
   assert.deepEqual(after.entries[PILOT_SLUGS[1]], before.entries[PILOT_SLUGS[1]]);
-  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "locked-segments-v1");
+  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "locked-segments-v2");
 });
