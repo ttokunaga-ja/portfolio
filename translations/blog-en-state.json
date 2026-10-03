@@ -5,11 +5,11 @@
       "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
       "attemptCount": 1,
       "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
-      "status": "reserved",
-      "reservationId": "37101852044-1",
-      "reason": "request_reserved",
-      "nextAttemptAt": "2026-10-03T07:04:45.565Z",
-      "validationCode": "abstract_format",
+      "status": "exhausted",
+      "reservationId": null,
+      "reason": "output_validation",
+      "nextAttemptAt": null,
+      "validationCode": "markdown_structure",
       "numericDiagnostics": {
         "title": {
           "expectedTokenCount": 0,
