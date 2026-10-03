@@ -1,17 +1,39 @@
 import assert from "node:assert/strict";
 
-const markerPattern = /(ZXQLOCK\d{5}QXZ)/g;
-
 // The model translates text segments; only this trusted code assembles markers.
 // This protocol repair deliberately retains the existing prompt/input attempt
 // allowance. It neither resets counters nor retranslates cached successes.
-export function splitTranslationBody(body) {
-  const parts = body.split(markerPattern);
+export function splitTranslationBody(body, names = []) {
+  assert.ok(
+    Array.isArray(names) &&
+      names.length <= 100 &&
+      names.every((name) => typeof name === "string" && name.length > 0 && name.length <= 160),
+    "Invalid protected names"
+  );
+  const fixedNames = [...names].sort((a, b) => b.length - a.length);
+  const parts = [];
+  let cursor = 0;
+  while (cursor < body.length) {
+    const match = body.slice(cursor).match(/ZXQLOCK\d{5}QXZ|[+-]?\d+(?:[.,]\d+)*%?/);
+    let at = match ? cursor + match.index : Infinity;
+    let value = match?.[0];
+    for (const name of fixedNames) {
+      const found = body.indexOf(name, cursor);
+      if (found >= 0 && found < at) {
+        at = found;
+        value = name;
+      }
+    }
+    if (at === Infinity) break;
+    parts.push(body.slice(cursor, at), value);
+    cursor = at + value.length;
+  }
+  parts.push(body.slice(cursor));
   return { parts, segments: parts.filter((_, index) => index % 2 === 0).map((part) => part.trim()) };
 }
 
-export function assembleTranslationBody(body, segments) {
-  const { parts, segments: original } = splitTranslationBody(body);
+export function assembleTranslationBody(body, segments, names = []) {
+  const { parts, segments: original } = splitTranslationBody(body, names);
   assert.ok(Array.isArray(segments) && segments.length === original.length, "Invalid body segment count");
   for (let index = 0; index < segments.length; index++) {
     assert.equal(typeof segments[index], "string", "Invalid body segment type");
