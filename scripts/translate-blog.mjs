@@ -15,7 +15,8 @@ import {
   TRANSLATION_MODEL,
   TRANSLATION_PROTOCOL_VERSION,
   translationRequest,
-  translationValidationCode
+  translationValidationCode,
+  translationNumericDiagnostics
 } from "./blog-translation-core.mjs";
 
 import { errorHints, MAX_ATTEMPTS, retryDecision } from "./blog-translation-retry.mjs";
@@ -339,12 +340,20 @@ export async function runTranslations({
       translated = restoreAndValidate(input, candidate);
     } catch (error) {
       const validationCode = translationValidationCode(error);
-      summary.failed.push({ slug, reason: "output_validation", validationCode, attemptCount: counted });
+      const numericDiagnostics = translationNumericDiagnostics(input, candidate);
+      summary.failed.push({
+        slug,
+        reason: "output_validation",
+        validationCode,
+        numericDiagnostics,
+        attemptCount: counted
+      });
       state.entries[slug] = {
         ...state.entries[slug],
         status: "exhausted",
         reason: "output_validation",
         validationCode,
+        numericDiagnostics,
         nextAttemptAt: null,
         reservationId: null
       };
