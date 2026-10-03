@@ -617,5 +617,5 @@ test("protocol repair keeps the existing attempt allowance and cached successful
   assert.equal(after.entries[PILOT_SLUGS[0]].attemptCount, 3);
   assert.equal(after.entries[PILOT_SLUGS[0]].inputHash, before.entries[PILOT_SLUGS[0]].inputHash);
   assert.deepEqual(after.entries[PILOT_SLUGS[1]], before.entries[PILOT_SLUGS[1]]);
-  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "locked-segments-v2");
+  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "locked-segments-v3");
 });

@@ -112,3 +112,60 @@ test("protected names are literal strings, never executable regex patterns", () 
   }
   assert.throws(() => splitTranslationBody("text", [""]), /protected names/);
 });
+
+test("actual Git metadata distinguishes duplicated digits from changed numeric boundary punctuation", async () => {
+  const { translationRequest, restoreAndValidate, translationNumericDiagnostics } =
+    await import("../scripts/blog-translation-core.mjs");
+  const { data, content } = parseFrontmatter(
+    fs.readFileSync(new URL("../content/ja/blog/2025-12-25-git-branch-splitting.md", import.meta.url), "utf8")
+  );
+  const input = createTranslationInput({ ...data, body: content });
+  const payload = JSON.parse(translationRequest(input).input);
+  const candidate = {
+    titleSegments: ["", "Minimal Steps to Safely Create a Branch from main"],
+    abstractSegments: [
+      "",
+      "provides a quick way to create branches from main, with tips for avoiding mistakes. All images show operations using",
+      "status bar. Procedure (",
+      "steps) Always Pull first to update. Run Git: Pull from the Source Control view or Command Palette to align local main with the remote. When main appears at the bottom left"
+    ],
+    bodySegments: payload.segments.map(({ text }) =>
+      text.replace(/[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/gu, "x")
+    )
+  };
+  assert.equal((restoreAndValidate(input, candidate).abstract.match(/[+-]?\d+(?:[.,]\d+)*%?/g) ?? []).join(","), "6");
+  const duplicate = {
+    ...candidate,
+    abstractSegments: candidate.abstractSegments.map((x, i) => (i === 3 ? `6 ${x}` : x))
+  };
+  assert.throws(() => restoreAndValidate(input, duplicate), /Numeric literals in prose segment/);
+  assert.equal(translationNumericDiagnostics(input, duplicate).abstract.returnedSegmentDigitCount, 1);
+  const boundary = {
+    ...candidate,
+    abstractSegments: candidate.abstractSegments.map((x, i) => (i === 2 ? x.replace("(", "-") : x))
+  };
+  assert.throws(() => restoreAndValidate(input, boundary), /Numeric literals changed in translation: abstract/);
+  assert.equal(translationNumericDiagnostics(input, boundary).abstract.returnedSegmentDigitCount, 0);
+  assert.equal(translationNumericDiagnostics(input, boundary).abstract.expectedTokenCount, 1);
+});
+
+test("supported tuple schemas constrain literal fragments and describe only their own source", async () => {
+  const { translationRequest } = await import("../scripts/blog-translation-core.mjs");
+  const input = createTranslationInput({ title: "VS Code の入門", abstract: "6 ステップ", body: "## 手順\n\n1. 項目" });
+  const request = translationRequest(input);
+  const payload = JSON.parse(request.input);
+  for (const [field, source] of [
+    ["titleSegments", payload.titleSegments],
+    ["abstractSegments", payload.abstractSegments],
+    ["bodySegments", payload.segments]
+  ]) {
+    const schema = request.response_format.schema.properties[field];
+    assert.equal(schema.prefixItems.length, source.length);
+    assert.ok(!Object.hasOwn(schema.items, "pattern"));
+    for (let i = 0; i < source.length; i++) {
+      const slot = schema.prefixItems[i];
+      if (slot.enum) assert.deepEqual(slot.enum, [source[i].text]);
+      else assert.ok(slot.description.includes(JSON.stringify(source[i].text)));
+    }
+  }
+});

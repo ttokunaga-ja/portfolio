@@ -38,6 +38,7 @@ export function assembleTranslationBody(body, segments, names = []) {
   for (let index = 0; index < segments.length; index++) {
     assert.equal(typeof segments[index], "string", "Invalid body segment type");
     assert.ok(!/ZXQLOCK\d+QXZ/.test(segments[index]), "Model supplied a protected marker");
+    assert.ok(!/[0-9]/.test(segments[index]), "Numeric literals in prose segment");
     if (!original[index].trim()) assert.equal(segments[index], original[index], "Whitespace segment changed");
   }
   let index = 0;
