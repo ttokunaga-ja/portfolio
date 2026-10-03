@@ -12,6 +12,7 @@ import {
   TRANSLATION_MODEL,
   translationRequest
 } from "../scripts/blog-translation-core.mjs";
+import { splitTranslationBody } from "../scripts/blog-translation-segments.mjs";
 import { createGeminiTranslator, parseArguments, runTranslations } from "../scripts/translate-blog.mjs";
 
 const consent = { BLOG_TRANSLATION_ALLOW_API: "1", BLOG_TRANSLATION_FREE_TIER_CONFIRMED: "1" };
@@ -260,10 +261,29 @@ test("official REST adapter makes one fixed-endpoint request with stateless stru
       assert.equal(request.store, false);
       assert.equal(request.response_format.mime_type, "application/json");
       assert.ok(!request.input.includes("console.log"));
+      const payload = JSON.parse(request.input);
+      assert.equal(payload.bodyContext, input.body);
+      assert.ok(payload.segments.every(({ text }) => !/ZXQLOCK\d+QXZ/.test(text)));
+      assert.equal(request.response_format.schema.properties.bodySegments.minItems, payload.segments.length);
+      assert.equal(request.response_format.schema.properties.bodySegments.maxItems, payload.segments.length);
       return new Response(
         JSON.stringify({
           status: "completed",
-          steps: [{ type: "model_output", content: [{ type: "text", text: JSON.stringify(fakeTranslation(input)) }] }]
+          steps: [
+            {
+              type: "model_output",
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    title: "English title",
+                    abstract: "English summary.",
+                    bodySegments: splitTranslationBody(input.body).segments
+                  })
+                }
+              ]
+            }
+          ]
         })
       );
     }
@@ -532,4 +552,70 @@ test("generated title and abstract reject leaked protected markers", () => {
       /Unresolved marker in translation metadata/
     );
   }
+});
+
+test("segment reconstruction retains all downstream validation checks", () => {
+  const input = createTranslationInput({ title: "Title", abstract: "Summary", body: sampleBody });
+  const segments = splitTranslationBody(input.body).segments;
+  const candidate = { title: "English title", abstract: "English summary.", bodySegments: segments };
+  assert.equal(restoreAndValidate(input, candidate).body, sampleBody);
+  assert.throws(
+    () =>
+      restoreAndValidate(input, {
+        ...candidate,
+        bodySegments: segments.map((x) => x.replace("## Overview", "Overview"))
+      }),
+    /Markdown structure/
+  );
+  assert.throws(
+    () =>
+      restoreAndValidate(input, {
+        ...candidate,
+        bodySegments: segments.map((x) => x.replace("Item | 2", "Item | 999"))
+      }),
+    /Numeric literals/
+  );
+  assert.throws(() => restoreAndValidate(input, { ...candidate, bodySegments: segments.slice(1) }), /segment count/);
+  assert.throws(() => restoreAndValidate(input, { ...candidate, abstract: "ZXQLOCK00001QXZ" }), /metadata/);
+});
+
+test("protocol repair keeps the existing attempt allowance and cached successful article", async (t) => {
+  const root = await fixture(t);
+  const opts = { root, env: consent };
+  const invalid = async (input) =>
+    input.title === "日本語タイトル" ? { title: "Wrong", abstract: "Wrong", body: "missing" } : fakeTranslation(input);
+  await runTranslations({
+    ...opts,
+    mode: "run",
+    slugs: [PILOT_SLUGS[1]],
+    translate: async (input) => fakeTranslation(input)
+  });
+  await runTranslations({ ...opts, mode: "run", slugs: [PILOT_SLUGS[0]], translate: invalid });
+  const env = { ...consent, GITHUB_EVENT_NAME: "workflow_dispatch", BLOG_TRANSLATION_RETRY_VALIDATION: "true" };
+  await runTranslations({ ...opts, mode: "reserve", slugs: [PILOT_SLUGS[0]], reservationId: "123-2", env });
+  await runTranslations({ ...opts, mode: "run", slugs: [PILOT_SLUGS[0]], reservationId: "123-2", translate: invalid });
+  const before = JSON.parse(await readFile(join(root, "translations/blog-en-state.json"), "utf8"));
+  await runTranslations({ ...opts, mode: "reserve", reservationId: "123-3", env });
+  let calls = 0;
+  const result = await runTranslations({
+    ...opts,
+    mode: "run",
+    reservationId: "123-3",
+    translate: async (input) => {
+      calls++;
+      return {
+        title: "English title",
+        abstract: "English summary.",
+        bodySegments: splitTranslationBody(input.body).segments
+      };
+    }
+  });
+  assert.equal(calls, 1);
+  assert.deepEqual(result.generated, [PILOT_SLUGS[0]]);
+  assert.deepEqual(result.unchanged, [PILOT_SLUGS[1]]);
+  const after = JSON.parse(await readFile(join(root, "translations/blog-en-state.json"), "utf8"));
+  assert.equal(after.entries[PILOT_SLUGS[0]].attemptCount, 3);
+  assert.equal(after.entries[PILOT_SLUGS[0]].inputHash, before.entries[PILOT_SLUGS[0]].inputHash);
+  assert.deepEqual(after.entries[PILOT_SLUGS[1]], before.entries[PILOT_SLUGS[1]]);
+  assert.equal(after.entries[PILOT_SLUGS[0]].protocolVersion, "locked-segments-v1");
 });

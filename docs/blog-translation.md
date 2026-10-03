@@ -129,3 +129,9 @@ In draft-only mode, inspect the English text, attribution and source hashes, app
 An `output_validation` result now includes a fixed `validationCode` such as `numbers_body`, `marker_count`, or `markdown_structure`. No assertion actual/expected values, response text or provider error body is recorded. All validators remain enforced.
 
 Only a deliberate manual dispatch with `retryValidation: true` may reserve one more attempt for an output-validation rejection. It preserves the existing attempt count and never permits a sixth request for the same input. Scheduled runs ignore this option; credential/request errors, human edits, and other terminal failures cannot be reopened by it. Use this option only after reviewing the failure or to obtain the first safe diagnostic from an older result that lacked a code.
+
+### Locked-segment response protocol
+
+The `locked-segments-v1` protocol returns an ordered array of translated text segments. The request includes the entire masked article as context, but trusted code alone reassembles the original protected code/link/name boundaries and their whitespace. Missing/extra segments or model-supplied markers are rejected. All existing numeric, language, Markdown, metadata, source and publication checks still apply after reassembly.
+
+This is a transport repair to the existing `blog-en-v1` semantic translation contract. It deliberately retains the existing input hash and attempt allowance; it does not reset the five-attempt cap or regenerate cached successful articles. New generated state/frontmatter records the protocol version. An operator recovering the Git pilot should manually select only `2025-12-25-git-branch-splitting`, `maxArticles: 1`, and `retryValidation: true`; the successful Debezium article remains unchanged.
