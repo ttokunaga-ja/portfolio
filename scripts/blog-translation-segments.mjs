@@ -1,17 +1,34 @@
 import assert from "node:assert/strict";
 
-const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 // The model translates text segments; only this trusted code assembles markers.
 // This protocol repair deliberately retains the existing prompt/input attempt
 // allowance. It neither resets counters nor retranslates cached successes.
 export function splitTranslationBody(body, names = []) {
-  const alternatives = [
-    "ZXQLOCK\\d{5}QXZ",
-    ...[...names].sort((a, b) => b.length - a.length).map(escape),
-    "[+-]?\\d+(?:[.,]\\d+)*%?"
-  ];
-  const parts = body.split(new RegExp(`(${alternatives.join("|")})`, "g"));
+  assert.ok(
+    Array.isArray(names) &&
+      names.length <= 100 &&
+      names.every((name) => typeof name === "string" && name.length > 0 && name.length <= 160),
+    "Invalid protected names"
+  );
+  const fixedNames = [...names].sort((a, b) => b.length - a.length);
+  const parts = [];
+  let cursor = 0;
+  while (cursor < body.length) {
+    const match = body.slice(cursor).match(/ZXQLOCK\d{5}QXZ|[+-]?\d+(?:[.,]\d+)*%?/);
+    let at = match ? cursor + match.index : Infinity;
+    let value = match?.[0];
+    for (const name of fixedNames) {
+      const found = body.indexOf(name, cursor);
+      if (found >= 0 && found < at) {
+        at = found;
+        value = name;
+      }
+    }
+    if (at === Infinity) break;
+    parts.push(body.slice(cursor, at), value);
+    cursor = at + value.length;
+  }
+  parts.push(body.slice(cursor));
   return { parts, segments: parts.filter((_, index) => index % 2 === 0).map((part) => part.trim()) };
 }
 

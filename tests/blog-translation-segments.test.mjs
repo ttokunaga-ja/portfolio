@@ -102,3 +102,13 @@ test("metadata protocol preserves exact 6 rather than requiring the model to rew
   };
   assert.throws(() => restoreAndValidate(input, altered), /Numeric literals/);
 });
+
+test("protected names are literal strings, never executable regex patterns", () => {
+  for (const name of ["A+B", "Example (Tool)", "name.*", "a[1]"]) {
+    const body = `Use ${name} and 6 steps.`;
+    const result = splitTranslationBody(body, [name]);
+    assert.equal(assembleTranslationBody(body, result.segments, [name]), body);
+    assert.ok(result.parts.includes(name));
+  }
+  assert.throws(() => splitTranslationBody("text", [""]), /protected names/);
+});
