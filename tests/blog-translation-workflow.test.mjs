@@ -166,7 +166,7 @@ test("only canonical JA synchronization commits establish persistent push budget
   for (const event of ["push", "schedule", "workflow_dispatch"]) {
     f.env.GITHUB_EVENT_NAME = event;
     succeeds(f.run("prepare-translation"));
-    assert.match(fs.readFileSync(f.env.GITHUB_OUTPUT, "utf8"), new RegExp(`budget_window=${sourceCommit}\\n`));
+    assert.ok(fs.readFileSync(f.env.GITHUB_OUTPUT, "utf8").includes(`budget_window=${sourceCommit}\n`));
   }
   for (const file of ["config.txt", article]) {
     f.write(file, "unrelated commit\n");
