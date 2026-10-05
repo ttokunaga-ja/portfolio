@@ -1,5 +1,5 @@
 ---
-title: "Claude Code・Codexの利用量をCSVで集計するCLI「aiUsage」を作りました"
+title: "Claude Code・Codexの利用量をCSVで集計するCLI「aiUsage」を作った"
 abstract: "Claude CodeやCodexを使っていて、「今月はどのモデルを、どれくらい使ったのか」を確認したくなったことはありませんか。 私は毎月のAI利用量を記事にまとめています。そのたびに保存ログを調べ、モデルごとにトークン数を集計し、API単価で換算する作業をしていました。この作業をコマンド1つで実行できるようにしたのが、Rust製のCLI aiUsage "
 publishedAt: "2026-10-04"
 canonicalUrl: "https://zenn.dev/t_tokunaga/articles/2026-10-04-aiusage-cli"
