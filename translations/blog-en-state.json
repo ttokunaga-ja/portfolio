@@ -5,10 +5,10 @@
       "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
       "attemptCount": 1,
       "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
-      "status": "exhausted",
-      "reservationId": null,
-      "reason": "output_validation",
-      "nextAttemptAt": null,
+      "status": "reserved",
+      "reservationId": "37569324322-1",
+      "reason": "request_reserved",
+      "nextAttemptAt": "2026-10-07T05:00:10.152Z",
       "validationCode": "slot_markdown",
       "numericDiagnostics": {
         "title": {
@@ -27,7 +27,7 @@
       "model": "gemini-3.5-flash-lite",
       "promptVersion": "blog-en-v1",
       "protocolVersion": "title-body-slots-v4",
-      "budgetWindow": "942819ed7ec3fd87c23f0a690632c611f16ff74a",
+      "budgetWindow": "5f3b8160e9015f7ee5066916ad4b72b3d37d9f39",
       "budgetHistory": [
         {
           "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
@@ -138,6 +138,35 @@
           "promptVersion": "blog-en-v1",
           "protocolVersion": "title-body-slots-v4",
           "budgetWindow": "0612f617277e7cae63baa72cf7c006ade1c22095",
+          "requestAllowance": 2
+        },
+        {
+          "inputHash": "06ec93106e14df918d33acc5aea6e003f958b3c7518d2a818520285dd2daaa4a",
+          "attemptCount": 1,
+          "pendingSourceHash": "3984e9de4ad0c37e41d6d48a502e1c53cdc166b19a308d50991a067e3cb7ed66",
+          "status": "exhausted",
+          "reservationId": null,
+          "reason": "output_validation",
+          "nextAttemptAt": null,
+          "validationCode": "slot_markdown",
+          "numericDiagnostics": {
+            "title": {
+              "expectedTokenCount": 0,
+              "returnedSegmentDigitCount": 0
+            },
+            "abstract": {
+              "expectedTokenCount": 1,
+              "returnedSegmentDigitCount": 0
+            },
+            "body": {
+              "expectedTokenCount": 7,
+              "returnedSegmentDigitCount": 0
+            }
+          },
+          "model": "gemini-3.5-flash-lite",
+          "promptVersion": "blog-en-v1",
+          "protocolVersion": "title-body-slots-v4",
+          "budgetWindow": "942819ed7ec3fd87c23f0a690632c611f16ff74a",
           "requestAllowance": 2
         }
       ],
