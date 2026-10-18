@@ -67,9 +67,10 @@ export const resources = {
         operationFailedWithDetails: "処理に失敗しました。{{code}}: {{message}}"
       },
       home: {
-        title: "徳永拓未 / Takumi Tokunaga",
+        title: "徳永拓未",
         updatesLabel: "最新の更新",
-        lead: "研究を支えるシステムと、日常の課題を解くソフトウェアを開発しています。",
+        viewCollection: "{{collection}}の一覧へ",
+        lead: "立命館大学で研究に取り組み、社会実装を目指して個人開発を行っています。",
         introduction:
           "立命館大学で情報理工学を学びながら、研究システムと個人開発に取り組んでいます。個人開発では、GoによるAPI、RustによるCLI、ブラウザで使えるツールを制作しています。",
         contributions:
@@ -184,7 +185,8 @@ export const resources = {
       home: {
         title: "Takumi Tokunaga",
         updatesLabel: "Latest updates",
-        lead: "I build systems for research and software for everyday problems.",
+        viewCollection: "All {{collection}}",
+        lead: "I conduct research at Ritsumeikan University and build independent software for real-world applications.",
         introduction:
           "I study information science and engineering at Ritsumeikan University and work on research systems and independent software projects. My independent projects include APIs in Go, command-line tools in Rust, and browser-based utilities.",
         contributions:
