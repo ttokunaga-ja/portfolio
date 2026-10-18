@@ -44,6 +44,8 @@ Blog posts are generated from the sibling `zenn-content` repository. Do not edit
 `content/ja/blog` or `public/images/blog` directly; they are mirrored on the next
 `zenn-content` push.
 
+`pnpm dev` and `pnpm preview` first fetch `origin/main` (with a 15-second timeout) and check that the managed blog directories match its committed trees and have no local changes. If this check fails, preserve local work and update the checkout before retrying. This check never merges, switches branches, or regenerates blog files; blog synchronization runs only in GitHub Actions. Normal `pnpm preview` then rebuilds the site before serving it, preventing an older `dist/` from appearing after a checkout update. GitHub Actions skips the local freshness check, and browser tests and Lighthouse serve their verified build directly without rebuilding it.
+
 English blog translation is an optional, disabled-by-default draft-PR workflow.
 See [the translation pilot and operator setup](docs/blog-translation.md) before
 configuring a Gemini key or enabling transmission. `node scripts/translate-blog.mjs plan`
