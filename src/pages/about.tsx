@@ -1,4 +1,3 @@
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import InfoRoundedIcon from "@mui/icons-material/InfoRounded";
 import { Box, Button, Card, Stack, Typography } from "@mui/material";
@@ -20,7 +19,7 @@ function AboutPage() {
           },
           {
             title: "公開している内容",
-            body: "教育データ検索、local-firstなPDF処理、QRコード生成、3Dブラウザゲームなど、自分で設計・実装・公開した成果物を中心に掲載しています。各プロジェクトページでは、目的、主な機能、技術構成、設計で重視した点、公開・運用方法を分けて説明しています。"
+            body: "共同研究での担当や、教育データ検索、local-firstな知識アーカイブ・PDF処理、QRコード生成、3Dブラウザゲームなどの開発実績を掲載しています。各プロジェクトページでは、目的、主な機能、技術構成、設計で重視した点、公開・運用方法を分けて説明しています。"
           },
           {
             title: "編集方針",
@@ -38,7 +37,7 @@ function AboutPage() {
           },
           {
             title: "Published scope",
-            body: "The site focuses on work I designed, implemented, and published myself, including education-data search, local-first PDF processing, QR code generation, and a browser-based 3D game. Project pages separate purpose, key features, stack choices, design focus, and operations."
+            body: "The site presents my contributions to collaborative research and software work, including education-data search, local-first knowledge archives and PDF processing, QR code generation, and a browser-based 3D game. Project pages separate purpose, key features, stack choices, design focus, and operations."
           },
           {
             title: "Editorial policy",
@@ -53,7 +52,14 @@ function AboutPage() {
   return (
     <>
       <PageHead icon={<InfoRoundedIcon />} title={t("page.aboutTitle")} lead={t("page.aboutLead")} />
-      <Section title={t("page.aboutTitle")} lead={t("page.aboutLead")}>
+      <Section title={t("home.title")} lead={t("home.lead")}>
+        <Stack spacing={2} sx={{ maxWidth: 860 }}>
+          <Typography>{t("home.introduction")}</Typography>
+          <Typography>{t("home.contributions")}</Typography>
+          <Typography>{t("home.educationPlans")}</Typography>
+        </Stack>
+      </Section>
+      <Section title={locale === "ja" ? "サイト運営情報" : "Site information"} tone="paper">
         <Box
           sx={{
             display: "grid",
@@ -83,6 +89,6 @@ function AboutPage() {
   );
 }
 
-export default function AboutRoute({ route, locale, entryDetail }: RoutePageProps) {
+export default function AboutRoute({}: RoutePageProps) {
   return <AboutPage />;
 }

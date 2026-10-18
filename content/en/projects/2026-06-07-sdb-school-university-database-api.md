@@ -33,7 +33,7 @@ links:
 
 sDB is a web page and API for searching Japanese education institutions. It is not limited to universities: it covers multiple institution types, including high schools, graduate schools, universities, junior colleges, technical colleges, advanced technical college programs, and vocational schools.
 
-The main goal is reproducibility. The project is designed so that a searchable database can be rebuilt from official public government information in another environment, without depending on a specific external SaaS or a private-only dataset. The public repository includes data acquisition and processing scripts, the search frontend, and API documentation.
+The main goal is reproducibility. The project is designed so that a searchable database can be rebuilt from official public government information in another environment, without depending on a specific external SaaS or a private-only dataset. The public repository includes Python data acquisition and processing scripts, the search frontend, and API contracts and documentation. The full Go API server code is not included in the public repository.
 
 ![sDB search form](sdb-search-form.jpg)
 

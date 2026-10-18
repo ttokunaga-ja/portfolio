@@ -1,6 +1,7 @@
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import GoogleIcon from "@mui/icons-material/Google";
+import InstagramIcon from "@mui/icons-material/Instagram";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import MailOutlineRoundedIcon from "@mui/icons-material/MailOutlineRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
@@ -86,6 +87,11 @@ function ContactPage() {
       label: "LinkedIn",
       href: "https://www.linkedin.com/in/%E6%8B%93%E6%9C%AA-%E5%BE%B3%E6%B0%B8-725094354/",
       icon: <LinkedInIcon />
+    },
+    {
+      label: "Instagram",
+      href: "https://www.instagram.com/takumi_tokunaga/",
+      icon: <InstagramIcon />
     },
     {
       label: "Mail",
