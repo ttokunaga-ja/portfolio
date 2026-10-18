@@ -5,6 +5,16 @@ for (const locale of ["ja", "en"] as const) {
   test(`${locale}: work states, education plans, and local navigation survive hydration`, async ({ page }) => {
     await page.goto(`${prefix}/`);
     const main = page.locator("main");
+    await expect(main.locator("h1")).toHaveText(locale === "ja" ? "徳永拓未" : "Takumi Tokunaga");
+    await expect(main).toContainText(
+      locale === "ja"
+        ? "立命館大学で研究に取り組み、社会実装を目指して個人開発を行っています。"
+        : "I conduct research at Ritsumeikan University and build independent software for real-world applications."
+    );
+    const portrait = main.locator('header img[src="/images/profile.webp"]');
+    await expect(portrait).toBeVisible();
+    await expect(portrait).toHaveAttribute("alt", "");
+    expect(await portrait.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     const updates = main.getByRole("list", { name: locale === "ja" ? "最新の更新" : "Latest updates" });
     await expect(updates.locator("article")).toHaveCount(3);
     const dates = await updates
@@ -13,7 +23,8 @@ for (const locale of ["ja", "en"] as const) {
     expect(dates).toEqual([...dates].sort().reverse());
     await expect(main.locator('a[href$="/experience/"]')).toHaveCount(0);
     for (const collection of ["research", "projects", "blog"]) {
-      await expect(updates.locator(`a[href*="/${collection}/"]`)).toHaveCount(1);
+      await expect(updates.locator(`a[href*="/${collection}/"]`)).toHaveCount(2);
+      await expect(updates.locator(`a[href="${prefix}/${collection}/"]`)).toHaveCount(1);
     }
 
     for (const viewport of [

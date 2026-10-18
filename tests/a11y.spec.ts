@@ -388,11 +388,11 @@ test.describe("portfolio accessibility", () => {
     expect(html).toContain("トクナガ");
     expect(html).toContain("タクミ");
     expect(html).toContain("Tokunaga Takumi");
-    expect(html).toMatch(/<h1 class="[^"]*">徳永拓未 \/ Takumi Tokunaga<\/h1>/);
+    expect(html).toMatch(/<h1 class="[^"]*">徳永拓未<\/h1>/);
 
     await page.goto("/");
     const visibleText = await page.locator("body").innerText();
-    expect(visibleText).toContain("徳永拓未 / Takumi Tokunaga");
+    await expect(page.locator("h1")).toHaveText("徳永拓未");
     expect(visibleText).not.toContain("德永拓未");
     expect(visibleText).not.toContain("とくながたくみ");
     expect(visibleText).not.toContain("トクナガタクミ");
