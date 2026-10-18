@@ -21,7 +21,15 @@ export default function HomeRoute({ locale }: RoutePageProps) {
           minHeight: { xs: 600, md: 680 },
           mb: { xs: 4, md: 5 },
           backgroundColor: "#101010",
-          color: "#fff"
+          color: "#fff",
+          "&::after": {
+            content: '""',
+            position: "absolute",
+            inset: "auto 0 0",
+            height: { xs: 120, md: 80 },
+            background: "linear-gradient(to bottom, transparent, var(--mui-palette-background-default))",
+            pointerEvents: "none"
+          }
         }}
       >
         <Box
@@ -57,7 +65,7 @@ export default function HomeRoute({ locale }: RoutePageProps) {
             position: "relative",
             width: "100%",
             px: { xs: 3, md: 5 },
-            pb: { xs: "200px", md: 6 },
+            pb: { xs: "200px", md: 12 },
             pt: 5,
             textAlign: "center"
           }}
