@@ -25,7 +25,7 @@ export default defineConfig({
     trace: "on-first-retry"
   },
   webServer: {
-    command: `${useExistingBuild ? "" : "pnpm build && "}pnpm preview --port 4176 --strictPort`,
+    command: `${useExistingBuild ? "" : "pnpm build && "}pnpm exec vite preview --host 127.0.0.1 --port 4176 --strictPort`,
     url: "http://127.0.0.1:4176",
     reuseExistingServer: false,
     timeout: 120_000
