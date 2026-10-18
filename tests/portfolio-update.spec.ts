@@ -44,6 +44,13 @@ for (const locale of ["ja", "en"] as const) {
         await page.goto(`${prefix}${path}`);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         await expect(page.locator("h1")).toHaveCount(1);
+        if (path === "/") {
+          const hero = main.locator("header");
+          const bounds = await hero.boundingBox();
+          expect(bounds?.x).toBe(0);
+          expect(bounds?.width).toBe(viewport.width);
+          await expect(hero).toHaveCSS("border-radius", "0px");
+        }
       }
     }
     await page.goto(`${prefix}/projects/kio/`);
