@@ -89,8 +89,10 @@ experienceType: "education"
 ---
 ```
 
-Experience frontmatter uses `startDate` and optional `endDate` as the source of truth. The build generates month-level labels and period text from those dates. If `endDate` is empty, the UI displays Present. If `endDate` is in the future at build time, the generated end label is marked as planned/expected.
+Experience frontmatter uses `startDate` and optional `endDate` as the source of truth. The build generates month-level labels and period text from those dates. If `endDate` is empty, the UI displays Present. Set `endDateExpected: true` to explicitly mark the generated end label as planned/expected. Dates never automatically turn plans into completed achievements. Planned admissions must also be stated in the title, subtitle, role, abstract, and body.
 Set `experienceType` to `education`, `work`, or `community` to control the timeline dot color.
+
+Home shows one latest entry from each of Research, Projects, and Blog in a single timeline, ordered by date descending. Experience is not promoted on Home. Dates use the existing `publishedAt`, `updatedAt`, `startDate`, then `endDate` precedence and preserve their original precision. Dated entries precede undated entries; ties and undated fallback use `sortOrder`, title, then slug. Featured entries use that same editorial order. Kio has no assumed development start date and remains labeled as in development / CLI pre-release on its listing and detail pages.
 
 ## Deploy
 

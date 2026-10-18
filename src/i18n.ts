@@ -67,17 +67,23 @@ export const resources = {
         operationFailedWithDetails: "処理に失敗しました。{{code}}: {{message}}"
       },
       home: {
-        title: "Takumi Tokunaga",
-        lead: "Research / Projects / Experience",
+        title: "徳永拓未 / Takumi Tokunaga",
+        updatesLabel: "最新の更新",
+        lead: "研究を支えるシステムと、日常の課題を解くソフトウェアを開発しています。",
+        introduction:
+          "立命館大学で情報理工学を学びながら、研究システムと個人開発に取り組んでいます。個人開発では、GoによるAPI、RustによるCLI、ブラウザで使えるツールを制作しています。",
+        contributions:
+          "共同研究のHandSlapRaceでは、サーバー実装と、Unity開発のPMとして実装・進捗確認・品質保証を担当し、リアルタイムゲームの通信品質改善にも取り組みました。",
+        educationPlans:
+          "2027年3月に学部卒業予定。2027年4月に立命館大学大学院へ入学予定で、2029年3月の修士課程修了を予定しています。",
         seoDescription:
-          "徳永拓未（德永拓未 / とくながたくみ / トクナガタクミ / Takumi Tokunaga / Tokunaga Takumi）の個人ホームページです。研究、個人開発プロジェクト、技術スタック、経歴、AI・機械学習、Cloud Run、Firebase、教育支援システムに関する活動を掲載しています。",
-        contentTitle: "Explore"
+          "徳永拓未の研究・開発ポートフォリオ。VR研究でのサーバー実装、Unity開発の実装・進捗確認・品質保証、GoのAPI、RustのCLI、Webツールを紹介します。"
       },
       page: {
         aboutTitle: "About",
-        aboutLead: "運営者情報、このサイトの目的、公開している内容の範囲をまとめています。",
+        aboutLead: "徳永拓未のプロフィール、学歴の予定、研究での担当とサイト運営情報をまとめています。",
         researchTitle: "Research",
-        researchLead: "教育データ、local-first設計、AI活用に関する調査・実装メモをまとめています。",
+        researchLead: "共同研究HandSlapRaceのシステム概要、サーバー実装、Unity開発と品質保証での担当を紹介します。",
         projectsTitle: "Projects",
         projectsLead: "プロジェクトの概要、技術スタック、体験用リンクをまとめています。",
         experienceTitle: "Experience",
@@ -85,7 +91,7 @@ export const resources = {
         blogTitle: "Blog",
         blogLead: "Zennで公開した技術・研究・個人開発に関する記事を掲載しています。",
         skillsTitle: "Skills",
-        skillsLead: "実際のプロジェクトで使っている技術領域と、設計・運用上の関心をカテゴリごとにまとめています。",
+        skillsLead: "Rust、Go、Unity / C#、React、Pythonと品質保証について、扱った内容と具体的な実例を紹介します。",
         contactTitle: "Contact",
         contactLead: "お問い合わせはこちらからお願いします。",
         privacyTitle: "Privacy & Site Policy",
@@ -177,17 +183,23 @@ export const resources = {
       },
       home: {
         title: "Takumi Tokunaga",
-        lead: "Research / Projects / Experience",
+        updatesLabel: "Latest updates",
+        lead: "I build systems for research and software for everyday problems.",
+        introduction:
+          "I study information science and engineering at Ritsumeikan University and work on research systems and independent software projects. My independent projects include APIs in Go, command-line tools in Rust, and browser-based utilities.",
+        contributions:
+          "For the collaborative HandSlapRace project, I handled server implementation and served as the project manager for Unity development, including implementation, progress tracking, and quality assurance. I also worked on improving communication quality in the real-time game.",
+        educationPlans:
+          "I expect to complete my undergraduate studies in March 2027. I plan to enter graduate study at Ritsumeikan University in April 2027, with completion of the master's program expected in March 2029.",
         seoDescription:
-          "Takumi Tokunaga's personal homepage, also written as Tokunaga Takumi, 徳永拓未, 德永拓未, とくながたくみ, and トクナガタクミ, covering research, personal projects, technical skills, experience, AI and machine learning, Cloud Run, Firebase, and education support systems.",
-        contentTitle: "Explore"
+          "Takumi Tokunaga's research and software portfolio, covering VR server implementation, Unity development and QA, Go APIs, Rust command-line tools, and web applications."
       },
       page: {
         aboutTitle: "About",
-        aboutLead: "Operator information, site purpose, and the scope of published content.",
+        aboutLead: "Takumi Tokunaga’s profile, education plans, research contributions, and site information.",
         researchTitle: "Research",
         researchLead:
-          "Research and implementation notes around education data, local-first design, and AI-assisted systems.",
+          "The collaborative HandSlapRace system and my contributions to server implementation, Unity development, and quality assurance.",
         projectsTitle: "Projects",
         projectsLead: "Project summaries, technical stacks, and links to try them.",
         experienceTitle: "Experience",
@@ -195,7 +207,8 @@ export const resources = {
         blogTitle: "Blog",
         blogLead: "Articles on technology, research, and independent development, originally published on Zenn.",
         skillsTitle: "Skills",
-        skillsLead: "Technical areas used in real projects, grouped by implementation and operations focus.",
+        skillsLead:
+          "Rust, Go, Unity / C#, React, Python, and quality assurance, with descriptions and concrete project evidence.",
         contactTitle: "Contact",
         contactLead: "Use these links to get in touch.",
         privacyTitle: "Privacy & Site Policy",

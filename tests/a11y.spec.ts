@@ -368,7 +368,10 @@ test.describe("portfolio accessibility", () => {
     await expect(page.getByText("著者", { exact: true })).toHaveCount(0);
   });
 
-  test("home page keeps personal search terms in source-only metadata", async ({ request, page }) => {
+  test("home page shows the chosen name while keeping alternate search spellings in metadata", async ({
+    request,
+    page
+  }) => {
     const response = await request.get("/");
     expect(response.ok()).toBeTruthy();
 
@@ -385,16 +388,15 @@ test.describe("portfolio accessibility", () => {
     expect(html).toContain("トクナガ");
     expect(html).toContain("タクミ");
     expect(html).toContain("Tokunaga Takumi");
-    expect(html).toMatch(/<h1 class="[^"]*">Takumi Tokunaga<\/h1>/);
+    expect(html).toMatch(/<h1 class="[^"]*">徳永拓未 \/ Takumi Tokunaga<\/h1>/);
 
     await page.goto("/");
     const visibleText = await page.locator("body").innerText();
-    expect(visibleText).not.toContain("徳永拓未");
+    expect(visibleText).toContain("徳永拓未 / Takumi Tokunaga");
     expect(visibleText).not.toContain("德永拓未");
     expect(visibleText).not.toContain("とくながたくみ");
     expect(visibleText).not.toContain("トクナガタクミ");
     expect(visibleText).not.toContain("德永");
-    expect(visibleText).not.toContain("拓未");
   });
 
   test("head includes browser color and social metadata", async ({ page }) => {

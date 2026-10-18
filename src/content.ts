@@ -8,20 +8,40 @@ export function getEntries(locale: Locale, collection?: Collection): PortfolioEn
 export function getFeaturedEntries(locale: Locale, collection: Collection, limit = 3): PortfolioEntry[] {
   return getEntries(locale, collection)
     .filter((entry) => entry.featured)
+    .sort(editorialOrder)
     .slice(0, limit);
 }
 
+function editorialOrder(a: PortfolioEntry, b: PortfolioEntry) {
+  return a.sortOrder - b.sortOrder || a.title.localeCompare(b.title) || a.slug.localeCompare(b.slug);
+}
+
+export function getHomeTimeline(locale: Locale): PortfolioEntry[] {
+  const collections: Collection[] = ["research", "projects", "blog"];
+  return collections
+    .flatMap((collection) => {
+      const entry = getLatestEntry(locale, collection);
+      return entry ? [entry] : [];
+    })
+    .sort(latestOrder);
+}
+
+export function getEntryDate(entry: PortfolioEntry): string {
+  return entry.publishedAt || entry.updatedAt || entry.startDate || entry.endDate;
+}
+
+function latestOrder(a: PortfolioEntry, b: PortfolioEntry) {
+  return entryTime(b) - entryTime(a) || editorialOrder(a, b);
+}
+
 function entryTime(entry: PortfolioEntry) {
-  const candidate = entry.publishedAt || entry.updatedAt || entry.startDate || entry.endDate;
-  const parsed = Date.parse(candidate);
+  const parsed = Date.parse(getEntryDate(entry));
   if (!Number.isNaN(parsed)) return parsed;
-  return Number.MAX_SAFE_INTEGER - entry.sortOrder;
+  return Number.MIN_SAFE_INTEGER;
 }
 
 export function getLatestEntry(locale: Locale, collection: Collection): PortfolioEntry | undefined {
-  return [...getEntries(locale, collection)].sort((a, b) => {
-    return entryTime(b) - entryTime(a) || a.sortOrder - b.sortOrder || a.title.localeCompare(b.title);
-  })[0];
+  return [...getEntries(locale, collection)].sort(latestOrder)[0];
 }
 
 const demoLinkKinds = new Set(["demo", "experience", "trial", "preview", "play"]);

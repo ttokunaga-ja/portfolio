@@ -1,161 +1,86 @@
-import AccountTreeRoundedIcon from "@mui/icons-material/AccountTreeRounded";
-import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
-import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
-import { Box, Button, Card, Container, Stack, Typography } from "@mui/material";
+import { Box, Container, Link, Stack, Typography } from "@mui/material";
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { getLatestEntry } from "../content";
+import { getEntryDate, getHomeTimeline } from "../content";
 import { hrefFor } from "../routeLinks";
-import { Section, usePageLocale } from "../pagePrimitives";
 import type { RoutePageProps } from "../routePageTypes";
-import type { Collection, Locale, PortfolioEntry } from "../types";
 
-function HomePage({ locale }: { locale: Locale }) {
+export default function HomeRoute({ locale }: RoutePageProps) {
   const { t } = useTranslation();
-  const sections: Array<{
-    collection: Collection;
-    title: string;
-    lead: string;
-    href: string;
-    icon: React.ReactNode;
-  }> = [
-    {
-      collection: "research",
-      title: t("page.researchTitle"),
-      lead: t("page.researchLead"),
-      href: hrefFor("research", locale),
-      icon: <ScienceRoundedIcon />
-    },
-    {
-      collection: "projects",
-      title: t("page.projectsTitle"),
-      lead: t("page.projectsLead"),
-      href: hrefFor("projects", locale),
-      icon: <AccountTreeRoundedIcon />
-    },
-    {
-      collection: "experience",
-      title: t("page.experienceTitle"),
-      lead: t("page.experienceLead"),
-      href: hrefFor("experience", locale),
-      icon: <TimelineRoundedIcon />
-    },
-    {
-      collection: "blog",
-      title: t("page.blogTitle"),
-      lead: t("page.blogLead"),
-      href: hrefFor("blog", locale),
-      icon: <ArticleRoundedIcon />
-    }
-  ];
-
   return (
-    <>
-      <Box
-        sx={{
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          backgroundColor: "background.paper"
-        }}
-      >
-        <Container maxWidth="xl" sx={{ py: { xs: 6, md: 8 } }}>
-          <Stack spacing={2.4} sx={{ maxWidth: 860 }}>
-            <Box>
-              <Typography variant="h1">{t("home.title")}</Typography>
-              <Typography variant="h3" component="p" color="text.secondary" sx={{ mt: 2, fontWeight: 520 }}>
-                {t("home.lead")}
-              </Typography>
-            </Box>
-          </Stack>
-        </Container>
+    <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+      <Box component="header" sx={{ mb: { xs: 4, md: 5 } }}>
+        <Typography variant="h1" sx={{ fontSize: "clamp(2.25rem, 4vw, 3.75rem)" }}>
+          {t("home.title")}
+        </Typography>
+        <Typography color="text.secondary" sx={{ mt: 1.5, maxWidth: 800 }}>
+          {t("home.lead")}
+        </Typography>
       </Box>
-
-      <Section title={t("home.contentTitle")}>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(4, minmax(0, 1fr))" },
-            gap: 2.5
-          }}
-        >
-          {sections.map((section) => (
-            <HomeContentCard
-              key={section.collection}
-              title={section.title}
-              lead={section.lead}
-              href={section.href}
-              icon={section.icon}
-              latest={getLatestEntry(locale, section.collection)}
-            />
-          ))}
-        </Box>
-      </Section>
-    </>
-  );
-}
-
-function HomeContentCard({
-  title,
-  lead,
-  href,
-  icon,
-  latest
-}: {
-  title: string;
-  lead: string;
-  href: string;
-  icon: React.ReactNode;
-  latest?: PortfolioEntry;
-}) {
-  const { t } = useTranslation();
-  const locale = usePageLocale();
-
-  return (
-    <Card variant="outlined" sx={{ height: "100%" }}>
-      <Stack spacing={2.2} sx={{ p: 2.5, height: "100%" }}>
-        <Stack direction="row" spacing={1.2} alignItems="center">
-          <Box sx={{ color: "primary.main", display: "grid", placeItems: "center" }}>{icon}</Box>
-          <Typography variant="h3">{title}</Typography>
-        </Stack>
-        <Typography color="text.secondary">{lead}</Typography>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="overline" color="primary" fontWeight={800}>
-            {t("label.latest")}
-          </Typography>
-          {latest ? (
-            <Box sx={{ mt: 0.7 }}>
-              <Typography fontWeight={800}>{latest.title}</Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                {latest.abstract}
-              </Typography>
+      <Stack component="ol" aria-label={t("home.updatesLabel")} sx={{ m: 0, p: 0, listStyle: "none" }}>
+        {getHomeTimeline(locale).map((entry) => {
+          const date = getEntryDate(entry);
+          return (
+            <Box
+              component="li"
+              key={`${entry.collection}/${entry.slug}`}
+              sx={{
+                position: "relative",
+                pl: { xs: 2.5, md: 4 },
+                pb: 4,
+                borderLeft: "1px solid",
+                borderColor: "divider",
+                "&:last-child": { pb: 0 }
+              }}
+            >
+              <Box
+                aria-hidden="true"
+                sx={{
+                  position: "absolute",
+                  left: -4.5,
+                  top: 8,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: "primary.main"
+                }}
+              />
+              <Box component="article">
+                <Stack direction="row" spacing={1.5} alignItems="baseline" sx={{ mb: 0.8 }}>
+                  <Typography variant="overline" color="primary" fontWeight={700}>
+                    {t(`nav.${entry.collection}`)}
+                  </Typography>
+                  {date && (
+                    <Typography component="time" dateTime={date} variant="body2" color="text.secondary">
+                      {date.slice(0, 10)}
+                    </Typography>
+                  )}
+                </Stack>
+                <Typography variant="h2" sx={{ fontSize: { xs: "1.4rem", md: "1.75rem" }, lineHeight: 1.35 }}>
+                  <Link
+                    href={hrefFor({ collection: entry.collection, slug: entry.slug }, locale)}
+                    color="text.primary"
+                    underline="hover"
+                    sx={{ display: "inline-flex", gap: 1, alignItems: "baseline" }}
+                  >
+                    {entry.title}
+                    <ArrowForwardRoundedIcon aria-hidden="true" sx={{ fontSize: "1.1rem", flexShrink: 0 }} />
+                  </Link>
+                </Typography>
+                {entry.subtitle && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.7 }}>
+                    {entry.subtitle}
+                  </Typography>
+                )}
+                <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 900 }}>
+                  {entry.abstract}
+                </Typography>
+              </Box>
             </Box>
-          ) : (
-            <Typography color="text.secondary" sx={{ mt: 0.7 }}>
-              {t("label.noContent")}
-            </Typography>
-          )}
-        </Box>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-          <Button
-            href={latest ? hrefFor({ collection: latest.collection, slug: latest.slug }, locale) : href}
-            variant={latest ? "contained" : "outlined"}
-            endIcon={<ArrowForwardRoundedIcon />}
-          >
-            {latest ? t("action.viewLatest") : t("action.viewIndex")}
-          </Button>
-          {latest && (
-            <Button href={href} variant="text">
-              {t("action.viewIndex")}
-            </Button>
-          )}
-        </Stack>
+          );
+        })}
       </Stack>
-    </Card>
+    </Container>
   );
-}
-
-export default function HomeRoute({ route, locale, entryDetail }: RoutePageProps) {
-  return <HomePage locale={locale} />;
 }
