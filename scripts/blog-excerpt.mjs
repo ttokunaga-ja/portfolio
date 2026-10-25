@@ -1,4 +1,4 @@
-import { marked } from "marked";
+import { createMarkdownParser } from "./markdown-parser.mjs";
 
 function decodeEntities(text) {
   const named = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
@@ -49,7 +49,7 @@ export function excerptFromMarkdown(body, limit = 180) {
     .split(/\r?\n/)
     .filter((line) => !/^\s*:::/u.test(line))
     .join("\n");
-  const text = decodeEntities(proseBlocks(marked.lexer(markdown, { gfm: true })).join(" "))
+  const text = decodeEntities(proseBlocks(createMarkdownParser().lexer(markdown)).join(" "))
     .replace(/(?:https?:\/\/|mailto:|www\.)[^\s<>]+/giu, " ")
     .replace(/\s+/gu, " ")
     .trim();

@@ -78,6 +78,9 @@ importers:
       marked:
         specifier: ^18.0.14
         version: 18.0.14
+      marked-footnote:
+        specifier: 1.4.0
+        version: 1.4.0(marked@18.0.14)
       prettier:
         specifier: ^3.9.10
         version: 3.9.10
@@ -2177,6 +2180,11 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
+
+  marked-footnote@1.4.0:
+    resolution: {integrity: sha512-fZTxAhI1TcLEs5UOjCfYfTHpyKGaWQevbxaGTEA68B51l7i87SctPFtHETYqPkEN0ka5opvy4Dy1l/yXVC+hmg==}
+    peerDependencies:
+      marked: '>=7.0.0'
 
   marked@18.0.14:
     resolution: {integrity: sha512-mBHK6FBHuBAlhgRe88w9F0O1AbwwXJUcQibUbC/QcdTbVGAD7aWza+xt3N6oT/jCZx3/OMeS+8rnuiHZcQ9s7A==}
@@ -4984,6 +4992,10 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  marked-footnote@1.4.0(marked@18.0.14):
+    dependencies:
+      marked: 18.0.14
 
   marked@18.0.14: {}
 

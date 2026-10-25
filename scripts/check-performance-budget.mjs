@@ -8,9 +8,7 @@ const dist = join(root, "dist");
 const manifestPath = join(dist, ".vite", "manifest.json");
 const reportPath = join(root, "reports", "performance-budget.json");
 const limits = {
-  routeJavaScriptGzipBytes: 256 * 1024,
-  largestImageBytes: Math.floor(1.5 * 1024 * 1024),
-  totalImageBytes: 30 * 1024 * 1024
+  routeJavaScriptGzipBytes: 256 * 1024
 };
 const imageExtensions = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
 
@@ -188,12 +186,8 @@ await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
 console.log(
   `[budget] largest route JS graph gzip: ${maxRoute.route} ${largestRouteJavaScriptGzipBytes} / ${limits.routeJavaScriptGzipBytes} bytes`
 );
-console.log(`[budget] largest image: ${largestImageBytes} / ${limits.largestImageBytes} bytes`);
-console.log(`[budget] total images: ${totalImageBytes} / ${limits.totalImageBytes} bytes`);
-if (
-  largestRouteJavaScriptGzipBytes > limits.routeJavaScriptGzipBytes ||
-  largestImageBytes > limits.largestImageBytes ||
-  totalImageBytes > limits.totalImageBytes
-) {
+console.log(`[budget] largest image: ${largestImageBytes} bytes`);
+console.log(`[budget] total images: ${totalImageBytes} bytes`);
+if (largestRouteJavaScriptGzipBytes > limits.routeJavaScriptGzipBytes) {
   throw new Error("Performance budget exceeded; inspect reports/performance-budget.json before raising a limit.");
 }

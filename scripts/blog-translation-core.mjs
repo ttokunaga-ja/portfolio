@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { marked } from "marked";
+import { createMarkdownParser } from "./markdown-parser.mjs";
 import { hasTranslationMarkers } from "./blog-translation-markers.mjs";
 import {
   splitTranslationBody,
@@ -57,9 +57,10 @@ export function assertSlug(slug) {
 function protectedMarkdown(markdown) {
   assert.ok(!/ZXQLOCK\d+QXZ/.test(markdown), "Source contains reserved translation markers");
   const protectedValues = new Set();
-  const tokens = marked.lexer(markdown);
+  const parser = createMarkdownParser("ja");
+  const tokens = parser.lexer(markdown);
   assertSafeMarkdownTokens(tokens, { normalized: "translation source" });
-  marked.walkTokens(tokens, (token) => {
+  parser.walkTokens(tokens, (token) => {
     if (token.type === "code" || token.type === "codespan") protectedValues.add(token.raw);
     if ((token.type === "link" || token.type === "image") && token.href) protectedValues.add(token.href);
   });
@@ -185,10 +186,10 @@ export function restoreAndValidate(input, translated, { deriveAbstract = false }
   let body = translated.body;
   for (const item of input.replacements) body = body.replaceAll(item.marker, item.value);
   assert.ok(!markerPattern.test(body), "Unresolved protected marker");
-  const tokens = marked.lexer(body);
+  const tokens = createMarkdownParser().lexer(body);
   assertSafeMarkdownTokens(tokens, { normalized: "English translation" });
   const actual = signature(tokens);
-  const expected = signature(marked.lexer(input.originalBody));
+  const expected = signature(createMarkdownParser("ja").lexer(input.originalBody));
   try {
     assert.deepEqual(actual, expected, "Markdown structure, code, or links changed");
   } catch (error) {

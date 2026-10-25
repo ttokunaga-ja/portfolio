@@ -1,10 +1,11 @@
 import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname, join, posix, relative } from "node:path";
-import { marked } from "marked";
+import { Renderer } from "marked";
 import sharp from "sharp";
 import { parseFrontmatter } from "./frontmatter.mjs";
 import { assertSafeMarkdownTokens } from "./markdown-security.mjs";
+import { createMarkdownParser } from "./markdown-parser.mjs";
 import { getBlogTranslationEligibility } from "./blog-translation-eligibility.mjs";
 import { excerptFromMarkdown } from "./blog-excerpt.mjs";
 
@@ -16,11 +17,6 @@ const collections = new Set(["research", "projects", "experience", "blog"]);
 const locales = new Set(["ja", "en"]);
 const imageDimensions = new Map();
 const imageDimensionTasks = new Map();
-
-marked.setOptions({
-  gfm: true,
-  breaks: false
-});
 
 function escapeHtmlAttribute(value) {
   return String(value) // nosemgrep: javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization
@@ -88,7 +84,7 @@ function createHeadingId(text, occurrences) {
 }
 
 function createMarkdownRenderer(context, toc) {
-  const renderer = new marked.Renderer();
+  const renderer = new Renderer();
   const headingOccurrences = new Map();
   const tableLabel = context.locale === "ja" ? "横にスクロール可能な表" : "Horizontally scrollable table";
 
@@ -268,14 +264,19 @@ function normalizeZennDirectives(markdown) {
 
 function collectMarkdownImageHrefs(markdown) {
   const imageHrefs = [];
-  const pending = [...marked.lexer(markdown)];
+  const pending = [...createMarkdownParser().lexer(markdown)];
+  const seen = new WeakSet();
 
   while (pending.length > 0) {
     const token = pending.pop();
     if (!token || typeof token !== "object") continue;
+    if (seen.has(token)) continue;
+    seen.add(token);
     if (token.type === "image") imageHrefs.push(token.href);
-    if (Array.isArray(token.tokens)) pending.push(...token.tokens);
-    if (Array.isArray(token.items)) pending.push(...token.items);
+    for (const value of Object.values(token)) {
+      if (Array.isArray(value)) pending.push(...value.filter((item) => item && typeof item === "object"));
+      else if (value && typeof value === "object") pending.push(value);
+    }
   }
 
   return imageHrefs;
@@ -566,12 +567,15 @@ for (const file of files) {
     console.warn(`[content] Skipping ${normalized}: ${translation.reason}`);
     continue;
   }
-  assertSafeMarkdownTokens(marked.lexer(parsed.content), context);
+  assertSafeMarkdownTokens(createMarkdownParser(locale).lexer(parsed.content), context);
   await cacheMarkdownImageDimensions(parsed.content, context);
   const toc = [];
-  const bodyHtml = await marked.parse(embedStandaloneYouTubeUrls(normalizeZennDirectives(parsed.content)), {
-    renderer: createMarkdownRenderer(context, toc)
-  });
+  const bodyHtml = await createMarkdownParser(locale).parse(
+    embedStandaloneYouTubeUrls(normalizeZennDirectives(parsed.content)),
+    {
+      renderer: createMarkdownRenderer(context, toc)
+    }
+  );
   const tags = collection === "blog" ? [] : normalizeArray(data.tags);
   const startDate = firstString(data.startDate);
   const endDate = firstString(data.endDate);

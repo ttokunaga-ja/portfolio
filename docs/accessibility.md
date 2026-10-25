@@ -4,14 +4,14 @@ This site targets WCAG 2.2 AA for the public portfolio pages.
 
 ## Commands
 
-| Command                | Purpose                                                               |
-| ---------------------- | --------------------------------------------------------------------- |
-| `pnpm lint`            | Prettier check and JSX accessibility lint                             |
-| `pnpm typecheck`       | Build content and run TypeScript                                      |
-| `pnpm test:a11y`       | Playwright + axe-core route checks                                    |
-| `pnpm a11y:lighthouse` | Lighthouse accessibility reports for all built routes and `/404.html` |
-| `pnpm budget`          | Built JavaScript and image payload regression guard                   |
-| `pnpm quality`         | Full local quality gate                                               |
+| Command                | Purpose                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `pnpm lint`            | Prettier check and JSX accessibility lint                                          |
+| `pnpm typecheck`       | Build content and run TypeScript                                                   |
+| `pnpm test:a11y`       | Playwright + axe-core route checks                                                 |
+| `pnpm a11y:lighthouse` | Lighthouse accessibility reports for all built routes and `/404.html`              |
+| `pnpm budget`          | Per-route gzipped JavaScript guard; image archive sizes are reported for diagnosis |
+| `pnpm quality`         | Full local quality gate                                                            |
 
 ## Regression Coverage
 

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { dirname, join, posix } from "node:path";
-import { marked } from "marked";
+import { createMarkdownParser } from "./markdown-parser.mjs";
 import { hasTranslationMarkers } from "./blog-translation-markers.mjs";
 import { parseFrontmatter } from "./frontmatter.mjs";
 
@@ -61,7 +61,8 @@ export async function getBlogTranslationEligibility({ contentDir, locale, collec
   // A removed image must not take down the build or be restored from an older
   // translation. Both output surfaces make the same publication decision.
   const imagePaths = new Set();
-  marked.walkTokens(marked.lexer(body), (token) => {
+  const parser = createMarkdownParser();
+  parser.walkTokens(parser.lexer(body), (token) => {
     if (token.type !== "image") return;
     const path = localImagePath(token.href, slug);
     if (path) imagePaths.add(path);

@@ -25,7 +25,7 @@ pnpm quality
 
 `pnpm quality` runs formatting/a11y lint, typecheck, unit security/middleware tests, build, Playwright + axe-core, and Lighthouse accessibility checks.
 
-`pnpm budget` checks every route's JavaScript graph from the Vite manifest: common static assets, its pre-hydration Markdown detail chunk, and Contact's mount-time Firebase preload when applicable. It writes the common/automatic breakdown to `reports/performance-budget.json`; change its limits only with a new measured baseline.
+`pnpm budget` checks every route's JavaScript graph from the Vite manifest: common static assets, its pre-hydration Markdown detail chunk, and Contact's mount-time Firebase preload when applicable. The per-route gzipped JavaScript limit is 256 KiB. It writes the common/automatic breakdown and image archive measurements to `reports/performance-budget.json`. Image archive size is diagnostic because it does not represent the bytes loaded by a single page; image size alone does not block a build. Change the JavaScript limit only with a new measured baseline.
 
 Node 24 is the minimum supported runtime and CI baseline (`.node-version`); local development may use a newer compatible Node release.
 
@@ -39,6 +39,7 @@ PORTFOLIO_SITE_ORIGIN=https://takumi-tokunaga.com pnpm build
 
 Markdown files live under `content/{ja,en}/{research,projects,experience,blog}`.
 Each file begins with frontmatter and an `## Abstract` section. List pages read the frontmatter `abstract` field, while detail pages render the Markdown body during the build.
+Blog Markdown supports `[^note]` references and `[^note]:` definitions; linked footnotes render at the end of the article. Link and raw HTML safety checks also cover footnote contents.
 
 Blog posts are generated from the sibling `zenn-content` repository. Do not edit
 `content/ja/blog` or `public/images/blog` directly; they are mirrored on the next
