@@ -23,6 +23,7 @@ The portfolio is a Vite MPA with React hydration.
 
 - This project does not use React Server Components, so there are no `use client` files to reduce.
 - SSR responsibility is the build-time prerender step: route body HTML, headings, Markdown article content, canonical URL, description, OGP, and Twitter metadata must be present in the generated HTML.
+- Route metadata uses localized page titles and descriptions. Blog detail pages emit `BlogPosting` JSON-LD. Article detail pages expose publication and update dates in `time` elements when supplied by the source content.
 - CSR responsibility is limited to hydration for navigation drawer focus management, language switching, and metadata updates after the viewer switches language.
 - Browser APIs are isolated to `src/entry-client.tsx` and the interactive parts of `src/App.tsx`. The SSR entry uses `renderToString` and route data only.
 - Display-only structures such as article bodies, cards, timelines, header links, and footer links are still hydrated because the app is a React/Vite MPA. Splitting them into islands would add complexity and is not required for the current pre-release scope.

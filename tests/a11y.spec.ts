@@ -279,6 +279,26 @@ test.describe("portfolio accessibility", () => {
     expect(html).not.toContain("Knowledge Infrastructure");
   });
 
+  test("search metadata identifies localized research pages and publication dates", async ({ request }) => {
+    for (const { prefix, locale, title } of [
+      { prefix: "", locale: "ja", title: "研究・学会発表 | 徳永拓未" },
+      { prefix: "/en", locale: "en", title: "Research | Takumi Tokunaga" }
+    ]) {
+      const listing = await request.get(`${prefix}/research/`);
+      expect(listing.ok()).toBeTruthy();
+      const html = await listing.text();
+      expect(html).toContain(`<html lang="${locale}">`);
+      expect(html).toContain(`<title>${title}</title>`);
+      expect(html).toMatch(/<meta name="description" content="[^"]*ACM VRST 2026[^"]*"/);
+
+      const detail = await request.get(`${prefix}/research/seated-hand-tapping-locomotion/`);
+      expect(detail.ok()).toBeTruthy();
+      const article = await detail.text();
+      expect(article).toMatch(/<time datetime="2026-11-16">/i);
+      expect(article).toContain('"datePublished":"2026-11-16"');
+    }
+  });
+
   test("article details expose generated contents anchors and Zenn directives", async ({ request }) => {
     const articleResponse = await request.get("/blog/2026-08-02-switch-before-router-network-incident/");
     expect(articleResponse.ok()).toBeTruthy();

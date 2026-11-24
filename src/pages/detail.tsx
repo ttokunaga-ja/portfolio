@@ -78,12 +78,14 @@ function ArticleDetailPage({
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
               {entry.publishedAt && (
                 <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
-                  {t("label.published")} · {formatArticleDate(entry.publishedAt, locale)}
+                  {t("label.published")} ·{" "}
+                  <time dateTime={entry.publishedAt}>{formatArticleDate(entry.publishedAt, locale)}</time>
                 </Typography>
               )}
               {entry.updatedAt && (
                 <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
-                  {t("label.updated")} · {formatArticleDate(entry.updatedAt, locale)}
+                  {t("label.updated")} ·{" "}
+                  <time dateTime={entry.updatedAt}>{formatArticleDate(entry.updatedAt, locale)}</time>
                 </Typography>
               )}
               {entry.period && (

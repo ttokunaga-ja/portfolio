@@ -69,9 +69,9 @@ function upsertMetaByName(html, name, content) {
     throw new Error(`Unsupported meta name: ${name}`);
   }
   if (pattern.test(html)) {
-    return html.replace(pattern, tag);
+    return html.replace(pattern, () => tag);
   }
-  return html.replace(/\n\s*<\/head>/i, `\n    ${tag}\n  </head>`);
+  return html.replace(/\n\s*<\/head>/i, () => `\n    ${tag}\n  </head>`);
 }
 
 function upsertMetaByProperty(html, property, content) {
@@ -81,18 +81,18 @@ function upsertMetaByProperty(html, property, content) {
     throw new Error(`Unsupported meta property: ${property}`);
   }
   if (pattern.test(html)) {
-    return html.replace(pattern, tag);
+    return html.replace(pattern, () => tag);
   }
-  return html.replace(/\n\s*<\/head>/i, `\n    ${tag}\n  </head>`);
+  return html.replace(/\n\s*<\/head>/i, () => `\n    ${tag}\n  </head>`);
 }
 
 function upsertCanonical(html, canonicalUrl) {
   const tag = `<link rel="canonical" href="${escapeHtmlAttr(canonicalUrl)}" />`;
   const pattern = /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i;
   if (pattern.test(html)) {
-    return html.replace(pattern, tag);
+    return html.replace(pattern, () => tag);
   }
-  return html.replace(/\n\s*<\/head>/i, `\n    ${tag}\n  </head>`);
+  return html.replace(/\n\s*<\/head>/i, () => `\n    ${tag}\n  </head>`);
 }
 
 function upsertAlternates(html, basePath, locales) {
@@ -117,7 +117,7 @@ function inject(shell, rendered) {
 
   let html = shell;
   html = html.replace(/<html lang="[^"]*">/, `<html lang="${rendered.locale}">`);
-  html = html.replace(/<title>.*?<\/title>/s, `<title>${escapeHtmlText(rendered.seo.title)}</title>`);
+  html = html.replace(/<title>.*?<\/title>/s, () => `<title>${escapeHtmlText(rendered.seo.title)}</title>`);
   html = upsertMetaByName(html, "description", rendered.seo.description);
   html = upsertMetaByName(html, "twitter:title", rendered.seo.title);
   html = upsertMetaByName(html, "twitter:description", rendered.seo.description);
@@ -133,8 +133,8 @@ function inject(shell, rendered) {
   if (rendered.seo.noIndex) {
     html = html.replace(/\n\s*<\/head>/i, `\n    <meta name="robots" content="noindex, follow" />\n  </head>`);
   }
-  html = html.replace(/\n\s*<\/head>/i, `\n    ${jsonLdScript(rendered.jsonLd)}\n  </head>`);
-  html = html.replace('<div id="root"></div>', `<div id="root">${rendered.html}</div>`);
+  html = html.replace(/\n\s*<\/head>/i, () => `\n    ${jsonLdScript(rendered.jsonLd)}\n  </head>`);
+  html = html.replace('<div id="root"></div>', () => `<div id="root">${rendered.html}</div>`);
   return html;
 }
 

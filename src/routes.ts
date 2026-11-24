@@ -132,17 +132,18 @@ export function getSeo(route: RouteState, locale: Locale) {
     };
   }
 
+  const pageNameSuffix = locale === "ja" ? "徳永拓未" : "Takumi Tokunaga";
   const pageTitles: Record<PrimaryPage, string> = {
     home: locale === "ja" ? "徳永拓未 | Takumi Tokunaga Portfolio" : "Takumi Tokunaga Portfolio",
-    about: `${t.page.aboutTitle} | Takumi Tokunaga`,
-    research: `${t.page.researchTitle} | Takumi Tokunaga`,
-    awards: `${t.page.awardsTitle} | Takumi Tokunaga`,
-    projects: `${t.page.projectsTitle} | Takumi Tokunaga`,
-    experience: `${t.page.experienceTitle} | Takumi Tokunaga`,
-    blog: `${t.page.blogTitle} | Takumi Tokunaga`,
-    skills: `${t.page.skillsTitle} | Takumi Tokunaga`,
-    contact: `${t.page.contactTitle} | Takumi Tokunaga`,
-    privacy: `${t.page.privacyTitle} | Takumi Tokunaga`
+    about: `${t.page.aboutTitle} | ${pageNameSuffix}`,
+    research: `${t.page.researchTitle} | ${pageNameSuffix}`,
+    awards: `${t.page.awardsTitle} | ${pageNameSuffix}`,
+    projects: `${t.page.projectsTitle} | ${pageNameSuffix}`,
+    experience: `${t.page.experienceTitle} | ${pageNameSuffix}`,
+    blog: `${t.page.blogTitle} | ${pageNameSuffix}`,
+    skills: `${t.page.skillsTitle} | ${pageNameSuffix}`,
+    contact: `${t.page.contactTitle} | ${pageNameSuffix}`,
+    privacy: `${t.page.privacyTitle} | ${pageNameSuffix}`
   };
 
   const pageDescriptions: Record<PrimaryPage, string> = {
@@ -245,7 +246,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
     givenName: "Takumi",
     familyName: "Tokunaga",
     url: `${origin}/`,
-    image: `${origin}/images/logo.png`,
+    image: `${origin}/images/profile.webp`,
     sameAs: SAME_AS,
     knowsAbout: PROFILE_KEYWORDS
   };
@@ -299,7 +300,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
         website,
         breadcrumb,
         {
-          "@type": "CreativeWork",
+          "@type": route.collection === "blog" ? "BlogPosting" : "CreativeWork",
           "@id": `${routeUrl}#creative-work`,
           url: routeUrl,
           name: entry ? entry.title : route.slug,
@@ -307,7 +308,8 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
           description: entry ? entry.abstract : seo.description,
           inLanguage,
           keywords: entry?.tags ?? [],
-          dateModified: entry?.updatedAt || entry?.publishedAt || undefined,
+          datePublished: entry?.publishedAt || undefined,
+          dateModified: entry?.updatedAt || undefined,
           ...(entry?.translationSourceHash && entry.sourceUrl
             ? {
                 translationOfWork: {

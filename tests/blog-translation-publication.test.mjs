@@ -160,7 +160,7 @@ test("HTML and AI-search share source-aware eligibility, provenance, and canonic
   );
   await writeFile(
     join(contentDir, "en/blog/manual.md"),
-    article({ title: "Manual English article", sourceUrl: originalUrl, translationModel: "metadata-without-marker" })
+    article({ title: "Manual English article $&", sourceUrl: originalUrl, translationModel: "metadata-without-marker" })
   );
 
   await cp(join(repo, "src"), join(root, "src"), {
@@ -226,9 +226,7 @@ test("HTML and AI-search share source-aware eligibility, provenance, and canonic
   assert.ok(!japanese.html.includes("This English translation was generated with AI"));
   assert.deepEqual(getAlternateLocales(english.route, "en"), []);
   assert.deepEqual(getAlternateLocales(japanese.route, "ja"), []);
-  const creativeWork = getJsonLd(english.route, "en", origin)["@graph"].find(
-    (node) => node["@type"] === "CreativeWork"
-  );
+  const creativeWork = getJsonLd(english.route, "en", origin)["@graph"].find((node) => node["@type"] === "BlogPosting");
   assert.equal(creativeWork.url, `${origin}/en/blog/valid/`);
   assert.equal(creativeWork.translationOfWork.url, originalUrl);
   const paths = getStaticPathsForPrerender().map(({ path }) => path);
@@ -262,6 +260,9 @@ test("HTML and AI-search share source-aware eligibility, provenance, and canonic
     cwd: root,
     env: { ...process.env, PORTFOLIO_SITE_ORIGIN: origin }
   });
+  const manualHtml = await readFile(join(root, "dist/en/blog/manual/index.html"), "utf8");
+  assert.ok(manualHtml.includes("<title>Manual English article $&amp; | Takumi Tokunaga</title>"));
+  assert.ok(manualHtml.includes('name="twitter:title" content="Manual English article $&amp; | Takumi Tokunaga"'));
   const englishHtml = await readFile(join(root, "dist/en/blog/valid/index.html"), "utf8");
   assert.ok(englishHtml.includes(`<link rel="canonical" href="${origin}/en/blog/valid/"`));
   assert.ok(englishHtml.includes("This English translation was generated with AI"));
