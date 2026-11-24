@@ -173,7 +173,10 @@ Firebase Auth は Google SSO 専用とする。
   各プロジェクト詳細
 
 /research/
-  研究・学習・実験成果
+  研究発表・論文
+
+/awards/
+  受賞歴・受賞詳細
 
 /blog/
   技術記事一覧
@@ -257,6 +260,7 @@ Link: <https://takumi-tokunaga.com/projects/example/>; rel="canonical"
 - [プロフィール](https://takumi-tokunaga.com/profile/)
 - [プロジェクト一覧](https://takumi-tokunaga.com/projects/)
 - [研究](https://takumi-tokunaga.com/research/)
+- [受賞歴](https://takumi-tokunaga.com/awards/)
 - [技術ブログ](https://takumi-tokunaga.com/blog/)
 
 ## 主な技術領域

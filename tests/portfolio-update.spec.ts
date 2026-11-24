@@ -38,7 +38,10 @@ for (const locale of ["ja", "en"] as const) {
         "/skills/",
         "/projects/",
         "/projects/kio/",
-        "/research/handslap-race/",
+        "/research/",
+        "/research/seated-hand-tapping-locomotion/",
+        "/awards/",
+        "/awards/handslap-race/",
         "/experience/"
       ]) {
         await page.goto(`${prefix}${path}`);
@@ -53,6 +56,25 @@ for (const locale of ["ja", "en"] as const) {
         }
       }
     }
+    await page.goto(`${prefix}/research/`);
+    await main
+      .locator(`a[href="${prefix}/research/seated-hand-tapping-locomotion/"]`)
+      .filter({ has: page.getByRole("heading") })
+      .click();
+    await expect(main.locator('a[href="https://dl.acm.org/doi/10.1145/3822517.3849971"]')).toBeVisible();
+    await page.goto(`${prefix}/awards/`);
+    await main
+      .locator(`a[href="${prefix}/awards/handslap-race/"]`)
+      .filter({ has: page.getByRole("heading") })
+      .click();
+    for (const url of [
+      "https://jp.his.gr.jp/symposium/award2026/",
+      "https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html",
+      "https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf"
+    ]) {
+      await expect(main.locator(`a[href="${url}"]`)).toBeVisible();
+    }
+
     await page.goto(`${prefix}/projects/kio/`);
     await expect(main).toContainText(locale === "ja" ? "開発中" : "In development");
     await expect(main.getByRole("link", { name: locale === "ja" ? /体験する/ : /open demo/i })).toHaveCount(0);

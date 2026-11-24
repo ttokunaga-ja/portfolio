@@ -16,6 +16,7 @@ export default function RouteViewServer(props: RoutePageProps) {
     case "about":
       return <AboutRoute {...props} />;
     case "research":
+    case "awards":
     case "projects":
     case "blog":
       return <ListingRoute {...props} />;

@@ -4,7 +4,7 @@ Personal portfolio built with Vite 8 MPA mode, React 19, TypeScript, MUI 6, Emot
 
 ## Stack
 
-- Build: Vite 8, nine HTML shells, build-time prerender
+- Build: Vite 8, ten HTML shells, build-time prerender
 - UI: React 19 + TypeScript
 - Design system: MUI 6 + Emotion
 - i18n: i18next + react-i18next, Japanese and English
@@ -37,7 +37,7 @@ PORTFOLIO_SITE_ORIGIN=https://takumi-tokunaga.com pnpm build
 
 ## Content
 
-Markdown files live under `content/{ja,en}/{research,projects,experience,blog}`.
+Markdown files live under `content/{ja,en}/{research,awards,projects,experience,blog}`.
 Each file begins with frontmatter and an `## Abstract` section. List pages read the frontmatter `abstract` field, while detail pages render the Markdown body during the build.
 Blog Markdown supports `[^note]` references and `[^note]:` definitions; linked footnotes render at the end of the article. Link and raw HTML safety checks also cover footnote contents.
 

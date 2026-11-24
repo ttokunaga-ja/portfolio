@@ -7,11 +7,12 @@ const root = process.cwd();
 const contentDir = join(root, "content");
 const dist = join(root, "dist");
 const siteOrigin = validateSiteOrigin(process.env.PORTFOLIO_SITE_ORIGIN ?? "https://takumi-tokunaga.com");
-const collections = new Set(["research", "projects", "experience", "blog"]);
+const collections = new Set(["research", "awards", "projects", "experience", "blog"]);
 const locales = new Set(["ja", "en"]);
 
 const collectionLabels = {
   research: { ja: "研究", en: "Research" },
+  awards: { ja: "受賞歴", en: "Awards" },
   projects: { ja: "プロジェクト", en: "Projects" },
   experience: { ja: "経歴", en: "Experience" },
   blog: { ja: "ブログ", en: "Blog" }
@@ -21,6 +22,7 @@ const staticPages = [
   { label: "JA Home", href: "/" },
   { label: "JA About", href: "/about/" },
   { label: "JA Research", href: "/research/" },
+  { label: "JA Awards", href: "/awards/" },
   { label: "JA Projects", href: "/projects/" },
   { label: "JA Experience", href: "/experience/" },
   { label: "JA Blog", href: "/blog/" },
@@ -30,6 +32,7 @@ const staticPages = [
   { label: "EN Home", href: "/en/" },
   { label: "EN About", href: "/en/about/" },
   { label: "EN Research", href: "/en/research/" },
+  { label: "EN Awards", href: "/en/awards/" },
   { label: "EN Projects", href: "/en/projects/" },
   { label: "EN Experience", href: "/en/experience/" },
   { label: "EN Blog", href: "/en/blog/" },
@@ -378,7 +381,7 @@ async function assertGeneratedOutputs(entries) {
 
   const headers = await readFile(join(dist, "_headers"), "utf8");
   const generatedHeaderCount = (
-    headers.match(/^\/(?:en\/)?(?:research|projects|experience|blog)\/[^\n]+\.md$/gmu) ?? []
+    headers.match(/^\/(?:en\/)?(?:research|awards|projects|experience|blog)\/[^\n]+\.md$/gmu) ?? []
   ).length;
   if (generatedHeaderCount !== entries.length) {
     throw new Error(`AI-search header count mismatch: expected ${entries.length}, received ${generatedHeaderCount}.`);

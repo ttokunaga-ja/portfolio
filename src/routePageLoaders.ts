@@ -11,6 +11,7 @@ export async function loadRoutePage(route: RouteState): Promise<RoutePage> {
     case "about":
       return (await import("./pages/about")).default;
     case "research":
+    case "awards":
     case "projects":
     case "blog":
       return (await import("./pages/listing")).default;

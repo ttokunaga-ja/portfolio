@@ -12,6 +12,7 @@ export default defineConfig({
         home: resolve(import.meta.dirname, "index.html"),
         about: resolve(import.meta.dirname, "about/index.html"),
         research: resolve(import.meta.dirname, "research/index.html"),
+        awards: resolve(import.meta.dirname, "awards/index.html"),
         projects: resolve(import.meta.dirname, "projects/index.html"),
         experience: resolve(import.meta.dirname, "experience/index.html"),
         blog: resolve(import.meta.dirname, "blog/index.html"),

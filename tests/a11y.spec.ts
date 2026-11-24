@@ -70,7 +70,7 @@ function tableScrollRegionLabelPrefix(routePath: string) {
   return routePath.startsWith("/en/") ? "Horizontally scrollable table" : "横にスクロール可能な表";
 }
 
-const markdownDetailPathPattern = /^\/(research|projects|experience|blog)\/[^/]+\/$/;
+const markdownDetailPathPattern = /^\/(research|awards|projects|experience|blog)\/[^/]+\/$/;
 const contentGutterViewports = [
   { name: "mobile", width: 390, height: 844 },
   { name: "laptop", width: 1024, height: 900 }

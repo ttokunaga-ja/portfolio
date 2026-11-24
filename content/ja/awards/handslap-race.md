@@ -1,12 +1,11 @@
 ---
-title: "HandSlapRace"
-subtitle: "手の動きで走る多人数VR競馬"
-abstract: "人工芝付きの入力デバイスを左右交互に操作し、馬アバタとして競走するVRシステムの共同研究。サーバー実装と、Unity開発のPMとして実装・進捗確認・品質保証を担当し、リアルタイム通信の品質改善に取り組みました。"
+title: "HIS 2026 優秀プレゼンテーション賞"
+subtitle: "HandSlapRace — 馬アバタ走行体験のための手を用いたVRロコモーションシステム"
+abstract: "共同研究HandSlapRaceの展示発表が、ヒューマンインタフェースシンポジウム2026で参加者の一般投票による優秀プレゼンテーション賞を受賞しました。"
 role: "サーバー実装 / Unity開発PM・実装 / 進捗確認 / 品質保証 / 通信品質改善"
-period: "HIS 2026 展示発表・共著"
+period: "HIS 2026"
 publishedAt: "2026-09-16"
 sortOrder: 5
-featured: true
 tags:
   - VR
   - Unity
@@ -14,6 +13,9 @@ tags:
   - UDP
   - Research
 links:
+  award:
+    label: "HIS 2026 公式受賞者一覧"
+    url: "https://jp.his.gr.jp/symposium/award2026/"
   paper:
     label: "公開論文PDF"
     url: "https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf"
@@ -22,7 +24,11 @@ links:
     url: "https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html"
 ---
 
-## 概要
+## 受賞
+
+HIS 2026の展示発表「馬アバタ走行体験のための手を用いたVRロコモーションシステム」（1T-D16W）が、参加者による一般投票で優秀プレゼンテーション賞を受賞しました。私は発表論文の共著者です。
+
+## 受賞対象の研究
 
 手の左右交互動作を馬アバタの走行に対応させ、人工芝への接触感覚と速度に応じた風提示を組み合わせたVRロコモーションシステムの共同研究です。複数の体験者とNPCが、同じレースで競走できるアプリケーションとして構築しました。
 
@@ -41,5 +47,3 @@ links:
 HIS 2026で展示発表され、共著者として論文集に掲載されています。
 
 岸野聖耀、齋藤智輝、徳永拓未、磯江亮太、前田佳澄、中村文彦、柴田史久、木村朝子．馬アバタ走行体験のための手を用いたVRロコモーションシステム．ヒューマンインタフェースシンポジウム2026論文集，1T-D16W，2026年9月16日．
-
-[公開論文PDF](https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf) / [研究室の展示発表一覧](https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html)

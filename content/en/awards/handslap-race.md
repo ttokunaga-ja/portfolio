@@ -1,12 +1,11 @@
 ---
-title: "HandSlapRace"
-subtitle: "Multiplayer VR horse racing through alternating hand movements"
-abstract: "A collaborative VR project in which players race as horse avatars using alternating hand movements on artificial-turf-covered input devices. I handled server implementation and project management for Unity development, including implementation, progress tracking, and quality assurance. I also worked on real-time communication quality."
+title: "HIS 2026 Outstanding Presentation Award"
+subtitle: "HandSlapRace — A Hand-Based VR Locomotion System for Running as a Horse Avatar"
+abstract: "The HandSlapRace demonstration received an Outstanding Presentation Award by attendee vote at Human Interface Symposium 2026."
 role: "Server implementation / Unity project management and implementation / Progress tracking / Quality assurance / Communication quality improvement"
-period: "HIS 2026 demonstration / Co-author"
+period: "HIS 2026"
 publishedAt: "2026-09-16"
 sortOrder: 5
-featured: true
 tags:
   - VR
   - Unity
@@ -14,6 +13,9 @@ tags:
   - UDP
   - Research
 links:
+  award:
+    label: "HIS 2026 official award results"
+    url: "https://jp.his.gr.jp/symposium/award2026/"
   paper:
     label: "Paper PDF"
     url: "https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf"
@@ -22,7 +24,11 @@ links:
     url: "https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html"
 ---
 
-## Overview
+## Award
+
+The HIS 2026 demonstration on hand-based VR locomotion for running as a horse avatar (1T-D16W) received the Outstanding Presentation Award by attendee vote. I co-authored the demonstration paper.
+
+## Award-winning research
 
 This collaborative VR locomotion system maps alternating hand movements to a horse avatar's running speed. It combines contact with artificial turf and airflow that changes with speed. The application supports multiple participants and NPCs racing together.
 
@@ -41,5 +47,3 @@ The exhibition on May 17, 2026 received 39 post-experience questionnaire respons
 The research was presented as a demonstration at HIS 2026, and I am a co-author of the paper.
 
 S. Kishino, T. Saito, T. Tokunaga, et al. “A Hand-Based VR Locomotion System for Running as a Horse Avatar.” Human Interface Symposium 2026, demonstration 1T-D16W, September 16, 2026.
-
-[Paper PDF](https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf) / [Laboratory publication record](https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html)

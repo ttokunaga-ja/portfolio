@@ -14,7 +14,7 @@ function ListingPage({ locale, collection }: { locale: Locale; collection: Colle
   const { t } = useTranslation();
   const entries = getEntries(locale, collection);
 
-  if (collection === "research" || collection === "blog") {
+  if (collection === "research" || collection === "awards" || collection === "blog") {
     return <ArticleListingPage locale={locale} collection={collection} entries={entries} />;
   }
 
@@ -37,13 +37,13 @@ function ArticleListingPage({
   entries
 }: {
   locale: Locale;
-  collection: "research" | "blog";
+  collection: "research" | "awards" | "blog";
   entries: PortfolioEntry[];
 }) {
   const { t } = useTranslation();
-  const title = collection === "research" ? t("page.researchTitle") : t("page.blogTitle");
-  const lead = collection === "research" ? t("page.researchLead") : t("page.blogLead");
-  const collectionLabel = collection === "research" ? t("nav.research") : t("nav.blog");
+  const title = t(`page.${collection}Title`);
+  const lead = t(`page.${collection}Lead`);
+  const collectionLabel = t(`nav.${collection}`);
 
   return (
     <>
@@ -102,7 +102,7 @@ function ArticleEntryList({ entries }: { entries: PortfolioEntry[] }) {
 function ArticleListItem({ entry }: { entry: PortfolioEntry }) {
   const { t } = useTranslation();
   const locale = usePageLocale();
-  const collectionLabel = entry.collection === "research" ? t("nav.research") : t("nav.blog");
+  const collectionLabel = t(`nav.${entry.collection}`);
   const sourceUrl = entry.sourceUrl || entry.canonicalUrl;
   const isAiTranslation = entry.collection === "blog" && locale === "en" && Boolean(entry.translationSourceHash);
   const metadata = entry.publishedAt
@@ -303,7 +303,7 @@ export default function ListingRoute({ route, locale, entryDetail }: RoutePagePr
     <ListingPage
       locale={locale}
       collection={
-        route.kind === "page" && ["research", "projects", "blog"].includes(route.page)
+        route.kind === "page" && ["research", "awards", "projects", "blog"].includes(route.page)
           ? (route.page as Collection)
           : "research"
       }

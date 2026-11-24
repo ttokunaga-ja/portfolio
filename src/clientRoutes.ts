@@ -5,6 +5,7 @@ const primaryPages = new Set<PrimaryPage>([
   "home",
   "about",
   "research",
+  "awards",
   "projects",
   "experience",
   "blog",
@@ -12,7 +13,7 @@ const primaryPages = new Set<PrimaryPage>([
   "contact",
   "privacy"
 ]);
-const collections = new Set<Collection>(["research", "projects", "experience", "blog"]);
+const collections = new Set<Collection>(["research", "awards", "projects", "experience", "blog"]);
 
 // Detail URL shapes are validated against the metadata catalog immediately before
 // hydration in entry-client. Keeping this parser catalog-free preserves the small

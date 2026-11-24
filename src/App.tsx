@@ -9,6 +9,7 @@ import MailOutlineRoundedIcon from "@mui/icons-material/MailOutlineRounded";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import OpenInNewRoundedIcon from "@mui/icons-material/OpenInNewRounded";
 import PrivacyTipRoundedIcon from "@mui/icons-material/PrivacyTipRounded";
+import EmojiEventsRoundedIcon from "@mui/icons-material/EmojiEventsRounded";
 import ScienceRoundedIcon from "@mui/icons-material/ScienceRounded";
 import TimelineRoundedIcon from "@mui/icons-material/TimelineRounded";
 import {
@@ -49,6 +50,7 @@ type AppProps = {
 const navItems: Array<{ page: PrimaryPage; labelKey: string; icon: React.ReactNode }> = [
   { page: "home", labelKey: "nav.home", icon: <HomeRoundedIcon /> },
   { page: "research", labelKey: "nav.research", icon: <ScienceRoundedIcon /> },
+  { page: "awards", labelKey: "nav.awards", icon: <EmojiEventsRoundedIcon /> },
   { page: "projects", labelKey: "nav.projects", icon: <AccountTreeRoundedIcon /> },
   { page: "experience", labelKey: "nav.experience", icon: <TimelineRoundedIcon /> },
   { page: "blog", labelKey: "nav.blog", icon: <ArticleRoundedIcon /> },

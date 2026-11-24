@@ -40,7 +40,7 @@ try {
       for (const collection of ["research", "projects", "blog"]) {
         assert.match(html, new RegExp(`href="(?:/en)?/${collection}/[^/]+/"`));
       }
-      assert.ok(html.includes("HandSlapRace"));
+      assert.ok(html.includes("A Seated Hand-Tapping Locomotion Technique"));
     });
     test(`${locale} About retains editorial policy and distinguishes future education`, () => {
       const html = render(About, locale);
@@ -62,7 +62,7 @@ try {
         assert.ok(html.includes(label));
       assert.match(html, /github.com\/ttokunaga-ja\/Group4_MoleWhack/);
       assert.match(html, /href="(?:\/en)?\/projects\/kio\/"/);
-      assert.match(html, /href="(?:\/en)?\/research\/handslap-race\/"/);
+      assert.match(html, /href="(?:\/en)?\/awards\/handslap-race\/"/);
     });
   }
 } finally {

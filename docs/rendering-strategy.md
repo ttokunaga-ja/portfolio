@@ -4,20 +4,20 @@ The portfolio is a Vite MPA with React hydration.
 
 ## Build Flow
 
-- `content/{ja,en}/{research,projects,experience}/*.md` is converted at build time.
-- `vite build` creates the nine HTML shells: home, about, research, projects, experience, blog, skills, contact, and privacy.
+- `content/{ja,en}/{research,awards,projects,experience}/*.md` is converted at build time.
+- `vite build` creates the ten HTML shells: home, about, research, awards, projects, experience, blog, skills, contact, and privacy.
 - `vite build --config vite.ssr.config.ts` creates a server render bundle.
 - `scripts/prerender.mjs` injects route HTML and route-specific head metadata.
 - `scripts/build-sitemap.mjs` writes `dist/sitemap.xml` from the generated `dist/**/index.html` files.
 
 ## Page Inventory
 
-| Route                                                               | Rendering                         |
-| ------------------------------------------------------------------- | --------------------------------- |
-| `/`                                                                 | Prerendered HTML + hydrated React |
-| `/research/`, `/projects/`, `/experience/`, `/skills/`, `/contact/` | Prerendered HTML + hydrated React |
-| `/{research,projects,experience}/{slug}/`                           | Prerendered HTML + hydrated React |
-| `/404.html`                                                         | Static HTML, no React hydration   |
+| Route                                                                           | Rendering                         |
+| ------------------------------------------------------------------------------- | --------------------------------- |
+| `/`                                                                             | Prerendered HTML + hydrated React |
+| `/research/`, `/awards/`, `/projects/`, `/experience/`, `/skills/`, `/contact/` | Prerendered HTML + hydrated React |
+| `/{research,awards,projects,experience}/{slug}/`                                | Prerendered HTML + hydrated React |
+| `/404.html`                                                                     | Static HTML, no React hydration   |
 
 ## SSR/CSR Audit
 

@@ -11,7 +11,7 @@ function SkillsPage() {
   const locale = usePageLocale();
   const ja = locale === "ja";
   const sdb = hrefFor({ collection: "projects", slug: "2026-06-07-sdb-school-university-database-api" }, locale);
-  const research = hrefFor({ collection: "research", slug: "handslap-race" }, locale);
+  const handSlapRaceAward = hrefFor({ collection: "awards", slug: "handslap-race" }, locale);
   const groups = [
     {
       title: "Rust / CLI",
@@ -38,7 +38,7 @@ function SkillsPage() {
           label: ja ? "QR追跡と配置の技術記事" : "QR tracking and placement (Japanese)",
           href: "https://zenn.dev/t_tokunaga/articles/2025-12-02-unity-quest3s-qrcode-detection"
         },
-        { label: "HandSlapRace", href: research }
+        { label: "HandSlapRace", href: handSlapRaceAward }
       ]
     },
     {
@@ -71,7 +71,7 @@ function SkillsPage() {
         ? "研究開発での進捗確認・品質保証と、Webサイトの自動検査。"
         : "Progress tracking and quality assurance in research development, plus automated checks for web projects.",
       links: [
-        { label: "HandSlapRace", href: research },
+        { label: "HandSlapRace", href: handSlapRaceAward },
         { label: "portfolio", href: "https://github.com/ttokunaga-ja/portfolio" }
       ]
     }

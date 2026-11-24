@@ -6,6 +6,7 @@ const primaryPages = new Set<PrimaryPage>([
   "home",
   "about",
   "research",
+  "awards",
   "projects",
   "experience",
   "blog",
@@ -13,7 +14,7 @@ const primaryPages = new Set<PrimaryPage>([
   "contact",
   "privacy"
 ]);
-const collections = new Set<Collection>(["research", "projects", "experience", "blog"]);
+const collections = new Set<Collection>(["research", "awards", "projects", "experience", "blog"]);
 
 export const locales: Locale[] = ["ja", "en"];
 
@@ -74,6 +75,7 @@ export function getStaticPathsForPrerender(): PrerenderTarget[] {
     "/",
     "/about/",
     "/research/",
+    "/awards/",
     "/projects/",
     "/experience/",
     "/blog/",
@@ -134,6 +136,7 @@ export function getSeo(route: RouteState, locale: Locale) {
     home: locale === "ja" ? "徳永拓未 | Takumi Tokunaga Portfolio" : "Takumi Tokunaga Portfolio",
     about: `${t.page.aboutTitle} | Takumi Tokunaga`,
     research: `${t.page.researchTitle} | Takumi Tokunaga`,
+    awards: `${t.page.awardsTitle} | Takumi Tokunaga`,
     projects: `${t.page.projectsTitle} | Takumi Tokunaga`,
     experience: `${t.page.experienceTitle} | Takumi Tokunaga`,
     blog: `${t.page.blogTitle} | Takumi Tokunaga`,
@@ -146,6 +149,7 @@ export function getSeo(route: RouteState, locale: Locale) {
     home: t.home.seoDescription,
     about: t.page.aboutLead,
     research: t.page.researchLead,
+    awards: t.page.awardsLead,
     projects: t.page.projectsLead,
     experience: t.page.experienceLead,
     blog: t.page.blogLead,
@@ -185,6 +189,7 @@ const PROFILE_KEYWORDS = [
   ...PERSON_SEARCH_TERMS,
   "portfolio",
   "research",
+  "awards",
   "personal projects",
   "Go",
   "Python",
@@ -220,7 +225,7 @@ function pageName(route: RouteState, locale: Locale) {
 }
 
 function collectionPageType(page: PrimaryPage) {
-  return page === "research" || page === "projects" || page === "experience" || page === "blog"
+  return page === "research" || page === "awards" || page === "projects" || page === "experience" || page === "blog"
     ? "CollectionPage"
     : "WebPage";
 }
@@ -356,7 +361,7 @@ export function getJsonLd(route: RouteState, locale: Locale, origin: string) {
     about: { "@id": `${origin}/#person` }
   };
 
-  if (page === "research" || page === "projects" || page === "experience" || page === "blog") {
+  if (page === "research" || page === "awards" || page === "projects" || page === "experience" || page === "blog") {
     const items = getEntries(locale, page).map((entry, index) => ({
       "@type": "ListItem",
       position: index + 1,

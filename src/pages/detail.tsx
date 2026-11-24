@@ -36,7 +36,7 @@ function ArticleDetailPage({
   detail: PortfolioEntryDetail;
 }) {
   const { t } = useTranslation();
-  const collectionLabel = entry.collection === "research" ? t("nav.research") : t("nav.blog");
+  const collectionLabel = t(`nav.${entry.collection}`);
   const visibleLinks = entry.links.filter((link) => {
     return !["demo", "experience", "trial", "preview", "play"].includes(link.kind);
   });
@@ -266,7 +266,7 @@ function DetailPage({
     return <NotFoundPage locale={locale} />;
   }
 
-  if (collection === "research" || collection === "blog") {
+  if (collection === "research" || collection === "awards" || collection === "blog") {
     return <ArticleDetailPage locale={locale} entry={entry} detail={entryDetail} />;
   }
 

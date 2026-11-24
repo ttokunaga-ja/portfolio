@@ -60,7 +60,7 @@ async function gzipBytesFor(files) {
 }
 
 function detailSourceKey(route) {
-  const match = route.match(/^\/(en\/)?(research|projects|experience|blog)\/([^/]+)\/index\.html$/);
+  const match = route.match(/^\/(en\/)?(research|awards|projects|experience|blog)\/([^/]+)\/index\.html$/);
   if (!match) return null;
   const [, english, collection, slug] = match;
   return `src/generated/content-details/${english ? "en" : "ja"}/${collection}/${slug}.ts`;
@@ -87,10 +87,10 @@ if (!clientDynamicImports.has(detailContentKey)) {
 }
 function pageSourceKey(route) {
   if (route === "/404.html") return "src/pages/detail.tsx";
-  if (/^\/(?:en\/)?(?:research|projects|experience|blog)\/[^/]+\/index\.html$/.test(route)) {
+  if (/^\/(?:en\/)?(?:research|awards|projects|experience|blog)\/[^/]+\/index\.html$/.test(route)) {
     return "src/pages/detail.tsx";
   }
-  if (/^\/(?:en\/)?(?:research|projects|blog)\/index\.html$/.test(route)) return "src/pages/listing.tsx";
+  if (/^\/(?:en\/)?(?:research|awards|projects|blog)\/index\.html$/.test(route)) return "src/pages/listing.tsx";
   if (/^\/(?:en\/)?experience\/index\.html$/.test(route)) return "src/pages/experience.tsx";
   if (/^\/(?:en\/)?about\/index\.html$/.test(route)) return "src/pages/about.tsx";
   if (/^\/(?:en\/)?skills\/index\.html$/.test(route)) return "src/pages/skills.tsx";

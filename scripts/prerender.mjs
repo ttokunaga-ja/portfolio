@@ -37,7 +37,7 @@ function shellPathFor(basePath) {
   const section = basePath.split("/").filter(Boolean)[0] ?? "";
   if (
     section &&
-    ["about", "research", "projects", "experience", "blog", "skills", "contact", "privacy"].includes(section)
+    ["about", "research", "awards", "projects", "experience", "blog", "skills", "contact", "privacy"].includes(section)
   ) {
     return join(dist, section, "index.html");
   }

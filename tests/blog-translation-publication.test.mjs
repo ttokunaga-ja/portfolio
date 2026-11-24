@@ -240,7 +240,18 @@ test("HTML and AI-search share source-aware eligibility, provenance, and canonic
   assert.ok(listing.html.includes("Manual English article"));
   assert.ok(!listing.html.includes("Removed information"));
   assert.equal((await render("/en/blog/stale/")).route.kind, "notFound");
-  for (const section of ["", "about", "research", "projects", "experience", "blog", "skills", "contact", "privacy"]) {
+  for (const section of [
+    "",
+    "about",
+    "research",
+    "awards",
+    "projects",
+    "experience",
+    "blog",
+    "skills",
+    "contact",
+    "privacy"
+  ]) {
     await mkdir(join(root, "dist", section), { recursive: true });
     await writeFile(
       join(root, "dist", section, "index.html"),
