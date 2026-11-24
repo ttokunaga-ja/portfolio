@@ -62,14 +62,15 @@ for (const locale of ["ja", "en"] as const) {
       .filter({ has: page.getByRole("heading") })
       .click();
     await expect(main.locator('a[href="https://dl.acm.org/doi/10.1145/3822517.3849971"]')).toBeVisible();
+    await expect(main.locator('a[target="_blank"]')).toHaveCount(1);
     await page.goto(`${prefix}/awards/`);
     await main
       .locator(`a[href="${prefix}/awards/handslap-race/"]`)
       .filter({ has: page.getByRole("heading") })
       .click();
+    await expect(main.locator('a[target="_blank"]')).toHaveCount(2);
     for (const url of [
       "https://jp.his.gr.jp/symposium/award2026/",
-      "https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html",
       "https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf"
     ]) {
       await expect(main.locator(`a[href="${url}"]`)).toBeVisible();

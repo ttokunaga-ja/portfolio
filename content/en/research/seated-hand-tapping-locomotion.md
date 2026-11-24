@@ -13,9 +13,6 @@ links:
   paper:
     label: "Read the paper in the ACM Digital Library"
     url: "https://dl.acm.org/doi/10.1145/3822517.3849971"
-  program:
-    label: "VRST 2026 demo program"
-    url: "https://vrst.acm.org/vrst2026/program_demos/"
 ---
 
 ## Research overview

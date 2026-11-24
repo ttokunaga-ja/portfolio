@@ -19,9 +19,6 @@ links:
   paper:
     label: "Paper PDF"
     url: "https://www.rm2c.ise.ritsumei.ac.jp/papers/2026/HIS2026_HandSlapRace_final.pdf"
-  publication:
-    label: "Laboratory publication record"
-    url: "https://www.rm2c.ise.ritsumei.ac.jp/demonstrations.html"
 ---
 
 ## Award

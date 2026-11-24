@@ -13,9 +13,6 @@ links:
   paper:
     label: "ACM Digital Libraryで論文を見る"
     url: "https://dl.acm.org/doi/10.1145/3822517.3849971"
-  program:
-    label: "VRST 2026 デモ発表プログラム"
-    url: "https://vrst.acm.org/vrst2026/program_demos/"
 ---
 
 ## 研究概要
