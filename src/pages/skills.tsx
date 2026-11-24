@@ -14,40 +14,14 @@ function SkillsPage() {
   const handSlapRaceAward = hrefFor({ collection: "awards", slug: "handslap-race" }, locale);
   const groups = [
     {
-      title: "Rust / CLI",
-      description: ja
-        ? "保存・索引・検索を分離したローカル知識アーカイブとCLIの開発。"
-        : "Local knowledge archives and CLI development, with separate storage, indexing, and search components.",
+      title: ja ? "プログラミング言語" : "Programming Languages",
+      skills: ["Go", "Rust", "TypeScript", "Python", "C#"],
       links: [{ label: "Kio", href: hrefFor({ collection: "projects", slug: "kio" }, locale) }]
     },
     {
-      title: "Go / Backend",
-      description: ja
-        ? "教育機関検索APIの実装。検索候補と一覧検索を分離し、PostgreSQLと組み合わせています。"
-        : "Educational-institution search APIs with separate suggestion and search endpoints, backed by PostgreSQL.",
-      links: [{ label: "sDB", href: sdb }]
-    },
-    {
-      title: "Unity / C# / MR",
-      description: ja
-        ? "QR追跡を利用したMR実装。研究ではUnity開発の実装・進捗確認・品質保証を担当しました。"
-        : "MR development using QR tracking. My research work also included Unity implementation, progress tracking, and QA.",
+      title: ja ? "フロントエンド" : "Frontend",
+      skills: ["React", "Vite", "Material UI", "Three.js"],
       links: [
-        { label: "Group4_MoleWhack", href: "https://github.com/ttokunaga-ja/Group4_MoleWhack" },
-        {
-          label: ja ? "QR追跡と配置の技術記事" : "QR tracking and placement (Japanese)",
-          href: "https://zenn.dev/t_tokunaga/articles/2025-12-02-unity-quest3s-qrcode-detection"
-        },
-        { label: "HandSlapRace", href: handSlapRaceAward }
-      ]
-    },
-    {
-      title: "TypeScript / React / Three.js",
-      description: ja
-        ? "Webツール、検索UI、ブラウザ上の3Dコンテンツの開発。"
-        : "Web utilities, search interfaces, and browser-based 3D content.",
-      links: [
-        { label: "sDB", href: sdb },
         {
           label: "3D Maze Game",
           href: hrefFor({ collection: "projects", slug: "2026-06-07-threejs-3d-maze-game" }, locale)
@@ -56,23 +30,30 @@ function SkillsPage() {
       ]
     },
     {
-      title: "Python / Data",
-      description: ja
-        ? "公開資料の取得・正規化と検索用データの生成。"
-        : "Acquisition and normalization of public data for search.",
-      links: [
-        { label: "sDB", href: sdb },
-        { label: ja ? "sDB 公開リポジトリ" : "sDB repository", href: "https://github.com/ttokunaga-ja/sDB" }
-      ]
+      title: ja ? "バックエンド・データベース" : "Backend & Databases",
+      skills: ["OpenAPI", "gRPC", "PostgreSQL"],
+      links: [{ label: "sDB", href: sdb }]
     },
     {
-      title: "Quality / Delivery",
-      description: ja
-        ? "研究開発での進捗確認・品質保証と、Webサイトの自動検査。"
-        : "Progress tracking and quality assurance in research development, plus automated checks for web projects.",
+      title: ja ? "クラウド・デプロイ" : "Cloud & Deployment",
+      skills: ["AWS", "Google Cloud Run", "Cloudflare Workers", "Cloudflare Pages", "GitHub Actions"],
+      links: [{ label: "portfolio", href: "https://github.com/ttokunaga-ja/portfolio" }]
+    },
+    {
+      title: ja ? "データ処理・機械学習" : "Data Processing & Machine Learning",
+      skills: ["NumPy", "TensorFlow", "pandas", "scikit-learn"],
+      links: [{ label: ja ? "sDB 公開リポジトリ" : "sDB repository", href: "https://github.com/ttokunaga-ja/sDB" }]
+    },
+    {
+      title: ja ? "XR・リアルタイム通信" : "XR & Real-Time Communication",
+      skills: ["Unity", "VR／MR", "WebSocket", "UDP"],
       links: [
-        { label: "HandSlapRace", href: handSlapRaceAward },
-        { label: "portfolio", href: "https://github.com/ttokunaga-ja/portfolio" }
+        { label: "Group4_MoleWhack", href: "https://github.com/ttokunaga-ja/Group4_MoleWhack" },
+        {
+          label: ja ? "QR追跡と配置の技術記事" : "QR tracking and placement (Japanese)",
+          href: "https://zenn.dev/t_tokunaga/articles/2025-12-02-unity-quest3s-qrcode-detection"
+        },
+        { label: "HandSlapRace", href: handSlapRaceAward }
       ]
     }
   ];
@@ -91,9 +72,13 @@ function SkillsPage() {
             <Card key={group.title} variant="outlined">
               <Stack spacing={2} sx={{ p: 2.5, height: "100%" }}>
                 <Typography variant="h3">{group.title}</Typography>
-                <Typography color="text.secondary" sx={{ flex: 1 }}>
-                  {group.description}
-                </Typography>
+                <Box component="ul" sx={{ flex: 1, pl: 2.5, color: "text.secondary" }}>
+                  {group.skills.map((skill) => (
+                    <Typography key={skill} component="li" variant="body1">
+                      {skill}
+                    </Typography>
+                  ))}
+                </Box>
                 <Stack spacing={1}>
                   {group.links.map((link) => (
                     <Link key={link.href} href={link.href}>

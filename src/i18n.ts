@@ -95,7 +95,7 @@ export const resources = {
         blogTitle: "Blog",
         blogLead: "Zennで公開した技術・研究・個人開発に関する記事を掲載しています。",
         skillsTitle: "Skills",
-        skillsLead: "Rust、Go、Unity / C#、React、Pythonと品質保証について、扱った内容と具体的な実例を紹介します。",
+        skillsLead: "開発や研究で扱った技術を、関連するプロジェクトや記事とともに紹介します。",
         contactTitle: "Contact",
         contactLead: "お問い合わせはこちらからお願いします。",
         privacyTitle: "Privacy & Site Policy",
@@ -214,8 +214,7 @@ export const resources = {
         blogTitle: "Blog",
         blogLead: "Articles on technology, research, and independent development, originally published on Zenn.",
         skillsTitle: "Skills",
-        skillsLead:
-          "Rust, Go, Unity / C#, React, Python, and quality assurance, with descriptions and concrete project evidence.",
+        skillsLead: "Technologies I use in software development and research, with related projects and articles.",
         contactTitle: "Contact",
         contactLead: "Use these links to get in touch.",
         privacyTitle: "Privacy & Site Policy",

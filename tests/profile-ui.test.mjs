@@ -51,15 +51,53 @@ try {
     test(`${locale} Skills connect six technical areas to evidence`, () => {
       const html = render(Skills, locale);
       assert.equal((html.match(/<h3\b/g) || []).length, 6);
-      for (const label of [
-        "Rust / CLI",
-        "Go / Backend",
-        "Unity / C# / MR",
-        "TypeScript / React / Three.js",
-        "Python / Data",
-        "Quality / Delivery"
-      ])
-        assert.ok(html.includes(label));
+      const categories =
+        locale === "ja"
+          ? [
+              "プログラミング言語",
+              "フロントエンド",
+              "バックエンド・データベース",
+              "クラウド・デプロイ",
+              "データ処理・機械学習",
+              "XR・リアルタイム通信"
+            ]
+          : [
+              "Programming Languages",
+              "Frontend",
+              "Backend &amp; Databases",
+              "Cloud &amp; Deployment",
+              "Data Processing &amp; Machine Learning",
+              "XR &amp; Real-Time Communication"
+            ];
+      const listedSkills = [...html.matchAll(/<li\b[^>]*>([^<]+)<\/li>/g)].map((match) => match[1]);
+      assert.deepEqual(listedSkills, [
+        "Go",
+        "Rust",
+        "TypeScript",
+        "Python",
+        "C#",
+        "React",
+        "Vite",
+        "Material UI",
+        "Three.js",
+        "OpenAPI",
+        "gRPC",
+        "PostgreSQL",
+        "AWS",
+        "Google Cloud Run",
+        "Cloudflare Workers",
+        "Cloudflare Pages",
+        "GitHub Actions",
+        "NumPy",
+        "TensorFlow",
+        "pandas",
+        "scikit-learn",
+        "Unity",
+        "VR／MR",
+        "WebSocket",
+        "UDP"
+      ]);
+      for (const category of categories) assert.ok(html.includes(category), category);
       assert.match(html, /github.com\/ttokunaga-ja\/Group4_MoleWhack/);
       assert.match(html, /href="(?:\/en)?\/projects\/kio\/"/);
       assert.match(html, /href="(?:\/en)?\/awards\/handslap-race\/"/);
