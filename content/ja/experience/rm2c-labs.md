@@ -30,4 +30,4 @@ links:
 
 共同研究のHandSlapRaceでは、サーバー実装と、Unity開発のPMとして実装・進捗確認・品質保証を担当しました。リアルタイムゲームの通信品質改善にも取り組みました。
 
-[受賞内容と担当の詳細](https://takumi-tokunaga.com/awards/handslap-race/)
+[受賞の詳細](https://takumi-tokunaga.com/awards/handslap-race/)

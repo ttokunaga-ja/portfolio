@@ -30,4 +30,4 @@ Member since July 2025. For HandSlapRace, I handled server implementation and Un
 
 For the collaborative HandSlapRace project, I handled server implementation and project management for Unity development, including implementation, progress tracking, and quality assurance. I also worked on real-time communication quality.
 
-[Award and contribution details](https://takumi-tokunaga.com/en/awards/handslap-race/)
+[Award details](https://takumi-tokunaga.com/en/awards/handslap-race/)
