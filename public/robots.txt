@@ -1,5 +1,8 @@
+# Public pages and rendering assets are available to search crawlers.
 User-agent: *
 Allow: /
+# Search indexing and retrieval for AI-generated answers.
+Content-Signal: search=yes, ai-input=yes
 
 Sitemap: https://takumi-tokunaga.com/sitemap.xml
 # AI-readable index: https://takumi-tokunaga.com/llms.txt

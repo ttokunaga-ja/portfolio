@@ -248,6 +248,8 @@ X-Robots-Tag: noindex
 Link: <https://takumi-tokunaga.com/projects/example/>; rel="canonical"
 ```
 
+[robots.txt](https://takumi-tokunaga.com/robots.txt) は、公開ページと描画用のアセットのクロールを許可し、検索エンジンにサイトマップを案内する。対応するクローラーには、`Content-Signal: search=yes, ai-input=yes` で検索インデックスへの登録とAI回答生成時の参照を許可する。
+
 `llms.txt` には、AI向けに重要ページと主な技術領域を案内する。
 
 ```md
